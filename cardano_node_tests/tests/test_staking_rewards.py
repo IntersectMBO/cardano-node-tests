@@ -374,7 +374,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -528,7 +528,7 @@ class TestRewards:
             # Sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
-                start=common.EPOCH_START_SEC_LEDGER_STATE,
+                start=common.get_epoch_start_sec_ledger_state(cluster_obj=cluster),
                 stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 force_epoch=True,
             )
@@ -691,7 +691,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -931,7 +931,7 @@ class TestRewards:
                 # Sleep till the end of epoch
                 clusterlib_utils.wait_for_epoch_interval(
                     cluster_obj=cluster,
-                    start=common.EPOCH_START_SEC_LEDGER_STATE,
+                    start=common.get_epoch_start_sec_ledger_state(cluster_obj=cluster),
                     stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                     force_epoch=True,
                 )
@@ -1013,7 +1013,7 @@ class TestRewards:
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1182,7 +1182,7 @@ class TestRewards:
 
         # Make sure we have enough time to submit pool registration cert in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1405,7 +1405,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1592,10 +1592,8 @@ class TestRewards:
 
                 # Wait for start of reward calculation, which is at 4k/f slot
                 start_reward_calc_sec = (
-                    4
-                    * cluster.genesis["securityParam"]
-                    / cluster.genesis["activeSlotsCoeff"]
-                    * cluster.genesis["slotLength"]
+                    clusterlib_utils.get_randomness_stabilisation_window(cluster_obj=cluster)
+                    * cluster.slot_length
                 )
                 wait_for_sec = int(start_reward_calc_sec) + 1
                 clusterlib_utils.wait_for_epoch_interval(
@@ -1630,7 +1628,7 @@ class TestRewards:
             # Sleep till the end of epoch
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
-                start=common.EPOCH_START_SEC_LEDGER_STATE,
+                start=common.get_epoch_start_sec_ledger_state(cluster_obj=cluster),
                 stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 force_epoch=True,
             )

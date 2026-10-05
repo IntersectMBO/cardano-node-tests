@@ -617,7 +617,7 @@ class TestRegisterAddr:
         # Step 2: register a stake address
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         tx_raw_output_reg, plutus_costs_reg = register_stake_addr(
@@ -639,7 +639,7 @@ class TestRegisterAddr:
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Submit deregistration certificate and withdraw rewards
@@ -782,7 +782,7 @@ class TestDelegateAddr:
         # Step 2: register and delegate
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -857,7 +857,7 @@ class TestDelegateAddr:
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Submit deregistration certificate and withdraw rewards
@@ -1016,7 +1016,7 @@ class TestDelegateAddr:
         # Step 2: register and delegate
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1094,7 +1094,7 @@ class TestDelegateAddr:
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Submit deregistration certificate and withdraw rewards

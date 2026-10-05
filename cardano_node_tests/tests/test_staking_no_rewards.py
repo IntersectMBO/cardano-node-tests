@@ -76,7 +76,7 @@ class TestNoRewards:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -100,7 +100,7 @@ class TestNoRewards:
 
         # Make sure we have enough time to finish the pool update in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         update_epoch = cluster.g_query.get_epoch()
 
@@ -253,7 +253,7 @@ class TestNoRewards:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -423,7 +423,7 @@ class TestNoRewards:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -627,7 +627,7 @@ class TestNoRewards:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -842,7 +842,7 @@ class TestNoRewards:
 
         # Make sure we have enough time to finish reward address deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         dereg_reward_epoch = cluster.g_query.get_epoch()
 

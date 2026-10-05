@@ -164,7 +164,7 @@ class TestDelegateAddr:
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -214,7 +214,7 @@ class TestDelegateAddr:
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -344,7 +344,7 @@ class TestDelegateAddr:
         ]
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -451,7 +451,7 @@ class TestDelegateAddr:
         pool_user = clusterlib.PoolUser(payment=payment_addr_recs[1], stake=stake_addr_rec)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -499,7 +499,7 @@ class TestDelegateAddr:
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Files for deregistering stake address
@@ -648,7 +648,7 @@ class TestDelegateAddr:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -675,7 +675,7 @@ class TestDelegateAddr:
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Files for deregistering stake address
@@ -788,7 +788,7 @@ class TestDelegateAddr:
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -993,7 +993,7 @@ class TestDelegateAddr:
         )
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 

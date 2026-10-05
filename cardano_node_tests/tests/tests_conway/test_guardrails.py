@@ -155,7 +155,9 @@ def cluster_with_constitution(
 
             # Make sure we have enough time to submit the votes in one epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+                cluster_obj=cluster,
+                start=5,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
             )
 
             conway_common.cast_vote(
@@ -275,7 +277,7 @@ def propose_param_changes(
 
     # Make sure we have enough time to submit the proposal in one epoch
     clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
     )
 
     tx_output_action = clusterlib_utils.build_and_submit_tx(

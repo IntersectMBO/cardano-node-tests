@@ -187,7 +187,7 @@ class TestGovActionAnchor:
 
         # Make sure we have enough time to submit the proposal in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         reqc.cli023.start(url=helpers.get_vcs_link())

@@ -39,3 +39,19 @@ class ClusterObjStub:
     ) -> None:
         self.cli_coverage: dict[str, tp.Any] = {} if cli_coverage is None else cli_coverage
         self.command_era = command_era
+
+
+class GenesisClusterStub:
+    """Minimal stub of `ClusterLib` that provides only the genesis based epoch timings."""
+
+    def __init__(
+        self,
+        *,
+        security_param: int,
+        active_slots_coeff: float,
+        slot_length: float,
+        epoch_length: int,
+    ) -> None:
+        self.genesis = {"securityParam": security_param, "activeSlotsCoeff": active_slots_coeff}
+        self.slot_length = slot_length
+        self.epoch_length_sec = epoch_length * slot_length

@@ -1035,7 +1035,7 @@ class TestStakePool:
 
         # Deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         depoch = cluster.g_query.get_epoch() + 1
         if build_method in (
@@ -1179,7 +1179,7 @@ class TestStakePool:
 
         # Deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         depoch = cluster.g_query.get_epoch() + 1
         cluster.g_stake_pool.deregister_stake_pool(
@@ -1336,7 +1336,7 @@ class TestStakePool:
 
         # Deregister stake pool in epoch + 2
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         depoch = cluster.g_query.get_epoch() + 2
         _dereg_cert, tx_raw_dereg = cluster.g_stake_pool.deregister_stake_pool(
@@ -1504,7 +1504,9 @@ class TestStakePool:
 
         # Make sure the update doesn't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster,
+            start=10,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
         )
         update_epoch = cluster.g_query.get_epoch()
 
@@ -1640,7 +1642,9 @@ class TestStakePool:
 
         # Make sure the update doesn't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster,
+            start=10,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
         )
         update_epoch = cluster.g_query.get_epoch()
 
@@ -1896,7 +1900,7 @@ class TestStakePool:
 
         # Make sure we have enough time to finish the deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         dereg_epoch = cluster.g_query.get_epoch()
 
@@ -2968,7 +2972,7 @@ class TestPoolVoteDeleg:
         deposit_address_amt = cluster.g_query.get_address_deposit(pparams=pparams)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         reg_epoch = cluster.g_query.get_epoch()
 

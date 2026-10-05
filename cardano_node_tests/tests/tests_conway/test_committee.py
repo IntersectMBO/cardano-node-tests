@@ -409,7 +409,7 @@ class TestCommittee:
 
         # Make sure we have enough time to submit the proposals and vote in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         _propose_new_member()
@@ -419,14 +419,11 @@ class TestCommittee:
         # authorized and the votes are submitted in one epoch, even if the proposal or the
         # authorization took long to get on chain (e.g. under Tx load). The proposals stay
         # valid in the next epoch, so the authorization can be retried there.
-        # The buffer of 6 blocks is larger than `EPOCH_STOP_SEC_BUFFER` only on testnets with
-        # long block time (e.g. slot length 1s and f=0.05).
-        block_time = cluster.slot_length / float(cluster.genesis["activeSlotsCoeff"])
         for attempt in range(1, 3):
             clusterlib_utils.wait_for_epoch_interval(
                 cluster_obj=cluster,
                 start=1,
-                stop=min(common.EPOCH_STOP_SEC_BUFFER, -int(6 * block_time)),
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
             )
             if _auth_hot_keys(attempt=attempt):
                 break
@@ -705,7 +702,9 @@ class TestCommittee:
 
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER - 10
+            cluster_obj=cluster,
+            start=1,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster) - 10,
         )
         actions_epoch = cluster.g_query.get_epoch()
 
@@ -982,7 +981,9 @@ class TestCommittee:
             with helpers.change_cwd(testfile_temp_dir):
                 # Make sure we have enough time to finish in one epoch
                 clusterlib_utils.wait_for_epoch_interval(
-                    cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+                    cluster_obj=cluster,
+                    start=1,
+                    stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
                 )
 
                 def _get_res_cert(idx: int, cc_auth: governance_utils.CCMemberAuth) -> pl.Path:
@@ -1496,7 +1497,9 @@ class TestCommittee:
 
             # Make sure we have enough time to submit the proposal in one epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+                cluster_obj=cluster,
+                start=1,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
             )
 
             tx_output_action = clusterlib_utils.build_and_submit_tx(
@@ -1692,7 +1695,7 @@ class TestCommittee:
 
         # Make sure we have enough time to submit the votes in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         # Vote & approve the action
@@ -1886,7 +1889,9 @@ class TestCommittee:
 
         # Make sure the votes don't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster,
+            start=10,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
         )
 
         conway_common.cast_vote(
@@ -1930,7 +1935,9 @@ class TestCommittee:
 
         # Make sure the votes don't happen close to epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=10, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster,
+            start=10,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
         )
 
         conway_common.cast_vote(

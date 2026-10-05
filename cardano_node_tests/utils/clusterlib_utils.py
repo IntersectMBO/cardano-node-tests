@@ -3,6 +3,7 @@
 import base64
 import dataclasses
 import enum
+import fractions
 import itertools
 import json
 import logging
@@ -1239,7 +1240,8 @@ def get_stability_window(*, cluster_obj: clusterlib.ClusterLib) -> int:
     Rounded down, so that the result is never above the window the ledger itself uses. A
     caller that uses it as a limit therefore stays inside the window. The division is
     exact on every testnet variant, so the rounding only guards against a variant that
-    picks a `securityParam` and `activeSlotsCoeff` that don't divide.
+    picks a `securityParam` and `activeSlotsCoeff` that don't divide. The active slot
+    coefficient is converted to a fraction, see `get_randomness_stabilisation_window`.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -1248,8 +1250,39 @@ def get_stability_window(*, cluster_obj: clusterlib.ClusterLib) -> int:
         int: The number of slots in the stability window.
     """
     security_param = int(cluster_obj.genesis["securityParam"])
-    active_slots_coeff = float(cluster_obj.genesis["activeSlotsCoeff"])
+    active_slots_coeff = fractions.Fraction(str(cluster_obj.genesis["activeSlotsCoeff"]))
     return math.floor(3 * security_param / active_slots_coeff)
+
+
+def get_block_interval_sec(*, cluster_obj: clusterlib.ClusterLib) -> float:
+    """Return the mean time between two blocks (`slotLength / activeSlotsCoeff`) in seconds.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        float: The mean block interval in seconds.
+    """
+    return float(cluster_obj.slot_length) / float(cluster_obj.genesis["activeSlotsCoeff"])
+
+
+def get_randomness_stabilisation_window(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the randomness stabilisation window (`4k/f`) in slots.
+
+    Rounded up, the same way the ledger computes it
+    (`computeRandomnessStabilisationWindow`). The active slot coefficient is converted to
+    a fraction from its decimal string, so that e.g. `0.05` doesn't add a float rounding
+    error that the rounding up would turn into an extra slot.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The number of slots in the randomness stabilisation window.
+    """
+    security_param = int(cluster_obj.genesis["securityParam"])
+    active_slots_coeff = fractions.Fraction(str(cluster_obj.genesis["activeSlotsCoeff"]))
+    return math.ceil(4 * security_param / active_slots_coeff)
 
 
 def wait_for_epoch_interval(
