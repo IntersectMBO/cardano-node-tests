@@ -730,6 +730,20 @@ class TestResolveResources:
         assert getter._resolve_resources_availability(cget_status, scratch) is True
         assert list(scratch.final_lock_resources) == ["pool2"]
 
+    def test_one_of_filter_lock_and_use(self):
+        """Check that `OneOf` filters for "lock" and "use" pick different resources."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status()
+        cget_status.lock_resources = [resources_management.OneOf(resources=["pool1", "pool2"])]
+        cget_status.use_resources = [resources_management.OneOf(resources=["pool1", "pool2"])]
+        scratch = _get_scratch(instance_num=0)
+
+        assert getter._resolve_resources_availability(cget_status, scratch) is True
+        assert sorted([*scratch.final_lock_resources, *scratch.final_use_resources]) == [
+            "pool1",
+            "pool2",
+        ]
+
 
 @pytest.mark.usefixtures("db_dir")
 class TestPrio:

@@ -51,3 +51,15 @@ def test_oneof_empty():
         resources=resources_to_use, unavailable=resources_locked
     )
     assert len(selected) == 0
+
+
+def test_oneof_already_selected():
+    """Check that a filter doesn't select a resource that was already selected."""
+    resources_locked = ["pool1", "pool2"]
+    already_selected = ["pool3", "pool4"]
+    selected = resources_management.get_resources(
+        resources=["pool4", resources_management.OneOf(ALL_POOLS)],
+        unavailable=resources_locked,
+        already_selected=already_selected,
+    )
+    assert sorted(selected) == ["pool4", "pool5"]

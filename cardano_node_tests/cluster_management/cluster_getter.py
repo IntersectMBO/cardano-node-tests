@@ -677,12 +677,15 @@ class ClusterGetter:
                 )
                 return False
 
-        # This test wants to use some resources, check if these are not locked
+        # This test wants to use some resources, check if these are not locked. The filters
+        # must not select the resources this test is about to lock, as the test would then get
+        # fewer distinct resources than it asked for.
         res_usable = []
         if cget_status.use_resources:
             res_usable = resources_management.get_resources(
                 resources=cget_status.use_resources,
                 unavailable=resources_locked,
+                already_selected=res_lockable,
             )
             if not res_usable:
                 self.log(
