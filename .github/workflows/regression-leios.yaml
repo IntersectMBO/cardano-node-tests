@@ -29,9 +29,12 @@ jobs:
       node_rev: ${{ inputs.node_rev || 'leios-prototype' }}
       cli_rev: ${{ inputs.cli_rev }}
       cluster_era: dijkstra 12
-      markexpr: testnets or leios
       allow_unstable_error_msgs: ${{ inputs.allow_unstable_error_msgs }}
       session_timeout: 4h
+      # Only smoke, Leios and Dijkstra tests - with the `leios_fast` testnet variant,
+      # the full testrun can exceed the 6h GitHub job limit. Unlike `-m`, `-k` can
+      # match the `tests_dijkstra` dir as well as the marker names.
+      ci_args: -k "smoke or leios or tests_dijkstra"
       env-path: runner/env_leios
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

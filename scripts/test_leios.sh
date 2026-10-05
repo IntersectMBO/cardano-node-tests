@@ -40,4 +40,9 @@ done
 # branch can be switched without touching the setup.
 export NODE_REV="${NODE_REV:-leios-prototype}"
 
+# The default session timeout of the regression run is too short for the full
+# Leios testrun. In CI, a smaller set of tests is run instead, to fit into the
+# GitHub job time limit.
+export SESSION_TIMEOUT="${SESSION_TIMEOUT:-8h}"
+
 exec runner/load-gh-env.sh runner/env_leios "$@" -- runner/regression.sh

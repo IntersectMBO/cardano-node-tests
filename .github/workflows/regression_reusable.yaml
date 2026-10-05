@@ -55,6 +55,10 @@ on:
         required: false
         type: string
         default: ""
+      ci_args:
+        required: false
+        type: string
+        default: ""
     secrets:
       TCACHE_BASIC_AUTH:
         required: false
@@ -83,6 +87,7 @@ env:
   CI_TESTRUN_NAME: ${{ inputs.testrun_name }}
   CI_SKIP_PASSED: ${{ inputs.skip_passed }}
   SESSION_TIMEOUT: ${{ inputs.session_timeout }}
+  CI_ARGS: ${{ inputs.ci_args }}
 
 jobs:
   reusable_run:

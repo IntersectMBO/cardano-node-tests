@@ -25,14 +25,16 @@ triggered manually from the `Actions` tab (`Run workflow`) or with `gh`:
 gh workflow run "04 Regression tests with Leios" --ref master
 ```
 
+To fit into the 6h GitHub job limit, the CI run is limited to smoke, Leios and
+`tests_dijkstra` tests. Local runs run the full suite.
+
 Inputs:
 
 | Input                       | Default            | Description                                            |
 | --------------------------- | ------------------ | ------------------------------------------------------ |
 | `node_rev`                  | `leios-prototype`  | `cardano-node` revision.                               |
 | `cli_rev`                   | (empty)            | `cardano-cli` revision, optional.                      |
-| `allow_unstable_error_msgs` | `true`             | Let tests pass with unstable error messages.           |
-| `skip_deselect`             | `false`            | Run also the tests that are known to fail on Leios.    |
+| `allow_unstable_error_msgs` | `false`            | Let tests pass with unstable error messages.           |
 
 ## Running Locally
 
@@ -60,8 +62,8 @@ overwritten:
 ./scripts/test_leios.sh TX_TPS=10
 ```
 
-The exceptions are `NODE_REV`, `MARKEXPR` and `ALLOW_UNSTABLE_ERROR_MESSAGES` - there an
-already exported value wins, so the node branch can be switched without touching the setup:
+The exceptions are `NODE_REV` and `SESSION_TIMEOUT` (default `8h`) - there an already
+exported value wins, so the node branch can be switched without touching the setup:
 
 ```sh
 NODE_REV=my-leios-branch ./scripts/test_leios.sh
