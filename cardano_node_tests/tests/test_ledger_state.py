@@ -68,7 +68,7 @@ class TestLedgerState:
 
         # Make sure the queries can be finished in single epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         stake_pool_ids = cluster.g_query.get_stake_pools()

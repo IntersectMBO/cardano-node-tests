@@ -374,7 +374,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -691,7 +691,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1013,7 +1013,7 @@ class TestRewards:
         temp_template = common.get_test_id(cluster)
 
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1182,7 +1182,7 @@ class TestRewards:
 
         # Make sure we have enough time to submit pool registration cert in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 
@@ -1405,7 +1405,7 @@ class TestRewards:
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         init_epoch = cluster.g_query.get_epoch()
 

@@ -460,7 +460,9 @@ def register_pool_with_bls_key(
         encoded BLS verification key the pool registered.
     """
     clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster_obj, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+        cluster_obj=cluster_obj,
+        start=5,
+        stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
     )
     reg_epoch = cluster_obj.g_query.get_epoch()
 
@@ -722,7 +724,9 @@ class TestBlsKeyRotation:
         # epoch after the rotation was seated from a snapshot that already knows the pool
         cluster_obj.wait_for_epoch(epoch_no=reg_epoch + 1, padding_seconds=5)
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster_obj, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster_obj,
+            start=5,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
         )
         rotate_epoch = cluster_obj.g_query.get_epoch()
 
@@ -847,7 +851,9 @@ class TestBlsKeyRotation:
         # the original one
         cluster_obj.wait_for_epoch(epoch_no=reg_epoch + 1, padding_seconds=5)
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster_obj, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster_obj,
+            start=5,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
         )
         renew_epoch = cluster_obj.g_query.get_epoch()
 
@@ -981,7 +987,9 @@ class TestBlsKeyRotation:
 
         # Rotating a key in is the way back out of the keyless state
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster_obj, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster_obj,
+            start=5,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
         )
         restore_epoch = cluster_obj.g_query.get_epoch()
         assert restore_epoch > drop_epoch, "The check of the keyless pool took longer than expected"
@@ -1123,7 +1131,7 @@ class TestBlsKeyExpiration:
         # the keys the other pools registered on startup
         cluster.wait_for_epoch(epoch_no=rotate_epoch, padding_seconds=5)
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         assert cluster.g_query.get_epoch() == rotate_epoch, (
             f"Missed the window for rotating the BLS key in epoch {rotate_epoch}"
@@ -1301,7 +1309,7 @@ class TestBlsKeyRotationVoting:
         # The rotation and the check that it is still pending must not be split by an
         # epoch boundary
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         rotate_epoch = cluster.g_query.get_epoch()
 

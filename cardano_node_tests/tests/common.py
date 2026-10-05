@@ -1,5 +1,6 @@
 import contextlib
 import logging
+import math
 import pathlib as pl
 import string
 import time
@@ -75,8 +76,8 @@ PUBLIC_ACTION_ANCHOR_INVALID_URL = (
 
 # Intervals for `wait_for_epoch_interval` (negative values are counted from the end of an epoch)
 if cluster_nodes.get_cluster_type().is_local:
-    # Time buffer at the end of an epoch, enough to do something that takes several transactions
-    EPOCH_STOP_SEC_BUFFER = -40
+    # Min time buffer at the end of an epoch, see `get_epoch_stop_sec_buffer`
+    EPOCH_STOP_SEC_BUFFER_MIN = 40
     # Time when all ledger state info is available for the current epoch
     EPOCH_START_SEC_LEDGER_STATE = -19
     # Time buffer at the end of an epoch after getting ledger state info
@@ -85,10 +86,14 @@ if cluster_nodes.get_cluster_type().is_local:
     MAX_EPOCHS_WAIT_SEC = 90 * 60
 else:
     # We can be more generous on testnets
-    EPOCH_STOP_SEC_BUFFER = -200
+    EPOCH_STOP_SEC_BUFFER_MIN = 200
     EPOCH_START_SEC_LEDGER_STATE = -300
     EPOCH_STOP_SEC_LEDGER_STATE = -200
     MAX_EPOCHS_WAIT_SEC = 2 * 60 * 60
+
+# Number of mean block intervals in the time buffer at the end of an epoch. A tx can miss
+# the next block (e.g. under Tx load), and there can be long gaps with no blocks.
+EPOCH_STOP_BUFFER_BLOCKS = 12
 
 
 def hypothesis_settings(max_examples: int = 100) -> tp.Any:
@@ -211,6 +216,29 @@ def skip_unless_local_fast() -> None:
             "Runs only on the 'local_fast' testnet variant, "
             f"not on '{configuration.TESTNET_VARIANT}'"
         )
+
+
+def get_epoch_stop_sec_buffer(*, cluster_obj: clusterlib.ClusterLib) -> int:
+    """Return the time buffer at the end of an epoch, for the `stop` of `wait_for_epoch_interval`.
+
+    The buffer is enough to do something that takes several transactions. It is derived from
+    the mean block interval (`slotLength / activeSlotsCoeff`), so it scales with testnets
+    that produce blocks slowly, but it is never shorter than `EPOCH_STOP_SEC_BUFFER_MIN`.
+    It is capped at half of the epoch, so the interval in the epoch is never empty.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+
+    Returns:
+        int: The buffer in seconds, as a negative number (counted from the end of an epoch).
+    """
+    block_interval_sec = float(cluster_obj.slot_length) / float(
+        cluster_obj.genesis["activeSlotsCoeff"]
+    )
+    buffer_sec = max(
+        EPOCH_STOP_SEC_BUFFER_MIN, math.ceil(EPOCH_STOP_BUFFER_BLOCKS * block_interval_sec)
+    )
+    return -min(buffer_sec, int(cluster_obj.epoch_length_sec // 2))
 
 
 def is_epochs_wait_ok(

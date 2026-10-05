@@ -306,7 +306,9 @@ def cast_vote(
 
     # Make sure we have enough time to submit the votes in one epoch
     clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster_obj, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        cluster_obj=cluster_obj,
+        start=1,
+        stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
     )
 
     submit_vote(
@@ -423,7 +425,9 @@ def propose_change_constitution(
 
     # Make sure we have enough time to submit the proposal in one epoch
     clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster_obj, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        cluster_obj=cluster_obj,
+        start=1,
+        stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
     )
 
     tx_output = clusterlib_utils.build_and_submit_tx(
@@ -499,7 +503,9 @@ def propose_pparams_update(
 
     # Make sure we have enough time to submit the proposal in one epoch
     clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster_obj, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+        cluster_obj=cluster_obj,
+        start=1,
+        stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
     )
 
     tx_output_action = clusterlib_utils.build_and_submit_tx(

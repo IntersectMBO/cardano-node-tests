@@ -219,7 +219,7 @@ class TestTreasuryWithdrawals:
 
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
 
         tx_output_action = clusterlib_utils.build_and_submit_tx(
@@ -322,7 +322,9 @@ class TestTreasuryWithdrawals:
 
             # Make sure we have enough time to submit the votes in one epoch
             clusterlib_utils.wait_for_epoch_interval(
-                cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+                cluster_obj=cluster,
+                start=1,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
             )
             _cast_vote_epoch = cluster.g_query.get_epoch()
 
@@ -533,7 +535,7 @@ class TestTreasuryWithdrawals:
 
         # Make sure we have enough time to submit the proposals in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         action_prop_epoch = cluster.g_query.get_epoch()
 
@@ -624,7 +626,7 @@ class TestTreasuryWithdrawals:
 
         # Make sure we have enough time to submit the votes in one epoch
         clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=1, stop=common.EPOCH_STOP_SEC_BUFFER
+            cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
         )
         vote_epoch = cluster.g_query.get_epoch()
 
