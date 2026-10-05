@@ -27,9 +27,9 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
-from cardano_node_tests.tests import leios
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.tests.tests_dijkstra import leios
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration

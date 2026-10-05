@@ -22,6 +22,7 @@ E2E tests are organized under:
 - `cardano_node_tests/tests/tests_plutus_v2/` - Plutus-specific tests for PlutusV2+
 - `cardano_node_tests/tests/tests_plutus_v3/` - Plutus-specific tests for PlutusV3+
 - `cardano_node_tests/tests/tests_conway/` - Conway era specific tests
+- `cardano_node_tests/tests/tests_dijkstra/` - Dijkstra era specific tests (Leios, BLS keys)
 - `cardano_node_tests/tests/data/` - Test data files
 
 Framework components are organized under:
