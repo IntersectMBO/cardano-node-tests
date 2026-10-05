@@ -47,6 +47,7 @@ def pool_user_lg(
         cluster_obj=cluster,
         caching_key=key,
         amount=400_000_000,
+        min_amount=350_000_000,
     )
 
 
@@ -195,21 +196,23 @@ class TestNoConfidence:
             approve_spo=False,
         )
 
-        # Vote & approve the action
-        reqc.cip039.start(url=helpers.get_vcs_link())
-        voted_votes = conway_common.cast_vote(
-            cluster_obj=cluster,
-            governance_data=governance_data,
-            name_template=f"{temp_template}_yes",
-            payment_addr=pool_user_lg.payment,
-            action_txid=action_txid,
-            action_ix=action_ix,
-            approve_drep=True,
-            approve_spo=True,
-        )
-
-        # Testnet will be in state of no confidence, respin is needed
+        # Testnet will be in state of no confidence, respin is needed. The guard covers
+        # also the approving vote, as the action can be enacted even when the vote's checks
+        # fail after the votes were submitted.
         with cluster_manager.respin_on_failure():
+            # Vote & approve the action
+            reqc.cip039.start(url=helpers.get_vcs_link())
+            voted_votes = conway_common.cast_vote(
+                cluster_obj=cluster,
+                governance_data=governance_data,
+                name_template=f"{temp_template}_yes",
+                payment_addr=pool_user_lg.payment,
+                action_txid=action_txid,
+                action_ix=action_ix,
+                approve_drep=True,
+                approve_spo=True,
+            )
+
             assert cluster.g_query.get_epoch() == init_epoch, (
                 "Epoch changed and it would affect other checks"
             )
@@ -358,21 +361,22 @@ class TestNoConfidence:
 
         reqc.cip014.start(url=helpers.get_vcs_link())
 
-        cc_members_to_resign = governance_data.cc_key_members[1:]
-        resign_epoch = cluster.g_query.get_epoch()
-        conway_common.resign_ccs(
-            cluster_obj=cluster,
-            name_template=f"{temp_template}_{resign_epoch}",
-            ccs_to_resign=[r.cc_member for r in cc_members_to_resign],
-            payment_addr=pool_user_lg.payment,
-        )
-        new_governance_data = dataclasses.replace(
-            governance_data, cc_key_members=governance_data.cc_key_members[:1]
-        )
-
         # Testnet will be in (sort of) state of no confidence, respin is needed in case of
-        # failure.
+        # failure. The guard covers also the resignation, as the CC members can be resigned
+        # even when the resignation checks fail after the tx was submitted.
         with cluster_manager.respin_on_failure():
+            cc_members_to_resign = governance_data.cc_key_members[1:]
+            resign_epoch = cluster.g_query.get_epoch()
+            conway_common.resign_ccs(
+                cluster_obj=cluster,
+                name_template=f"{temp_template}_{resign_epoch}",
+                ccs_to_resign=[r.cc_member for r in cc_members_to_resign],
+                payment_addr=pool_user_lg.payment,
+            )
+            new_governance_data = dataclasses.replace(
+                governance_data, cc_key_members=governance_data.cc_key_members[:1]
+            )
+
             # Try to ratify a "create constitution" action
             anchor_data = governance_utils.get_default_anchor_data()
             constitution_file = pl.Path(f"{temp_template}_constitution.txt")

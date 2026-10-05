@@ -1411,7 +1411,8 @@ class TestDelegDReps:
 
         * List status of all DReps
         * List status of selected DReps
-        * Compare the output to check that it is consistent
+        * Compare the output to check that it is consistent, repeat the queries while the
+          difference keeps changing, as other tests can vote with the DReps in the meantime
         """
         cluster, governance_data = cluster_use_dreps
         common.get_test_id(cluster)
@@ -1421,21 +1422,58 @@ class TestDelegDReps:
         ) -> dict[str, dict[str, tp.Any]]:
             return {drep[0]["keyHash"]: drep[1] for drep in drep_state}
 
-        drep_states_all = _get_drep_rec(drep_state=cluster.g_query.get_drep_state())
-        drep_states_gov_data = _get_drep_rec(
-            drep_state=[
-                cluster.g_query.get_drep_state(drep_key_hash=drep.drep_id)[0]
-                for drep in governance_data.dreps_reg
-            ]
-        )
+        def _without_expiry(rec: dict[str, tp.Any]) -> dict[str, tp.Any]:
+            return {k: v for k, v in rec.items() if k != "expiry"}
 
-        first_key = next(iter(drep_states_gov_data))
-        if drep_states_all[first_key]["expiry"] != drep_states_gov_data[first_key]["expiry"]:
-            issues.ledger_4349.finish_test()
+        # Other tests can vote with the default DReps at the same time, and a vote updates
+        # the DRep expiry. Repeat the queries while the mismatch keeps changing, so that a vote
+        # submitted between the queries doesn't cause a false mismatch. No mismatch, or the
+        # same mismatch as in the previous attempt, is most likely not caused by a vote.
+        drep_states_all: dict[str, dict[str, tp.Any]] = {}
+        drep_states_gov_data: dict[str, dict[str, tp.Any]] = {}
+        prev_mismatch: dict[str, tp.Any] | None = None
+        is_stable = False
+        for __ in range(3):
+            # Make sure the queries don't happen around epoch boundary, as the DRep expiry
+            # can change there
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster,
+                start=1,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
+            )
+            drep_states_all = _get_drep_rec(drep_state=cluster.g_query.get_drep_state())
+            drep_states_gov_data = _get_drep_rec(
+                drep_state=[
+                    cluster.g_query.get_drep_state(drep_key_hash=drep.drep_id)[0]
+                    for drep in governance_data.dreps_reg
+                ]
+            )
+            mismatch = {
+                k: (v, a)
+                for k, v in drep_states_gov_data.items()
+                if (a := drep_states_all.get(k)) != v
+            }
+            if not mismatch or mismatch == prev_mismatch:
+                is_stable = True
+                break
+            prev_mismatch = mismatch
+        else:
+            LOGGER.warning(
+                "The DRep states kept changing between the queries, other tests are "
+                "probably voting with the DReps."
+            )
 
         for key, rec in drep_states_gov_data.items():
             assert key in drep_states_all, f"DRep '{key}' not found in DRep state"
-            assert rec == drep_states_all[key], f"DRep '{key}' state mismatch"
+            assert _without_expiry(rec) == _without_expiry(drep_states_all[key]), (
+                f"DRep '{key}' state mismatch"
+            )
+
+        # A changing expiry mismatch is caused by votes of other tests, not by the known issue
+        if is_stable and any(
+            rec["expiry"] != drep_states_all[k]["expiry"] for k, rec in drep_states_gov_data.items()
+        ):
+            issues.ledger_4349.finish_test()
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets

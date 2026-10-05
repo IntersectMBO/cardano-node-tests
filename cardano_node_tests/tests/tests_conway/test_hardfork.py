@@ -15,6 +15,7 @@ from cardano_node_tests.tests import reqs_conway as reqc
 from cardano_node_tests.tests.tests_conway import conway_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
@@ -30,12 +31,29 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def pool_user_lg(
+def cluster_singleton_governance(
     cluster_manager: cluster_management.ClusterManager,
-    cluster_lock_governance: governance_utils.GovClusterT,
+    cluster_singleton: clusterlib.ClusterLib,
+) -> governance_utils.GovClusterT:
+    """Lock the whole cluster instance and return it together with the default governance.
+
+    Locking just the governance is not enough. Once the hard fork is enacted, the new protocol
+    version affects all tests running on the cluster instance.
+    """
+    governance_data = governance_setup.get_default_governance(
+        cluster_manager=cluster_manager, cluster_obj=cluster_singleton
+    )
+    governance_utils.wait_delayed_ratification(cluster_obj=cluster_singleton)
+    return cluster_singleton, governance_data
+
+
+@pytest.fixture
+def pool_user_sg(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster_singleton_governance: governance_utils.GovClusterT,
 ) -> clusterlib.PoolUser:
-    """Create a pool user for "lock governance"."""
-    cluster, __ = cluster_lock_governance
+    """Create a pool user for "singleton governance"."""
+    cluster, __ = cluster_singleton_governance
     key = helpers.get_current_line_str()
     name_template = common.get_test_id(cluster)
     return addrs_common.get_registered_pool_user(
@@ -55,8 +73,8 @@ class TestHardfork:
     def test_hardfork(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_lock_governance: governance_utils.GovClusterT,
-        pool_user_lg: clusterlib.PoolUser,
+        cluster_singleton_governance: governance_utils.GovClusterT,
+        pool_user_sg: clusterlib.PoolUser,
     ):
         """Test hardfork action.
 
@@ -68,7 +86,7 @@ class TestHardfork:
         * Check that the action is enacted
         * Check that it's not possible to vote on enacted action
         """
-        cluster, governance_data = cluster_lock_governance
+        cluster, governance_data = cluster_singleton_governance
         temp_template = common.get_test_id(cluster)
 
         prot_ver_init = clusterlib_utils.get_protocol_version(cluster_obj=cluster)
@@ -90,7 +108,7 @@ class TestHardfork:
         common.skip_on_long_epochs(cluster_obj=cluster, epochs=2)
 
         init_return_account_balance = cluster.g_query.get_stake_addr_info(
-            pool_user_lg.stake.address
+            pool_user_sg.stake.address
         ).reward_account_balance
 
         # Create an action
@@ -116,14 +134,14 @@ class TestHardfork:
             protocol_minor_version=0,
             prev_action_txid=prev_action_rec.txid,
             prev_action_ix=prev_action_rec.ix,
-            deposit_return_stake_vkey_file=pool_user_lg.stake.vkey_file,
+            deposit_return_stake_vkey_file=pool_user_sg.stake.vkey_file,
         )
         [r.success() for r in (reqc.cip031a_07, reqc.cip031d, reqc.cip054_07)]
 
         tx_files_action = clusterlib.TxFiles(
             proposal_files=[hardfork_action.action_file],
             signing_key_files=[
-                pool_user_lg.payment.skey_file,
+                pool_user_sg.payment.skey_file,
             ],
         )
 
@@ -138,7 +156,7 @@ class TestHardfork:
         tx_output_action = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster,
             name_template=f"{temp_template}_action",
-            src_address=pool_user_lg.payment.address,
+            src_address=pool_user_sg.payment.address,
             build_method=clusterlib_utils.BuildMethods.BUILD,
             tx_files=tx_files_action,
         )
@@ -146,13 +164,13 @@ class TestHardfork:
 
         out_utxos_action = cluster.g_query.get_utxo(tx_raw_output=tx_output_action)
         assert (
-            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_lg.payment.address)[
+            clusterlib.filter_utxos(utxos=out_utxos_action, address=pool_user_sg.payment.address)[
                 0
             ].amount
             == clusterlib.calculate_utxos_balance(tx_output_action.txins)
             - tx_output_action.fee
             - deposit_amt
-        ), f"Incorrect balance for source address `{pool_user_lg.payment.address}`"
+        ), f"Incorrect balance for source address `{pool_user_sg.payment.address}`"
 
         action_txid = cluster.g_transaction.get_txid(tx_body_file=tx_output_action.out_file)
         action_gov_state = cluster.g_query.get_gov_state()
@@ -179,7 +197,7 @@ class TestHardfork:
                     cluster_obj=cluster,
                     governance_data=governance_data,
                     name_template=f"{temp_template}_no",
-                    payment_addr=pool_user_lg.payment,
+                    payment_addr=pool_user_sg.payment,
                     action_txid=action_txid,
                     action_ix=action_ix,
                     approve_cc=False,
@@ -197,7 +215,7 @@ class TestHardfork:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_no",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_sg.payment,
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=False,
@@ -206,21 +224,23 @@ class TestHardfork:
         )
         reqc.cli019.success()
 
+        # Testnet will be using an unexpected protocol version, respin is needed. Request the
+        # respin before voting, so it is requested even when the vote's checks fail after the
+        # votes were already submitted.
+        cluster_manager.set_needs_respin()
+
         # Vote & approve the action
         voted_votes = conway_common.cast_vote(
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_yes",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_sg.payment,
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=True,
             approve_drep=True if prot_ver_init > 9 else None,
             approve_spo=True,
         )
-
-        # Testnet will be using an unexpected protocol version, respin is needed
-        cluster_manager.set_needs_respin()
 
         assert cluster.g_query.get_epoch() == init_epoch, (
             "Epoch changed and it would affect other checks"
@@ -243,7 +263,7 @@ class TestHardfork:
             cluster_obj=cluster,
             governance_data=governance_data,
             name_template=f"{temp_template}_after_ratification",
-            payment_addr=pool_user_lg.payment,
+            payment_addr=pool_user_sg.payment,
             action_txid=action_txid,
             action_ix=action_ix,
             approve_cc=False,
@@ -279,7 +299,7 @@ class TestHardfork:
         assert enact_prev_action_rec.ix == action_ix, "Incorrect previous action index"
 
         enact_deposit_returned = cluster.g_query.get_stake_addr_info(
-            pool_user_lg.stake.address
+            pool_user_sg.stake.address
         ).reward_account_balance
 
         assert enact_deposit_returned == init_return_account_balance + deposit_amt, (
@@ -292,7 +312,7 @@ class TestHardfork:
                 cluster_obj=cluster,
                 governance_data=governance_data,
                 name_template=f"{temp_template}_enacted",
-                payment_addr=pool_user_lg.payment,
+                payment_addr=pool_user_sg.payment,
                 action_txid=action_txid,
                 action_ix=action_ix,
                 approve_cc=False,
