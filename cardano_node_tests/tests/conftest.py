@@ -437,8 +437,12 @@ def cluster_manager(
 
     yield cluster_manager_obj
 
-    errors = cluster_manager_obj.get_logfiles_errors()
-    cluster_manager_obj.on_test_stop()
+    # The test status records must be removed even when the log files check fails, otherwise
+    # the resources locked by the test would stay locked for the rest of the testrun
+    try:
+        errors = cluster_manager_obj.get_logfiles_errors()
+    finally:
+        cluster_manager_obj.on_test_stop()
     _raise_logs_error(errors)
 
 

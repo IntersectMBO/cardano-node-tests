@@ -63,8 +63,17 @@ ResourcesType = tp.Iterable[str | ResourceFilter]
 def get_resources(
     resources: ResourcesType,
     unavailable: tp.Iterable[str],
+    already_selected: tp.Iterable[str] = (),
 ) -> list[str]:
-    """Get resources that can be used or locked."""
+    """Get resources that can be used or locked.
+
+    Args:
+        resources: Named resources and resource filters to select from.
+        unavailable: Resources that cannot be selected.
+        already_selected: Resources that were already selected for the same test, e.g. for
+            locking when selecting resources for use. The filters don't select these again,
+            but the named resources can be among them.
+    """
     # The "named resources", i.e. resources specified by string, are always mandatory.
     # If any of these is not available, the selection cannot continue.
     named_resources = [r for r in resources if isinstance(r, str)]
@@ -75,7 +84,7 @@ def get_resources(
 
     # Execute filters on resources that are still available after satisfying the "named resources".
     # If any of the filters returns empty list, the selection cannot continue.
-    already_unavailable = {*unavailable, *named_resources}
+    already_unavailable = {*unavailable, *already_selected, *named_resources}
     resources_w_filter = [r for r in resources if not isinstance(r, str)]
     selected_resources: list[str] = []
     for res_filter in resources_w_filter:
