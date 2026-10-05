@@ -2,7 +2,7 @@
 
 The Leios testrun exercises the experimental Leios feature of `cardano-node` on the
 experimental Dijkstra era. It is a regular regression run with a different setup, plus the
-dedicated Leios tests in `cardano_node_tests/tests/test_leios_blocks.py`.
+dedicated Leios tests in `cardano_node_tests/tests/tests_dijkstra/test_leios_blocks.py`.
 
 ## The Leios Setup
 

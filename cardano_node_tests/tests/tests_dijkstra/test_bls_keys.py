@@ -14,8 +14,8 @@ from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
-from cardano_node_tests.tests import bls
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests.tests_dijkstra import bls
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
