@@ -71,59 +71,89 @@ def get_pool_id(
     return cluster_obj.g_stake_pool.get_stake_pool_id(node_cold.vkey_file)
 
 
-def cluster_and_pool(
+def cluster_and_pools(
     cluster_manager: cluster_management.ClusterManager,
+    *,
+    num: int = 1,
     use_resources: resources_management.ResourcesType = (),
-) -> tuple[clusterlib.ClusterLib, str]:
-    """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
+) -> tuple[clusterlib.ClusterLib, list[str]]:
+    """Return instance of `clusterlib.ClusterLib`, and IDs of `num` distinct pools.
 
-    We need to mark the pool as "in use" when requesting local cluster
-    instance, that's why cluster instance and pool id are tied together in
-    single fixture.
+    On local cluster, we need to mark the pools as "in use" when requesting the cluster
+    instance, so they cannot be retired or otherwise changed by other tests while being used.
+    That's why cluster instance and pool IDs are tied together.
+
+    On testnets, preference is given to well-known long-running pools. Otherwise the pools
+    are selected among the pools that are not retiring. This is only best-effort, as the
+    pools are not under our control.
     """
     cluster_type = cluster_nodes.get_cluster_type()
     if cluster_type.is_testnet:
         cluster_obj: clusterlib.ClusterLib = cluster_manager.get(use_resources=use_resources)
 
         # Getting ledger state on official testnet is too expensive,
-        # use one of hardcoded pool IDs if possible.
-        testnet_pools = None
+        # use hardcoded pool IDs if possible.
+        testnet_pools: tuple[str, ...] = ()
         if cluster_type.testnet_type == cluster_nodes.Testnets.preview:
             testnet_pools = PREVIEW_POOL_IDS
         elif cluster_type.testnet_type == cluster_nodes.Testnets.preprod:
             testnet_pools = PREPROD_POOL_IDS
         if testnet_pools:
-            stake_pools = cluster_obj.g_query.get_stake_pools()
-            for pool_id in testnet_pools:
-                if pool_id in stake_pools:
-                    return cluster_obj, pool_id
+            stake_pools = set(cluster_obj.g_query.get_stake_pools())
+            known_pool_ids = [p for p in testnet_pools if p in stake_pools]
+            if len(known_pool_ids) >= num:
+                return cluster_obj, known_pool_ids[:num]
 
         blocks_before = clusterlib_utils.get_blocks_before(cluster_obj=cluster_obj)
         # Sort pools by how many blocks they produce
         pool_ids_s = sorted(blocks_before, key=lambda x: blocks_before.get(x) or 0, reverse=True)
-        # Select a pool with reasonable margin
+        # Select pools with reasonable margin
+        pool_ids: list[str] = []
         for pool_id in pool_ids_s:
             pool_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id)
             if pool_params.pool_params["margin"] <= 0.5 and not pool_params.retiring:
-                break
+                pool_ids.append(pool_id)
+                if len(pool_ids) == num:
+                    break
         else:
-            pytest.skip("Cannot find any usable pool.")
+            pytest.skip(f"Cannot find {num} usable pool(s).")
     else:
         cluster_obj = cluster_manager.get(
             use_resources=[
-                resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
+                *[
+                    resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS)
+                    for __ in range(num)
+                ],
                 *use_resources,
             ]
         )
-        pool_name = cluster_manager.get_used_resources(
+        pool_names = cluster_manager.get_used_resources(
             from_set=cluster_management.Resources.ALL_POOLS
-        )[0]
-        pool_id = get_pool_id(
-            cluster_obj=cluster_obj,
-            addrs_data=cluster_manager.cache.addrs_data,
-            pool_name=pool_name,
         )
-    return cluster_obj, pool_id
+        assert len(pool_names) == num, f"Expecting {num} pool(s), got {pool_names}"
+        pool_ids = [
+            get_pool_id(
+                cluster_obj=cluster_obj,
+                addrs_data=cluster_manager.cache.addrs_data,
+                pool_name=p,
+            )
+            for p in pool_names
+        ]
+    return cluster_obj, pool_ids
+
+
+def cluster_and_pool(
+    cluster_manager: cluster_management.ClusterManager,
+    use_resources: resources_management.ResourcesType = (),
+) -> tuple[clusterlib.ClusterLib, str]:
+    """Return instance of `clusterlib.ClusterLib`, and pool id to delegate to.
+
+    See `cluster_and_pools`.
+    """
+    cluster_obj, pool_ids = cluster_and_pools(
+        cluster_manager=cluster_manager, num=1, use_resources=use_resources
+    )
+    return cluster_obj, pool_ids[0]
 
 
 def db_check_delegation(

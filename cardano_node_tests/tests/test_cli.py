@@ -18,6 +18,7 @@ from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
@@ -1180,16 +1181,11 @@ class TestAdvancedQueries:
 
     def _check_stake_snapshot(  # noqa: C901
         self,
-        cluster_manager: cluster_management.ClusterManager,
         cluster_obj: clusterlib.ClusterLib,
+        pool_ids: list[str],
         option: str,
         temp_template: str,
     ):
-        pool_ids = cluster_obj.g_query.get_stake_pools()
-        if not pool_ids:
-            pytest.skip("No stake pools are available.")
-
-        expected_pool_ids = []
         stake_snapshot = {}
         try:
             if option == "single_pool":
@@ -1200,15 +1196,9 @@ class TestAdvancedQueries:
                     stop=-3,
                 )
 
-                expected_pool_ids = [pool_ids[0]]
-                stake_snapshot = cluster_obj.g_query.get_stake_snapshot(
-                    stake_pool_ids=expected_pool_ids
-                )
+                stake_snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=pool_ids)
             elif option == "multiple_pools":
-                expected_pool_ids = [pool_ids[0], pool_ids[1]]
-                stake_snapshot = cluster_obj.g_query.get_stake_snapshot(
-                    stake_pool_ids=expected_pool_ids
-                )
+                stake_snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=pool_ids)
             elif option == "all_pools":
                 # Sleep till the end of epoch for stable stake distribution
                 clusterlib_utils.wait_for_epoch_interval(
@@ -1216,13 +1206,6 @@ class TestAdvancedQueries:
                     start=common.get_epoch_start_sec_ledger_state(cluster_obj=cluster_obj),
                     stop=common.EPOCH_STOP_SEC_LEDGER_STATE,
                 )
-                # Get up-to-date list of available pools
-                expected_pool_ids = [
-                    cluster_obj.g_stake_pool.get_stake_pool_id(
-                        cluster_manager.cache.addrs_data[p]["cold_key_pair"].vkey_file
-                    )
-                    for p in cluster_management.Resources.ALL_POOLS
-                ]
                 stake_snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
             else:
                 msg = f"Unknown option: {option}"
@@ -1230,7 +1213,7 @@ class TestAdvancedQueries:
         except json.decoder.JSONDecodeError:
             issues.node_3859.finish_test()
 
-        expected_pool_ids_mapping = {p: helpers.decode_bech32(bech32=p) for p in expected_pool_ids}
+        expected_pool_ids_mapping = {p: helpers.decode_bech32(bech32=p) for p in pool_ids}
 
         def _dump_on_error():
             if cluster_nodes.get_cluster_type().is_local:
@@ -1359,11 +1342,39 @@ class TestAdvancedQueries:
                 node_4895.finish_test()
 
     @pytest.fixture
-    def pool_ids(self, cluster: clusterlib.ClusterLib) -> list[str]:
-        stake_pool_ids = cluster.g_query.get_stake_pools()
-        if not stake_pool_ids:
-            pytest.skip("No stake pools are available.")
-        return stake_pool_ids
+    def cluster_and_pool(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> tuple[clusterlib.ClusterLib, str]:
+        """Return cluster instance and ID of a pool that is not going to be retired."""
+        return delegation.cluster_and_pool(cluster_manager=cluster_manager)
+
+    @pytest.fixture
+    def cluster_and_snapshot_pools(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        option: str,
+    ) -> tuple[clusterlib.ClusterLib, list[str]]:
+        """Return cluster instance and IDs of pools to query stake snapshot for.
+
+        On local cluster, the pools are marked as "in use", so they cannot be retired by other
+        tests. On testnets, the selection of pools that are not retiring is only best-effort.
+        """
+        if option == "all_pools":
+            # Mark all cluster pools as "in use", so none of them gets retired during the test
+            cluster_obj = cluster_manager.get(use_resources=cluster_management.Resources.ALL_POOLS)
+            pool_ids = [
+                delegation.get_pool_id(
+                    cluster_obj=cluster_obj,
+                    addrs_data=cluster_manager.cache.addrs_data,
+                    pool_name=p,
+                )
+                for p in cluster_management.Resources.ALL_POOLS
+            ]
+            return cluster_obj, pool_ids
+
+        num = 2 if option == "multiple_pools" else 1
+        return delegation.cluster_and_pools(cluster_manager=cluster_manager, num=num)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
@@ -1405,8 +1416,7 @@ class TestAdvancedQueries:
     @pytest.mark.dbsync
     def test_stake_snapshot(
         self,
-        cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
+        cluster_and_snapshot_pools: tuple[clusterlib.ClusterLib, list[str]],
         option: str,
     ):
         """Query stake snapshot for pools and validate structure.
@@ -1414,16 +1424,17 @@ class TestAdvancedQueries:
         Test parametrized to query single pool, multiple pools, or all pools.
         See also `TestLedgerState.test_stake_snapshot` for comprehensive ledger state validation.
 
-        * Get stake pool IDs from cluster
+        * Select stake pools that are not going to be retired during the test
         * Execute `cardano-cli query stake-snapshot` with specified pool filter (option parameter)
         * Verify response contains expected snapshot fields (stakeMark, stakeSet, stakeGo)
         * Check pool stake totals match expected values
         * (optional) Validate stake distribution against db-sync for single_pool option
         """
+        cluster, pool_ids = cluster_and_snapshot_pools
         temp_template = common.get_test_id(cluster)
         self._check_stake_snapshot(
-            cluster_manager=cluster_manager,
             cluster_obj=cluster,
+            pool_ids=pool_ids,
             option=option,
             temp_template=temp_template,
         )
@@ -1431,24 +1442,26 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_pool_params(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
+    def test_pool_params(self, cluster_and_pool: tuple[clusterlib.ClusterLib, str]):
         """Query pool parameters and validate structure.
 
         Test that pool-params query returns expected pool configuration fields.
 
-        * Get first available pool ID from cluster
+        * Select a pool that is not going to be retired during the test
         * Execute `cardano-cli query pool-params` command for pool
-        * Verify response contains expected "retiring" field
+        * Verify response contains pool parameters and expected "retiring" field
         * Check that pool parameters JSON can be parsed successfully
         """
+        cluster, pool_id = cluster_and_pool
         common.get_test_id(cluster)
 
         try:
-            pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_ids[0])
+            pool_params = cluster.g_query.get_pool_params(stake_pool_id=pool_id)
         except json.decoder.JSONDecodeError:
             issues.node_3859.finish_test()
             raise
 
+        assert pool_params.pool_params, "No pool parameters returned"
         assert hasattr(pool_params, "retiring")
 
     @allure.link(helpers.get_vcs_link())
@@ -1496,20 +1509,22 @@ class TestAdvancedQueries:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.smoke
     @pytest.mark.testnets
-    def test_pool_state(self, cluster: clusterlib.ClusterLib, pool_ids: list[str]):
+    def test_pool_state(self, cluster_and_pool: tuple[clusterlib.ClusterLib, str]):
         """Query pool state and validate structure.
 
         Test that pool-state query returns expected pool runtime state fields.
 
-        * Get first available pool ID from cluster
+        * Select a pool that is not going to be retired during the test
         * Execute `cardano-cli query pool-state` command for pool
-        * Verify response contains expected "retiring" field
+        * Verify response contains pool parameters and expected "retiring" field
         * Check that pool state can be retrieved successfully
         """
+        cluster, pool_id = cluster_and_pool
         common.get_test_id(cluster)
 
-        pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_ids[0])
+        pool_params = cluster.g_query.get_pool_state(stake_pool_id=pool_id)
 
+        assert pool_params.pool_params, "No pool parameters returned"
         assert hasattr(pool_params, "retiring")
 
 

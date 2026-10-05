@@ -8,7 +8,6 @@ from cardano_clusterlib import clusterlib
 from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
-from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
@@ -46,23 +45,10 @@ def cluster_and_two_pools(
     cluster_manager: cluster_management.ClusterManager,
 ) -> tuple[clusterlib.ClusterLib, str, str]:
     """Return instance of `clusterlib.ClusterLib` and two pools."""
-    cluster_obj = cluster_manager.get(
-        use_resources=[
-            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
-            resources_management.OneOf(resources=cluster_management.Resources.ALL_POOLS),
-        ]
+    cluster_obj, (pool1_id, pool2_id) = delegation.cluster_and_pools(
+        cluster_manager=cluster_manager, num=2
     )
-    pool_names = cluster_manager.get_used_resources(from_set=cluster_management.Resources.ALL_POOLS)
-    pool_ids = [
-        delegation.get_pool_id(
-            cluster_obj=cluster_obj,
-            addrs_data=cluster_manager.cache.addrs_data,
-            pool_name=p,
-        )
-        for p in pool_names
-    ]
-    assert len(pool_ids) == 2, "Expecting two pools"
-    return cluster_obj, pool_ids[0], pool_ids[1]
+    return cluster_obj, pool1_id, pool2_id
 
 
 @pytest.fixture
@@ -1343,9 +1329,9 @@ class TestNegative:
     @pytest.mark.smoke
     def test_legacy_stake_delegation_rejected_in_conway(
         self,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-        pool_users_disposable: list[clusterlib.PoolUser],
+        cluster_and_pool: tuple[clusterlib.ClusterLib, str],
+        pool_users_cluster_and_pool: list[clusterlib.PoolUser],
+        pool_users_disposable_cluster_and_pool: list[clusterlib.PoolUser],
         era: EraName,
     ):
         """Reject legacy stake address delegation in Conway.
@@ -1356,10 +1342,11 @@ class TestNegative:
         * Attempt to submit the legacy certificate in a Conway-era transaction.
         * Expect the transaction submission to fail with a TextEnvelope type error.
         """
+        cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        user_registered = pool_users_disposable[0]
-        user_payment = pool_users[0].payment
+        user_registered = pool_users_disposable_cluster_and_pool[0]
+        user_payment = pool_users_cluster_and_pool[0].payment
 
         # Register stake address using Conway commands
         clusterlib_utils.register_stake_address(
@@ -1368,11 +1355,6 @@ class TestNegative:
             name_template=f"{temp_template}_{era}_reg",
             deposit_amt=cluster.g_query.get_address_deposit(),
         )
-
-        # Use an existing registered pool
-        pool_ids = cluster.g_query.get_stake_pools()
-        assert pool_ids, "No registered stake pools available on this testnet"
-        pool_id = pool_ids[0]
 
         # Generate legacy delegation cert via compatible CLI
         era_api = getattr(cluster.g_compatible, era)
@@ -1385,7 +1367,7 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(
             certificate_files=[legacy_stake_deleg_cert],
             signing_key_files=[
-                pool_users[0].payment.skey_file,
+                user_payment.skey_file,
                 user_registered.stake.skey_file,
             ],
         )
@@ -1393,7 +1375,7 @@ class TestNegative:
         err_str = ""
         try:
             cluster.g_transaction.send_tx(
-                src_address=pool_users[0].payment.address,
+                src_address=user_payment.address,
                 tx_name=f"{temp_template}_{era}_legacy_deleg",
                 tx_files=tx_files,
             )
