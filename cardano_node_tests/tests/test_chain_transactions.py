@@ -11,6 +11,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
@@ -97,11 +98,18 @@ def _repeat_submit(cluster_obj: clusterlib.ClusterLib, tx_file: pl.Path) -> str:
 class TestTxChaining:
     @pytest.fixture
     def cluster(self, cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
+        """Lock the whole cluster instance.
+
+        The test checks how many blocks the chained Txs take, so Txs of other tests must not
+        take the block space. The Txs also fill the mempool, which would slow down the
+        submission of Txs of other tests.
+        """
         return cluster_manager.get(
-            lock_resources=[cluster_management.Resources.PERF],
+            lock_resources=[cluster_management.Resources.CLUSTER],
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.dbsync
     def test_tx_chaining(
         self,

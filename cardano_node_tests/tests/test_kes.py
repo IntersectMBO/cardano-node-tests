@@ -772,7 +772,7 @@ class TestKES:
     @allure.link(helpers.get_vcs_link())
     def test_no_kes_period_arg(
         self,
-        cluster: clusterlib.ClusterLib,
+        cluster_use_pool: tuple[clusterlib.ClusterLib, str],
         cluster_manager: cluster_management.ClusterManager,
     ):
         """Try to generate new operational certificate without specifying the `--kes-period`.
@@ -780,16 +780,21 @@ class TestKES:
         Test that operational certificate generation fails when required `--kes-period` argument
         is not provided. Expect failure.
 
-        * Get pool KES verification key, cold signing key, and counter file from pool2
+        * Get pool KES verification key, cold signing key, and a copy of counter file
         * Attempt to execute `cardano-cli node issue-op-cert` without --kes-period argument
         * Check that command fails with "Missing: --kes-period NATURAL" error
         * Verify operational certificate file was not created
         """
-        pool_name = cluster_management.Resources.POOL2
+        cluster, pool_name = cluster_use_pool
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         temp_template = common.get_test_id(cluster)
         out_file = pl.Path(f"{temp_template}_shouldnt_exist.opcert")
+
+        # The command would increment the counter if it succeeded, so don't pass it the shared
+        # counter file of the cluster pool
+        counter_file = pl.Path(f"{temp_template}_cold.counter")
+        shutil.copyfile(pool_rec["cold_key_pair"].counter_file, counter_file)
 
         # Try to generate new operational certificate without specifying the `--kes-period`
         with pytest.raises(clusterlib.CLIError) as excinfo:
@@ -802,7 +807,7 @@ class TestKES:
                     "--cold-signing-key-file",
                     str(pool_rec["cold_key_pair"].skey_file),
                     "--operational-certificate-issue-counter",
-                    str(pool_rec["cold_key_pair"].counter_file),
+                    str(counter_file),
                     "--out-file",
                     str(out_file),
                 ]
@@ -817,7 +822,7 @@ class TestKES:
     @pytest.mark.smoke
     def test_negative_kes_period_arg(
         self,
-        cluster: clusterlib.ClusterLib,
+        cluster_use_pool: tuple[clusterlib.ClusterLib, str],
         cluster_manager: cluster_management.ClusterManager,
     ):
         """Try to generate new operational certificate with a negative value for `--kes-period`.
@@ -825,16 +830,21 @@ class TestKES:
         Test that operational certificate generation fails when --kes-period is set to a
         negative value. Expect failure.
 
-        * Get pool KES verification key, cold signing key, and counter file from pool2
+        * Get pool KES verification key, cold signing key, and a copy of counter file
         * Attempt to generate operational certificate with --kes-period set to -100
         * Check that generation fails with "KES_PERIOD must not be less than 0" error
         """
-        common.get_test_id(cluster)
+        cluster, pool_name = cluster_use_pool
+        temp_template = common.get_test_id(cluster)
 
-        pool_name = cluster_management.Resources.POOL2
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         node_name = pool_name.replace("node-", "")
+
+        # The command would increment the counter if it succeeded, so don't pass it the shared
+        # counter file of the cluster pool
+        counter_file = pl.Path(f"{temp_template}_cold.counter")
+        shutil.copyfile(pool_rec["cold_key_pair"].counter_file, counter_file)
 
         # Generate new operational certificate with negative value for `--kes-period`
         invalid_kes_period = -100
@@ -844,7 +854,7 @@ class TestKES:
                 node_name=f"{node_name}_invalid_opcert_file",
                 kes_vkey_file=pool_rec["kes_key_pair"].vkey_file,
                 cold_skey_file=pool_rec["cold_key_pair"].skey_file,
-                cold_counter_file=pool_rec["cold_key_pair"].counter_file,
+                cold_counter_file=counter_file,
                 kes_period=invalid_kes_period,
             )
         except clusterlib.CLIError as exc:
