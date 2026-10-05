@@ -218,7 +218,7 @@ class TestLeadershipSchedule:
     def test_unstable_stake_distribution(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
+        cluster_use_pool: tuple[clusterlib.ClusterLib, str],
     ):
         """Try to query leadership schedule for next epoch when stake distribution is unstable.
 
@@ -233,9 +233,9 @@ class TestLeadershipSchedule:
         * Attempt to query leadership schedule for next epoch using pool VRF and cold keys
         * Check that query fails with error message about unstable stake distribution
         """
+        cluster, pool_name = cluster_use_pool
         common.get_test_id(cluster)
 
-        pool_name = cluster_management.Resources.POOL3
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
 
         # Wait for epoch interval where stake distribution for next epoch is unstable,
