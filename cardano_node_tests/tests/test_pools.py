@@ -2082,6 +2082,24 @@ class TestPoolCost:
 class TestNegative:
     """Stake pool tests that are expected to fail."""
 
+    @staticmethod
+    def _get_pool_users(
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_obj: clusterlib.ClusterLib,
+        caching_key: str,
+    ) -> list[clusterlib.PoolUser]:
+        """Create pool users."""
+        return addrs_common.get_pool_users(
+            name_template=common.get_test_id(cluster_obj),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster_obj,
+            num=2,
+            fund_idx=[0],
+            caching_key=caching_key,
+            amount=900_000_000,
+            min_amount=600_000_000,
+        )
+
     @pytest.fixture
     def pool_users(
         self,
@@ -2089,17 +2107,36 @@ class TestNegative:
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.PoolUser]:
         """Create pool users."""
-        created_users = addrs_common.get_pool_users(
-            name_template=common.get_test_id(cluster),
+        return self._get_pool_users(
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
-            num=2,
-            fund_idx=[0],
             caching_key=helpers.get_current_line_str(),
-            amount=900_000_000,
-            min_amount=600_000_000,
         )
-        return created_users
+
+    @pytest.fixture
+    def cluster_use_pool1(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+    ) -> clusterlib.ClusterLib:
+        """Mark the first cluster pool as "in use".
+
+        Tests that lock a pool can retire it and register it again with the same VRF key.
+        While the pool is retired, its VRF key is free to be registered by another pool.
+        """
+        return cluster_manager.get(use_resources=[cluster_management.Resources.POOL1])
+
+    @pytest.fixture
+    def pool_users_pool1(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_use_pool1: clusterlib.ClusterLib,
+    ) -> list[clusterlib.PoolUser]:
+        """Create pool users on a cluster instance with the first cluster pool "in use"."""
+        return self._get_pool_users(
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster_use_pool1,
+            caching_key=helpers.get_current_line_str(),
+        )
 
     @pytest.fixture
     def pool_data(self) -> clusterlib.PoolData:
@@ -2247,8 +2284,8 @@ class TestNegative:
     def test_pool_registration_used_vrf_key(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
+        cluster_use_pool1: clusterlib.ClusterLib,
+        pool_users_pool1: list[clusterlib.PoolUser],
         pool_data: clusterlib.PoolData,
         testfile_temp_dir: pl.Path,
         request: FixtureRequest,
@@ -2276,6 +2313,7 @@ class TestNegative:
 
         Expect failure.
         """
+        cluster = cluster_use_pool1
         temp_template = common.get_test_id(cluster)
 
         protocol_ver = cluster.g_query.get_protocol_params()["protocolVersion"]["major"]
@@ -2286,8 +2324,10 @@ class TestNegative:
             )
 
         # The VRF key of an already registered pool, taken from the cluster itself. The
-        # pool needs no lock: only its VRF verification key is read, and the pool this
-        # test may create out of it has no stake and so never forges a block.
+        # pool is marked as "in use" by the fixture, so it cannot be retired during the
+        # test - while retired, its VRF key could be registered by this test's pool, and the
+        # re-registration of the retired pool would then fail. The pool this test may
+        # create out of the VRF key has no stake and so never forges a block.
         used_pool_rec = cluster_manager.cache.addrs_data[cluster_management.Resources.POOL1]
         used_vrf_vkey_file = used_pool_rec["vrf_key_pair"].vkey_file
 
@@ -2297,7 +2337,7 @@ class TestNegative:
             pool_data=pool_data,
             vrf_vkey_file=used_vrf_vkey_file,
             cold_vkey_file=node_cold.vkey_file,
-            owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
+            owner_stake_vkey_files=[pool_users_pool1[0].stake.vkey_file],
             bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
@@ -2306,15 +2346,15 @@ class TestNegative:
         tx_files = clusterlib.TxFiles(
             certificate_files=[pool_reg_cert_file],
             signing_key_files=[
-                pool_users[0].payment.skey_file,
-                pool_users[0].stake.skey_file,
+                pool_users_pool1[0].payment.skey_file,
+                pool_users_pool1[0].stake.skey_file,
                 node_cold.skey_file,
             ],
         )
 
         try:
             cluster.g_transaction.send_tx(
-                src_address=pool_users[0].payment.address,
+                src_address=pool_users_pool1[0].payment.address,
                 tx_name=f"{temp_template}_used_vrf_key",
                 tx_files=tx_files,
             )
@@ -2333,7 +2373,7 @@ class TestNegative:
             depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
-                    pool_owners=[pool_users[0]],
+                    pool_owners=[pool_users_pool1[0]],
                     cold_key_pair=node_cold,
                     epoch=cluster.g_query.get_epoch() + depoch,
                     pool_name=pool_data.pool_name,
@@ -3091,6 +3131,13 @@ class TestPoolVoteDeleg:
             pools: list[clusterlib.PoolCreationOutput],  # noqa: ARG001
         ):
             """Check that data in "all pools" query matches data from indidual pool queries."""
+            # The stake distribution changes on epoch boundary, and other tests can retire
+            # their pools there. Make sure the queries happen in the same epoch.
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=cluster,
+                start=1,
+                stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
+            )
             all_records = cluster.g_query.get_spo_stake_distribution()
             for r in all_records:
                 single_rec = cluster.g_query.get_spo_stake_distribution(spo_key_hash=r.spo_vkey_hex)

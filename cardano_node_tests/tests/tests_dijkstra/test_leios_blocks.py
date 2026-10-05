@@ -112,11 +112,39 @@ QUORUM_RECOVERY_SEARCH_SEC = 2 * leios.MAX_SEARCH_SEC
 EPOCH_TAIL_SEC = leios.MAX_SEARCH_SEC + leios.EPOCH_MARGIN_SEC
 
 
+def _get_cluster_leios(
+    cluster_manager: cluster_management.ClusterManager, use_resources: tp.Iterable[str] = ()
+) -> clusterlib.ClusterLib:
+    """Return a cluster instance that is able to produce Leios endorser blocks.
+
+    All cluster pools are marked as "in use". The tests rely on every cluster pool being on
+    the voting committee, and a pool retired by another test would leave it.
+    """
+    cluster_obj = cluster_manager.get(
+        use_resources=[*cluster_management.Resources.ALL_POOLS, *use_resources]
+    )
+    leios.skip_if_no_ebs(cluster_obj=cluster_obj)
+    return cluster_obj
+
+
 @pytest.fixture
-def cluster_leios(cluster: clusterlib.ClusterLib) -> clusterlib.ClusterLib:
+def cluster_leios(cluster_manager: cluster_management.ClusterManager) -> clusterlib.ClusterLib:
     """Return a cluster instance that is able to produce Leios endorser blocks."""
-    leios.skip_if_no_ebs(cluster_obj=cluster)
-    return cluster
+    return _get_cluster_leios(cluster_manager=cluster_manager)
+
+
+@pytest.fixture
+def cluster_leios_perf(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Return a cluster instance that is able to produce Leios endorser blocks.
+
+    Mark also the performance as "in use", so tests generating heavy load don't run at the
+    same time and don't take the block space.
+    """
+    return _get_cluster_leios(
+        cluster_manager=cluster_manager, use_resources=[cluster_management.Resources.PERF]
+    )
 
 
 @pytest.fixture(scope="module")
@@ -944,7 +972,7 @@ class TestLeiosEbTxs:
     def test_txs_in_certified_eb(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_leios: clusterlib.ClusterLib,
+        cluster_leios_perf: clusterlib.ClusterLib,
     ):
         """Check that txs that don't fit into an RB reach the ledger through a certified EB.
 
@@ -982,7 +1010,7 @@ class TestLeiosEbTxs:
           the RB is still on every chain - skip as inconclusive when one did, as the log
           doesn't say where the chains split
         """
-        cluster = cluster_leios
+        cluster = cluster_leios_perf
         temp_template = common.get_test_id(cluster)
 
         if not leios.is_committee_seated_in_genesis(cluster_obj=cluster):
