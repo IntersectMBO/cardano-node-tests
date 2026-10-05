@@ -188,6 +188,10 @@ def cluster_leios_singleton(
             f"the {epoch_tail_sec} sec search window"
         )
 
+    # The test waits for up to 6.5 epochs: up to `leios.VOTING_START_EPOCH` epochs, then
+    # `bls.BLS_ACTIVATION_EPOCHS` epochs, and ~20 min of log searches and node restarts
+    common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=6.5)
+
     cluster_manager.set_needs_respin()
     return cluster_obj
 
@@ -1258,9 +1262,6 @@ class TestBlsKeyRotationVoting:
           the rotation is seated - and check that the pool votes again
         """
         cluster = cluster_leios_singleton
-        # Waits for up to 6.5 epochs: up to `leios.VOTING_START_EPOCH` epochs, then
-        # `bls.BLS_ACTIVATION_EPOCHS` epochs, and ~20 min of log searches and node restarts
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=6.5)
         temp_template = common.get_test_id(cluster)
 
         pool_name = cluster_management.Resources.POOL_FOR_OFFLINE

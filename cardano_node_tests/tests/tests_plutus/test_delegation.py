@@ -44,11 +44,15 @@ pytestmark = [
 @pytest.fixture
 def cluster_lock_42stake(
     cluster_manager: cluster_management.ClusterManager,
-) -> tuple[clusterlib.ClusterLib, str]:
+) -> tp.Generator[tuple[clusterlib.ClusterLib, str]]:
     """Make sure just one staking Plutus test run at a time.
 
     Plutus script always has the same address. When one script is used in multiple
     tests that are running in parallel, the balances etc. don't add up.
+
+    When a test fails before deregistering the Plutus script stake address, the address
+    stays registered and all the following tests using the script would be skipped.
+    Respin the cluster instance in such case.
     """
     plutus_script = (
         plutus_common.STAKE_PLUTUS_V2
@@ -72,7 +76,14 @@ def cluster_lock_42stake(
         addrs_data=cluster_manager.cache.addrs_data,
         pool_name=pool_name,
     )
-    return cluster_obj, pool_id
+    yield cluster_obj, pool_id
+
+    script_stake_address = cluster_obj.g_stake_address.gen_stake_addr(
+        addr_name=f"script_stake_check_{clusterlib.get_rand_str(4)}",
+        stake_script_file=plutus_script,
+    )
+    if cluster_obj.g_query.get_stake_addr_info(script_stake_address):
+        cluster_manager.set_needs_respin()
 
 
 @pytest.fixture

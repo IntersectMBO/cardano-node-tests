@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import time
-import typing as tp
 
 import allure
 import pytest
@@ -82,16 +81,14 @@ def skip_on_no_env(
 @pytest.fixture
 def set_network_id_env(
     cluster: clusterlib.ClusterLib,
-) -> tp.Generator[None]:
-    """Set `CARDANO_NODE_NETWORK_ID` and prevent `cardano-cli` from using `--testnet-magic`."""
-    magic_args = cluster.magic_args[:]
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Set `CARDANO_NODE_NETWORK_ID` and prevent `cardano-cli` from using `--testnet-magic`.
 
-    os.environ["CARDANO_NODE_NETWORK_ID"] = str(cluster.network_magic)
-    cluster.magic_args = []
-    yield
-    if os.environ.get("CARDANO_NODE_NETWORK_ID"):
-        del os.environ["CARDANO_NODE_NETWORK_ID"]
-    cluster.magic_args = magic_args
+    The original values are restored after the test, also when the test changed them.
+    """
+    monkeypatch.setenv("CARDANO_NODE_NETWORK_ID", str(cluster.network_magic))
+    monkeypatch.setattr(cluster, "magic_args", [])
 
 
 @pytest.fixture

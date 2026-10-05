@@ -399,11 +399,12 @@ class TestRollback:
         split_block = cluster.g_query.get_block_no() + 10
         final_block = split_block + cluster.genesis["securityParam"]
 
+        # The cluster needs respin after this point. Request the respin before the split, so
+        # it is requested even when the split fails half-way.
+        cluster_manager.set_needs_respin()
+
         # Split the cluster into two separate clusters
         self.split_cluster(split_topology_dir=split_topology_dir)
-
-        # The cluster needs respin after this point
-        cluster_manager.set_needs_respin()
 
         # Submit a Tx number 2 on the first cluster
         tx_outputs.append(
