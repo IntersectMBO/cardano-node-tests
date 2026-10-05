@@ -14,6 +14,7 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import mint_build
@@ -21,6 +22,7 @@ from cardano_node_tests.tests.tests_plutus.mint_build import _fund_issuer
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import submit_api
 from cardano_node_tests.utils import submit_utils
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -182,6 +184,13 @@ class TestBuildMintingNegative:
                 txins=mint_utxos,
             )
         exc_value = str(excinfo.value)
+        # cardano-submit-api has no Dijkstra decoder, and the Conway one cannot
+        # decode required signers in the Dijkstra format
+        if (
+            VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+            and "DecoderErrorDeserialiseFailure" in exc_value
+        ):
+            issues.node_6719.finish_test()
         with common.allow_unstable_error_messages():
             assert (
                 "MissingRequiredSigners" in exc_value  # on node version < 8.8.0
