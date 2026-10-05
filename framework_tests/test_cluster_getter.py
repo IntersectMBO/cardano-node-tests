@@ -1069,6 +1069,136 @@ def test_respin_if_armed_failure(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.usefixtures("db_dir")
+def test_respin_if_armed_raises(monkeypatch: pytest.MonkeyPatch):
+    """Check that a respin that raised marks the cluster instance dead.
+
+    Without the dead flag, nothing would remove the "respin in progress" record and the
+    cluster instance would stay unusable for the rest of the testrun.
+    """
+    getter = _get_cluster_getter()
+    cget_status = _get_cget_status()
+    cget_status.respin = _get_claim(instance_num=0, phase=cluster_getter._RespinPhase.ARMED)
+
+    def _raising_respin(scriptsdir: ttypes.FileType = "") -> bool:  # noqa: ARG001
+        msg = "cannot prepare startup scripts"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(getter, "_respin", _raising_respin)
+
+    with pytest.raises(RuntimeError, match="cannot prepare startup scripts"):
+        getter._respin_if_armed(cget_status)
+
+    assert status_db.is_cluster_dead(instance_num=0)
+    assert cget_status.respin is not None
+    assert cget_status.respin.phase is cluster_getter._RespinPhase.RESPUN
+
+
+@pytest.mark.usefixtures("db_dir")
+class TestAbandonGet:
+    """Tests for `ClusterGetter._abandon_get`."""
+
+    def test_nothing_to_abandon(self):
+        """Check that records of other workers are left alone."""
+        getter = _get_cluster_getter()
+        status_db.create_prio_in_progress(worker_id="gw1")
+        status_db.create_respin_progress(instance_num=0, worker_id="gw1")
+
+        getter._abandon_get(_get_cget_status())
+
+        assert len(status_db.list_prio_in_progress()) == 1
+        assert len(status_db.list_respin_progress(instance_num=0)) == 1
+        assert status_db.list_respin_needed(instance_num=0) == []
+
+    def test_prio_removed(self):
+        """Check that the "prio" record of this worker is removed."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status()
+        cget_status.prio = True
+        getter._init_prio(cget_status)
+        status_db.create_prio_in_progress(worker_id="gw1")
+
+        getter._abandon_get(cget_status)
+
+        assert [r.worker_id for r in status_db.list_prio_in_progress()] == ["gw1"]
+
+    def test_respin_handed_back(self):
+        """Check that a claimed respin is handed back as "needs respin"."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status()
+        status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+        cget_status.claim_respin(0)
+
+        getter._abandon_get(cget_status)
+
+        assert status_db.list_respin_progress(instance_num=0) == []
+        assert len(status_db.list_respin_needed(instance_num=0)) == 1
+        assert cget_status.respin is None
+
+    def test_respin_dead_not_handed_back(self):
+        """Check that the respin of a dead cluster instance is not handed back."""
+        getter = _get_cluster_getter()
+        cget_status = _get_cget_status()
+        status_db.set_cluster_dead(instance_num=0)
+        status_db.create_respin_progress(instance_num=0, worker_id="gw0")
+        cget_status.claim_respin(0)
+
+        getter._abandon_get(cget_status)
+
+        assert status_db.list_respin_progress(instance_num=0) == []
+        assert status_db.list_respin_needed(instance_num=0) == []
+        assert cget_status.respin is None
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_get_cluster_instance_raises_prio_removed(monkeypatch: pytest.MonkeyPatch):
+    """Check that a priority test that fails to obtain a cluster instance removes its "prio".
+
+    The worker stays alive, so the stale records cleanup would never remove the record and
+    all other workers would wait for the priority test until they time out.
+    """
+    getter = _get_cluster_getter()
+
+    def _raising_try_instances(*_args: tp.Any, **_kwargs: tp.Any) -> tp.NoReturn:
+        msg = "unexpected failure"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(getter, "_try_instances", _raising_try_instances)
+    # Make the test independent of the environment it runs in
+    monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
+    monkeypatch.setattr(configuration, "FORBID_RESPIN", False)
+
+    with pytest.raises(RuntimeError, match="unexpected failure"):
+        getter.get_cluster_instance(prio=True)
+
+    assert status_db.list_prio_in_progress() == []
+
+
+@pytest.mark.usefixtures("db_dir")
+def test_get_cluster_instance_respin_raises(monkeypatch: pytest.MonkeyPatch):
+    """Check that a respin that raised doesn't leave the "respin in progress" record behind."""
+    getter = _get_cluster_getter()
+
+    def _raising_respin(scriptsdir: ttypes.FileType = "") -> bool:  # noqa: ARG001
+        msg = "cannot prepare startup scripts"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(getter, "_respin", _raising_respin)
+    monkeypatch.setattr(cluster_getter.cluster_nodes, "set_cluster_env", lambda **_kwargs: None)
+    # Make the test independent of the environment it runs in
+    monkeypatch.setattr(configuration, "DEV_CLUSTER_RUNNING", False)
+    monkeypatch.setattr(configuration, "FORBID_RESPIN", False)
+
+    with pytest.raises(RuntimeError, match="cannot prepare startup scripts"):
+        getter.get_cluster_instance(prio=True)
+
+    assert status_db.is_cluster_dead(instance_num=0)
+    assert status_db.list_respin_progress(instance_num=0) == []
+    # The dead cluster instance cannot be respun, so the respin is not handed back
+    assert status_db.list_respin_needed(instance_num=0) == []
+    assert status_db.list_prio_in_progress() == []
+
+
+@pytest.mark.usefixtures("db_dir")
 class TestEvaluateInstance:
     """Check the evaluation of a single cluster instance for the current test."""
 

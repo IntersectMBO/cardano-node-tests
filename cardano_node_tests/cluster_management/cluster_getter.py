@@ -742,6 +742,39 @@ class ClusterGetter:
         cget_status.prio_here = True
         self.log(f"setting 'prio' for '{cget_status.current_test}'")
 
+    def _abandon_get(self, cget_status: _ClusterGetStatus) -> None:
+        """Remove status records of this worker when it gives up obtaining a cluster instance.
+
+        The records are otherwise removed only once the test starts, and the stale records
+        cleanup ignores them as long as the worker process is alive:
+
+        * the "prio" record would keep all other workers waiting for this priority test
+        * the "respin in progress" record of a claimed respin would keep all other
+          workers away from the cluster instance. The respin is handed back as "needs
+          respin", so other workers perform it once the cluster instance is idle. When
+          the respin was already performed, the cluster instance is respun once more,
+          which is wasteful but safe. A dead cluster instance cannot be respun, so its
+          respin is not handed back.
+        """
+        claim = cget_status.respin
+        if not (cget_status.prio_here or claim):
+            return
+
+        with locking.FileLockIfXdist(self.cluster_lock):
+            if cget_status.prio_here:
+                self.log(f"removing 'prio' of '{cget_status.current_test}'")
+                status_db.rm_prio_in_progress(worker_id=self.worker_id)
+            if claim:
+                self.log(f"c{claim.instance_num}: handing back the claimed respin")
+                status_db.rm_respin_progress(
+                    instance_num=claim.instance_num, worker_id=self.worker_id
+                )
+                if not status_db.is_cluster_dead(instance_num=claim.instance_num):
+                    status_db.create_respin_needed(
+                        instance_num=claim.instance_num, worker_id=self.worker_id
+                    )
+                cget_status.respin = None
+
     def _being_respun_by_other_worker(
         self, cget_status: _ClusterGetStatus, instance_num: int
     ) -> bool:
@@ -956,14 +989,26 @@ class ClusterGetter:
         restarted exactly once per claim, even when a later iteration re-enters
         before the cleanup. The move happens also when the respin fails - the
         failure marks the cluster dead and the dead cluster check handles the
-        recovery on the next iteration.
+        recovery on the next iteration. When `_respin` raises, the cluster is marked
+        dead as well and the exception leaves `get_cluster_instance`, where
+        `_abandon_get` removes the "respin in progress" record of this worker.
         """
         claim = cget_status.respin
         if claim is None or claim.phase is not _RespinPhase.ARMED:
             return
 
-        self._respin(scriptsdir=cget_status.scriptsdir)
-        claim.phase = _RespinPhase.RESPUN
+        try:
+            self._respin(scriptsdir=cget_status.scriptsdir)
+        except BaseException:
+            # A respin that raised instead of returning (e.g. the startup scripts could
+            # not be prepared) leaves the cluster instance in unknown state. Mark it dead,
+            # same as when the cluster fails to start. The failure can be permanent (e.g.
+            # 'FORBID_RESPIN' is set), so the respin is not handed back for other workers
+            # to retry.
+            status_db.set_cluster_dead(instance_num=claim.instance_num)
+            raise
+        finally:
+            claim.phase = _RespinPhase.RESPUN
 
     def _cleanup_after_respin(self, cget_status: _ClusterGetStatus) -> None:
         """Clean up after the respin of this cluster instance was performed.
@@ -1389,71 +1434,76 @@ class ClusterGetter:
         now = time.monotonic()
         deadline_soft = now + self.grace_period_soft
         deadline_hard = now + self.grace_period_hard
-        while True:
-            now = time.monotonic()
-            remaining_soft = deadline_soft - now
-            remaining_hard = deadline_hard - now
+        try:
+            while True:
+                now = time.monotonic()
+                remaining_soft = deadline_soft - now
+                remaining_hard = deadline_hard - now
 
-            # Timeout after soft grace period if no cluster instance was selected yet
-            if cget_status.selected_instance == -1 and remaining_soft <= 0:
-                msg = "Timeout (soft) while waiting to obtain cluster instance."
-                raise TimeoutError(msg)
-            # Timeout after hard grace period even if cluster instance was already selected
-            if remaining_hard <= 0:
-                msg = "Timeout (hard) while waiting to obtain cluster instance."
-                raise TimeoutError(msg)
+                # Timeout after soft grace period if no cluster instance was selected yet
+                if cget_status.selected_instance == -1 and remaining_soft <= 0:
+                    msg = "Timeout (soft) while waiting to obtain cluster instance."
+                    raise TimeoutError(msg)
+                # Timeout after hard grace period even if cluster instance was already selected
+                if remaining_hard <= 0:
+                    msg = "Timeout (hard) while waiting to obtain cluster instance."
+                    raise TimeoutError(msg)
 
-            self._respin_if_armed(cget_status)
+                self._respin_if_armed(cget_status)
 
-            # Sleep for a while to avoid too many checks in a short time
-            _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
-            cget_status.sleep_delay = max(cget_status.sleep_delay, 1)
+                # Sleep for a while to avoid too many checks in a short time
+                _xdist_sleep(random.uniform(0.6, 1.2) * cget_status.sleep_delay)
+                cget_status.sleep_delay = max(cget_status.sleep_delay, 1)
 
-            # Compute the instance iteration order outside the lock to keep the locked
-            # section as short as possible.
-            instances_order = self._make_instances_order(
-                available_instances=available_instances,
-                lock_resources=lock_resources,
-                use_resources=use_resources,
-            )
+                # Compute the instance iteration order outside the lock to keep the locked
+                # section as short as possible.
+                instances_order = self._make_instances_order(
+                    available_instances=available_instances,
+                    lock_resources=lock_resources,
+                    use_resources=use_resources,
+                )
 
-            # Nothing time consuming can go under this lock as all other workers will need to wait
-            with locking.FileLockIfXdist(self.cluster_lock):
-                # Load status records that were modified by other workers while the lock
-                # was not held. All status reads in this iteration are then answered from
-                # the snapshot - it refreshes itself after writes done by this process.
-                self.snap.refresh()
+                # Nothing time consuming can go under this lock as all other workers will need
+                # to wait
+                with locking.FileLockIfXdist(self.cluster_lock):
+                    # Load status records that were modified by other workers while the lock
+                    # was not held. All status reads in this iteration are then answered from
+                    # the snapshot - it refreshes itself after writes done by this process.
+                    self.snap.refresh()
 
-                if self._is_already_running():
-                    return self.cluster_instance_num
+                    if self._is_already_running():
+                        return self.cluster_instance_num
 
-                self._gc_stale_records()
+                    self._gc_stale_records()
 
-                self._fail_on_dead_clusters(remaining_time_sec=remaining_soft)
+                    self._fail_on_dead_clusters(remaining_time_sec=remaining_soft)
 
-                if cget_status.mark:
-                    # Check if tests with my mark are already locked to any cluster instance
-                    cget_status.marked_running_my_anywhere = self.snap.list_curr_mark(
-                        mark=cget_status.mark
-                    )
+                    if cget_status.mark:
+                        # Check if tests with my mark are already locked to any cluster instance
+                        cget_status.marked_running_my_anywhere = self.snap.list_curr_mark(
+                            mark=cget_status.mark
+                        )
 
-                # A "prio" test has priority in obtaining cluster instance. Check if it is needed
-                # to wait until earlier "prio" test obtains a cluster instance.
-                if self._wait_for_prio(cget_status):
-                    cget_status.sleep_delay = LONG_BACKOFF_SEC
-                    continue
+                    # A "prio" test has priority in obtaining cluster instance. Check if it is
+                    # needed to wait until earlier "prio" test obtains a cluster instance.
+                    if self._wait_for_prio(cget_status):
+                        cget_status.sleep_delay = LONG_BACKOFF_SEC
+                        continue
 
-                # Set "prio" for this test if indicated
-                self._init_prio(cget_status)
+                    # Set "prio" for this test if indicated
+                    self._init_prio(cget_status)
 
-                self._cluster_instance_num = -1
+                    self._cluster_instance_num = -1
 
-                # Try all existing cluster instances in the precomputed order
-                decision = self._try_instances(cget_status, instances_order=instances_order)
-                if decision.verdict is not _InstanceVerdict.START:
-                    continue
+                    # Try all existing cluster instances in the precomputed order
+                    decision = self._try_instances(cget_status, instances_order=instances_order)
+                    if decision.verdict is not _InstanceVerdict.START:
+                        continue
 
-                # Cluster instance is ready, we can start the test
-                break
+                    # Cluster instance is ready, we can start the test
+                    break
+        except BaseException:
+            self._abandon_get(cget_status)
+            raise
 
         return self.cluster_instance_num
