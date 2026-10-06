@@ -154,6 +154,10 @@ if [ "$1" = "step1" ]; then
   # create results archive for step1
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step1
 
+  # report the step stats to the tcache, without CLI coverage: it is built only
+  # in the finish step
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step1" "$retval" "" step1 || :
+
   printf "STEP1 finish: %(%H:%M:%S)T\n" -1
 
 #
@@ -324,6 +328,9 @@ elif [ "$1" = "step2" ]; then
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step2
 
   [ "$err_retval" -gt "$retval" ] && retval=1
+
+  # report the step stats to the tcache
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step2" "$retval" "" step2 || :
 
   printf "STEP2 finish: %(%H:%M:%S)T\n" -1
 
@@ -508,6 +515,9 @@ elif [ "$1" = "step3" ]; then
   ./runner/create_results.sh "$reports_dir" "$WORKDIR" allure-results-step3
 
   [ "$err_retval" -gt "$retval" ] && retval=1
+
+  # report the step stats to the tcache
+  ./runner/report_stats.sh "${WORKDIR}/allure-results-step3" "$retval" "" step3 || :
 
   printf "STEP3 finish: %(%H:%M:%S)T\n" -1
 
