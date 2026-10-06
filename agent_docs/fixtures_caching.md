@@ -47,6 +47,12 @@ Use `cluster_manager.cache_fixture()` to cache fixture values:
 - Each test on different instance gets correct cached value for that instance
 - Tests on same worker + same instance still benefit from caching
 
+## Sharing a Caching Key
+
+Tests that use the same `caching_key` share the cached value only when they run one after another on the same worker and cluster instance. A worker runs one test at a time, so a cached value is never used by two tests at once, and sharing a key is safe for parallel runs.
+
+Cached addresses still carry state from the earlier tests: leftover UTxOs, a different balance, transactions that are still pending. Don't assert the exact balance of a cached address; check the outputs of the test's own transaction instead.
+
 ## Real-World Example
 
 See `cardano_node_tests/tests/test_tx_basic.py:34-78`.

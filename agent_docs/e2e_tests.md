@@ -29,6 +29,7 @@ Mark tests based on where they can run and how long they take:
 - `@pytest.mark.testnets` - add when the test can run on public testnets like Preview. The test cannot depend on crossing an epoch boundary - waiting for the next epoch would take too long there.
 - `@pytest.mark.long` - add when the test runs for a long time even on local testnets, typically because it crosses several epoch boundaries.
 - `@pytest.mark.smoke` - add when the test finishes under 1 minute. Smoke tests are selected for quick regression and upgrade testing runs, so unmarked fast tests silently drop out of those runs.
+- `@pytest.mark.order(5)` - add when the test runs much longer than the rest (e.g. an hour or more on `leios_fast`). Long tests are started in collection order, so such a test that is collected late can finish long after all the other tests and prolong the whole run. The long tests that need to start in the first wave use `order(5)` to `order(7)`, lower values first.
 
 The full list of markers is in `pyproject.toml`. For db-sync related markers, see `agent_docs/dbsync.md`. The `xdist_group` marker is described in `agent_docs/subtests.md`. The `xdist_split` marker spreads tests that lock the same scarce cluster resource across xdist workers - it is orthogonal to `long` (wallclock).
 
