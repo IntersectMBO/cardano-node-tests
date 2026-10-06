@@ -29,8 +29,14 @@ Mark tests based on where they can run and how long they take:
 - `@pytest.mark.testnets` - add when the test can run on public testnets like Preview. The test cannot depend on crossing an epoch boundary - waiting for the next epoch would take too long there.
 - `@pytest.mark.long` - add when the test runs for a long time even on local testnets, typically because it crosses several epoch boundaries.
 - `@pytest.mark.smoke` - add when the test finishes under 1 minute. Smoke tests are selected for quick regression and upgrade testing runs, so unmarked fast tests silently drop out of those runs.
+- `@pytest.mark.order(5)` - add when the test runs much longer than the rest (e.g. an hour or more on `leios_fast`). Long tests are started in collection order, so such a test that is collected late can finish long after all the other tests and prolong the whole run. The long tests that need to start in the first wave use `order(5)` to `order(7)`, lower values first.
+- `@pytest.mark.order(-10)` (or another negative value) - add when the test needs to run at the end of the run, e.g. because it checks state accumulated by other tests (db-sync tables) or because a wait at its start becomes a no-op once the cluster instance is old enough. Add a comment explaining why the test is ordered.
 
-The full list of markers is in `pyproject.toml`. For db-sync related markers, see `agent_docs/dbsync.md`. The `xdist_group` marker is described in `agent_docs/subtests.md`. The `xdist_split` marker spreads tests that lock the same scarce cluster resource across xdist workers - it is orthogonal to `long` (wallclock).
+The full list of markers is in `pyproject.toml`. For db-sync related markers, see `agent_docs/dbsync.md`. The `xdist_group` marker is described in `agent_docs/subtests.md`. The `xdist_split` marker spreads tests that lock the same scarce cluster resource across xdist workers, so that workers don't stall waiting for the cluster manager. Use the keys from `markers.XdSplits`: `heavy` for tests that lock a lot of cluster resources (e.g. use `cluster_singleton`), `governance` for tests that lock the governance setup. The marker is orthogonal to `long` - a test can be heavy and fast, or long and light. Never combine `xdist_split` with `cluster_manager.get(mark=...)`, as they work against each other (see `agent_docs/subtests.md`).
+
+## Version and Feature Checks
+
+Gate on node or CLI versions (`VERSIONS.node`, `VERSIONS.cli`) only for released builds. Experimental branches (e.g. the Leios prototype) ship forks whose reported version follows the fork point, not the feature set. When a test must handle both the old and the new behavior of a CLI command, detect the feature from `<command> --help` output or from the shape of the returned data instead (see `_has_old_ping_iface` in `cardano_node_tests/tests/test_cli.py`).
 
 ## Epoch Waits
 

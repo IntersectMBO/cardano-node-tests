@@ -22,3 +22,9 @@ In order to see the full CLI command logging, you can add the `--log-level=debug
 ```sh
 ./ai_run.sh pytest -s --log-level=debug -k "test_minting_one_token" cardano_node_tests/
 ```
+
+## Troubleshooting E2E Runs
+
+- **"Connection refused" or tests failing on the first query.** The `ai_run.sh` guard only checks that the node socket file exists. A socket file left behind by a stopped cluster passes the check. Verify that a `cardano-node` process is running (`pgrep -af cardano-node`). If it isn't, ask the user to restart the cluster - restarting it is outside of what `ai_run.sh` allows.
+- **Every tx fails with `ValidationTagMismatch ... PassedUnexpectedly` on a Dijkstra cluster.** The CLI builds Conway era txs unless told otherwise. Set the era explicitly, the same as `runner/regression.sh` does: `PROTOCOL_VERSION=12 COMMAND_ERA=dijkstra ./ai_run.sh pytest ...`. Add `TESTNET_VARIANT=leios_fast` when the cluster was started with that variant.
+- **Results look wrong after changing cardonnay or cardano-clusterlib.** The tests import the installed release of these packages, not the local checkout. Use the `dep-sync` skill (if available) or install the local checkout into the virtual environment first.
