@@ -1404,10 +1404,8 @@ class TestLeiosQuorum:
                     for found in outage_found.values()
                 )
                 if not eb_seen or outage_problems:
-                    # A skip is not an `Exception`, so `respin_on_failure` doesn't see it.
-                    # The pool node gets started again, but nothing shows the committee
-                    # certifies again.
-                    cluster_manager.set_needs_respin()
+                    # The skip makes `respin_on_failure` ask for a respin. The pool node
+                    # gets started again, but nothing shows the committee certifies again.
                     pytest.skip(
                         "; ".join(
                             [
@@ -1443,8 +1441,7 @@ class TestLeiosQuorum:
                     cluster_nodes.start_nodes([stopped_node])
 
             # Still within the respin context - a committee that doesn't certify again
-            # leaves the instance in a state the next test cannot rely on. A skip is not
-            # an `Exception`, so it has to ask for the respin itself.
+            # leaves the instance in a state the next test cannot rely on.
             recovery_found = {m for s in recovery_searches.values() for m in s.found}
             if leios.MSG_CERTIFIED in recovery_found:
                 return
@@ -1457,7 +1454,6 @@ class TestLeiosQuorum:
                 )
                 raise AssertionError("\n".join([error, *recovery_problems]))
 
-            cluster_manager.set_needs_respin()
             pytest.skip(
                 "; ".join(
                     [

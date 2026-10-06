@@ -218,10 +218,17 @@ class ClusterManager:
 
     @contextlib.contextmanager
     def respin_on_failure(self) -> tp.Iterator[None]:
-        """Indicate that the cluster instance needs respin if command failed - context manager."""
+        """Indicate that the cluster instance needs respin if command failed - context manager.
+
+        Any exception other than `KeyboardInterrupt` counts as a failure, including the
+        outcomes set by `pytest.fail`, `pytest.skip` and `pytest.xfail`, as these don't derive
+        from `Exception`.
+        """
         try:
             yield
-        except Exception:
+        except KeyboardInterrupt:
+            raise
+        except BaseException:
             self.set_needs_respin()
             raise
 
