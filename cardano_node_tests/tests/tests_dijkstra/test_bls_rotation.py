@@ -43,7 +43,7 @@ neither the certificate route nor the formula is settled there.
 
 The two tests that rotate the key of a *cluster* pool need that pool to be
 re-registrable, which a pool whose parameters come from the genesis is not - see
-`reregister_cluster_pool`. They xfail on such an instance, so today they run for real
+`bls.reregister_cluster_pool`. They xfail on such an instance, so today they run for real
 only on a testnet variant that starts before Dijkstra and hard-forks into it.
 
 See CIP-0164 and the Leios testnet guide for the operator side of this.
@@ -66,7 +66,6 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
-from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import kes
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_dijkstra import bls
@@ -565,52 +564,6 @@ def check_seat_keyless(
             f"The pool '{pool_name}' is still voting in epoch {epoch}, although its BLS key "
             f"expired: {seat}"
         )
-
-
-def reregister_cluster_pool(
-    *,
-    cluster_obj: clusterlib.ClusterLib,
-    pool_rec: dict,
-    pool_name: str,
-    pool_id: str,
-    bls_skey_file: pl.Path,
-    tx_name: str,
-) -> None:
-    """Re-register a cluster pool with a new BLS key, keeping everything else as it is.
-
-    Xfails on a cluster instance whose pools came from the genesis: the ledger records no
-    occurrence of their VRF key hash, so the Dijkstra `POOL` rule rejects the update with
-    `VRFKeyHashAlreadyRegistered` even though the VRF key does not change. Once the ledger
-    populates the map on genesis injection, the rejection stops and the tests run.
-
-    Args:
-        cluster_obj: An instance of `clusterlib.ClusterLib`.
-        pool_rec: The addresses and keys of the pool, from the cluster manager cache.
-        pool_name: A name of the pool, e.g. ``node-pool1``.
-        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
-        bls_skey_file: A path to the BLS signing key file to register.
-        tx_name: A name of the transaction.
-    """
-    pool_data = clusterlib_utils.load_registered_pool_data(
-        cluster_obj=cluster_obj, pool_name=f"rotated_{pool_name}", pool_id=pool_id
-    )
-
-    try:
-        __, tx_raw_reg = cluster_obj.g_stake_pool.register_stake_pool(
-            pool_data=pool_data,
-            pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
-            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-            cold_key_pair=pool_rec["cold_key_pair"],
-            tx_name=tx_name,
-            reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            bls_signing_key_file=bls_skey_file,
-            deposit=0,  # no additional deposit, the pool is already registered
-        )
-        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)
-    except clusterlib.CLIError as excinfo:
-        if "VRFKeyHashAlreadyRegistered" not in str(excinfo):
-            raise
-        issues.ledger_6102.finish_test()
 
 
 def rotate_bls_key(
@@ -1157,7 +1110,7 @@ class TestBlsKeyExpiration:
             force=True,
         )
 
-        reregister_cluster_pool(
+        bls.reregister_cluster_pool(
             cluster_obj=cluster,
             pool_rec=rotated_pool_rec,
             pool_name=rotated_pool_name,
@@ -1329,7 +1282,7 @@ class TestBlsKeyRotationVoting:
             force=True,
         )
 
-        reregister_cluster_pool(
+        bls.reregister_cluster_pool(
             cluster_obj=cluster,
             pool_rec=pool_rec,
             pool_name=pool_name,

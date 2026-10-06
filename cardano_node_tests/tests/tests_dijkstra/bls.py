@@ -22,8 +22,10 @@ import pathlib as pl
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
 
 # Size of the proof of possession that accompanies the BLS key in a pool registration
 # certificate. It is mandatory: BLS aggregate signatures are otherwise open to rogue-key
@@ -179,3 +181,53 @@ def get_max_key_age(*, cluster_obj: clusterlib.ClusterLib) -> int:
     genesis = cluster_obj.genesis
     kes_lifetime = int(genesis["maxKESEvolutions"]) * int(genesis["slotsPerKESPeriod"])
     return math.ceil(kes_lifetime / int(genesis["epochLength"])) + 2
+
+
+def reregister_cluster_pool(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    pool_rec: dict,
+    pool_name: str,
+    pool_id: str,
+    bls_skey_file: pl.Path,
+    tx_name: str,
+    allow_xfail: bool = True,
+) -> None:
+    """Re-register a cluster pool with a new BLS key, keeping everything else as it is.
+
+    Xfails, unless disabled by `allow_xfail`, on a cluster instance whose pools came from
+    the genesis: the ledger records no occurrence of their VRF key hash, so the Dijkstra
+    `POOL` rule rejects the update with `VRFKeyHashAlreadyRegistered` even though the VRF
+    key does not change. Once the ledger populates the map on genesis injection, the
+    rejection stops and the tests run.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_rec: The addresses and keys of the pool, from the cluster manager cache.
+        pool_name: A name of the pool, e.g. ``node-pool1``.
+        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
+        bls_skey_file: A path to the BLS signing key file to register.
+        tx_name: A name of the transaction.
+        allow_xfail: Whether to xfail on the known `VRFKeyHashAlreadyRegistered` ledger
+            issue instead of failing (optional, default True).
+    """
+    pool_data = clusterlib_utils.load_registered_pool_data(
+        cluster_obj=cluster_obj, pool_name=f"rereg_{pool_name}", pool_id=pool_id
+    )
+
+    try:
+        __, tx_raw_reg = cluster_obj.g_stake_pool.register_stake_pool(
+            pool_data=pool_data,
+            pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
+            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+            cold_key_pair=pool_rec["cold_key_pair"],
+            tx_name=tx_name,
+            reward_account_vkey_file=pool_rec["reward"].vkey_file,
+            bls_signing_key_file=bls_skey_file,
+            deposit=0,  # no additional deposit, the pool is already registered
+        )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)
+    except clusterlib.CLIError as excinfo:
+        if not (allow_xfail and "VRFKeyHashAlreadyRegistered" in str(excinfo)):
+            raise
+        issues.ledger_6102.finish_test()

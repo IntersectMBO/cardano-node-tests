@@ -480,6 +480,12 @@ elif [ "$1" = "step3" ]; then
   export PROTOCOL_VERSION="$TARGET_PROT_VER"
   export COMMAND_ERA="${user_command_era:-"$target_era"}"
 
+  # Register BLS keys of the pools. The test skips itself when the pools already have them.
+  if [ "$target_era" = "dijkstra" ]; then
+    pytest cardano_node_tests/tests/test_node_upgrade.py -k test_register_pools_bls_keys \
+      || exit 6
+  fi
+
   # Run smoke tests
   printf "STEP3 tests: %(%H:%M:%S)T\n" -1
   retval=0
