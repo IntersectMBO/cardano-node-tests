@@ -170,6 +170,16 @@ def fund_issuer_batch(
     ]
 
 
+class PendingMint(tp.NamedTuple):
+    """Minting transaction submitted to the mempool, but not yet confirmed on chain."""
+
+    tx_file: pl.Path
+    tx_output: clusterlib.TxRawOutput
+    issuer_address: str
+    token: str
+    token_amount: int
+
+
 def run_scenario(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
@@ -180,10 +190,17 @@ def run_scenario(
     outcome: Outcomes,
     is_cost_model_ok: bool,
     is_prot_version_ok: bool,
-):
+) -> PendingMint | None:
     """Run an e2e test for a Plutus builtin.
 
     The token issuer is expected to be already funded (see `fund_issuer_batch`).
+
+    The minting transaction is submitted without waiting for it to appear on chain, so
+    transactions for multiple scripts can be confirmed together (see `confirm_mints`).
+
+    Returns:
+        PendingMint | None: The submitted minting transaction, or None when the minting
+        failed as expected.
     """
     lovelace_amount = 2_000_000
     token_amount = 5
@@ -230,38 +247,104 @@ def run_scenario(
     _dump_cost()
 
     try:
-        tx_output_mint = clusterlib_utils.build_and_submit_tx(
-            cluster_obj=cluster_obj,
-            name_template=f"{temp_template}_mint",
+        tx_output_mint = cluster_obj.g_transaction.build_tx(
             src_address=payment_addr.address,
-            build_method=clusterlib_utils.BuildMethods.BUILD,
+            tx_name=f"{temp_template}_mint",
             tx_files=tx_files_mint,
             txins=mint_utxos,
             txouts=txouts_mint,
             mint=plutus_mint_data,
         )
+        tx_signed_mint = cluster_obj.g_transaction.sign_tx(
+            tx_body_file=tx_output_mint.out_file,
+            signing_key_files=tx_files_mint.signing_key_files,
+            tx_name=f"{temp_template}_mint",
+        )
+        cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed_mint)
     except clusterlib.CLIError as excp:
         str_excp = str(excp)
         if not is_prot_version_ok and (
             "not available in language PlutusV3 at and protocol version" in str_excp
             or "Script evaluation error" in str_excp
         ):
-            return
+            return None
         if (not is_cost_model_ok or outcome == Outcomes.OVERSPEND) and (
             "The machine terminated part way through evaluation due to "
             "overspending the budget." in str_excp
         ):
-            return
+            return None
         if outcome == Outcomes.ERROR and (
             "The machine terminated because of an error" in str_excp
             or "Script evaluation error" in str_excp
         ):
-            return
+            return None
         raise
 
-    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_mint)
-    token_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=issuer_addr.address, coin=token)
-    assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
+    return PendingMint(
+        tx_file=tx_signed_mint,
+        tx_output=tx_output_mint,
+        issuer_address=issuer_addr.address,
+        token=token,
+        token_amount=token_amount,
+    )
+
+
+def confirm_mints(
+    cluster_obj: clusterlib.ClusterLib,
+    pending_mints: list[PendingMint],
+    attempts: int = 10,
+) -> list[PendingMint]:
+    """Wait for submitted minting transactions to appear on chain.
+
+    Resubmit the transactions that didn't make it to the chain, e.g. because they were
+    dropped from the mempool after a rollback. Resubmit only after a round where no
+    transaction got confirmed. Otherwise the transactions are likely still waiting in the
+    mempool, as not all of them fit into one block.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pending_mints: The submitted minting transactions.
+        attempts: Max number of resubmits. Rounds where some transaction got confirmed
+            don't count.
+
+    Returns:
+        list[PendingMint]: The minting transactions that didn't make it to the chain.
+    """
+    unconfirmed = list(pending_mints)
+    progressed = True
+    resubmits = 0
+    # Each round that doesn't count against `attempts` confirms at least one transaction,
+    # so the loop always ends
+    while unconfirmed and resubmits < attempts:
+        if not progressed:
+            resubmits += 1
+            for pending_mint in unconfirmed:
+                LOGGER.warning(
+                    "Resubmitting transaction from '%s'. Attempt %s/%s.",
+                    pending_mint.tx_file,
+                    resubmits,
+                    attempts,
+                )
+                try:
+                    cluster_obj.g_transaction.submit_tx_bare(tx_file=pending_mint.tx_file)
+                except clusterlib.CLIError as exc:
+                    # The transaction is likely still in the mempool
+                    if not helpers.is_inputs_spent_err(str(exc)):
+                        raise
+
+        cluster_obj.wait_for_new_block(new_blocks=cluster_obj.confirm_blocks)
+
+        issuer_utxos = cluster_obj.g_query.get_utxo(
+            address=list({m.issuer_address for m in unconfirmed})
+        )
+        minted = {(u.address, u.coin, u.amount) for u in issuer_utxos}
+        still_unconfirmed = [
+            m for m in unconfirmed if (m.issuer_address, m.token, m.token_amount) not in minted
+        ]
+        progressed = len(still_unconfirmed) < len(unconfirmed)
+        unconfirmed = still_unconfirmed
+
+    return unconfirmed
 
 
 def run_plutusv3_builtins_test(
@@ -278,8 +361,10 @@ def run_plutusv3_builtins_test(
 ):
     """Run minting tests with the tested Plutus Core built-in functions.
 
-    The token issuer is funded for multiple scripts at once, in chunks of
-    `FUND_CHUNK_SIZE` scripts, to save one funding transaction per script.
+    The scripts are processed in chunks of `FUND_CHUNK_SIZE` scripts. For each chunk,
+    the token issuer is funded in a single transaction, and the minting transactions are
+    submitted without waiting, and then confirmed on chain together. This saves waiting
+    for blocks for each script separately.
     """
     cases = [
         *((s, Outcomes.SUCCESS) for s in success_scripts),
@@ -323,12 +408,16 @@ def run_plutusv3_builtins_test(
             amount=SCRIPT_FUND,
         )
 
-        for (script, outcome), issuer_funds in zip(chunk, all_issuer_funds, strict=True):
+        pending_mints: list[tuple[str, PendingMint]] = []
+        for case_idx, ((script, outcome), issuer_funds) in enumerate(
+            zip(chunk, all_issuer_funds, strict=True), start=chunk_start
+        ):
             script_stem = script.script_file.stem
             with subtests.test(variant=f"{variant}_{script_stem}"):
-                run_scenario(
+                pending_mint = run_scenario(
                     cluster_obj=cluster_obj,
-                    temp_template=f"{temp_template}_{script_stem}",
+                    # The index keeps tx file names unique even if script stems repeat
+                    temp_template=f"{temp_template}_{case_idx}_{script_stem}",
                     plutus_v_record=script,
                     payment_addr=payment_addr,
                     issuer_addr=issuer_addr,
@@ -337,6 +426,16 @@ def run_plutusv3_builtins_test(
                     is_cost_model_ok=is_cost_model_ok,
                     is_prot_version_ok=is_prot_version_ok,
                 )
+                if pending_mint:
+                    pending_mints.append((script_stem, pending_mint))
+
+        # Confirm all minting transactions of the chunk at once
+        not_minted = confirm_mints(
+            cluster_obj=cluster_obj, pending_mints=[m for __, m in pending_mints]
+        )
+        for script_stem, pending_mint in pending_mints:
+            with subtests.test(variant=f"{variant}_{script_stem}_minted"):
+                assert pending_mint not in not_minted, "The token was not minted"
 
 
 class TestPlutusV3Builtins:
