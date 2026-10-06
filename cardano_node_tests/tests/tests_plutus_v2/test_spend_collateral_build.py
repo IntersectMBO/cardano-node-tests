@@ -199,7 +199,12 @@ class TestCollateralOutput:
                 issues.consensus_947.finish_test()
             raise
 
-        cluster.wait_for_new_block(new_blocks=2)
+        # Check that the collateral UTxO was spent
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=collateral_utxos)
+        except AssertionError:
+            issues.consensus_973.finish_test()
+
         try:
             cluster.g_transaction.submit_tx_bare(
                 tx_file=tx_output_redeem.out_file.with_suffix(".signed")
@@ -216,11 +221,6 @@ class TestCollateralOutput:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
-
-        # Check that collateral was taken
-        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
-        if spent_collateral_utxo:
-            issues.consensus_973.finish_test()
 
         # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"
@@ -346,7 +346,12 @@ class TestCollateralOutput:
                 issues.consensus_947.finish_test()
             raise
 
-        cluster.wait_for_new_block(new_blocks=2)
+        # Check that the collateral UTxO was spent
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=collateral_utxos)
+        except AssertionError:
+            issues.consensus_973.finish_test()
+
         try:
             cluster.g_transaction.submit_tx_bare(
                 tx_file=tx_output_redeem.out_file.with_suffix(".signed")
@@ -363,11 +368,6 @@ class TestCollateralOutput:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
-
-        # Check that collateral was taken
-        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
-        if spent_collateral_utxo:
-            issues.consensus_973.finish_test()
 
         # Check that input UTxOs were not spent
         assert cluster.g_query.get_utxo(utxo=tx_output_redeem.txins), "Payment UTxO was spent"

@@ -486,7 +486,7 @@ class TestUpgrade:
         * Submit the transaction to the upgraded node
         * Wait for transaction to be included in a block
         * Verify transaction was successfully submitted and processed
-        * Check expected balances after transaction submission
+        * Verify transaction inputs were spent
         * Demonstrates backward compatibility of transaction format across versions/eras
         """
         temp_template = common.get_test_id(cluster)
@@ -515,4 +515,7 @@ class TestUpgrade:
             )
 
         cluster.g_transaction.submit_tx_bare(tx_file=tx_file)
-        cluster.wait_for_new_block(2)
+
+        txins = cluster.g_transaction.view_tx_dict(tx_file=tx_file).get("inputs") or []
+        assert txins, "No inputs found in the transaction"
+        clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=txins)

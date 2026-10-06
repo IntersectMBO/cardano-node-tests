@@ -5,6 +5,8 @@ import pathlib as pl
 
 from cardano_clusterlib import clusterlib
 
+from cardano_node_tests.utils import clusterlib_utils
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -17,7 +19,6 @@ def defragment(
     name_template: str = "",
 ) -> None:
     """Defragment address UTxOs."""
-    new_blocks = 3
     name_template = f"{name_template}_" if name_template else ""
 
     loop = 1
@@ -41,6 +42,7 @@ def defragment(
 
         batch_size = min(100, utxos_len)
         batch_num = 1
+        loop_txins: list[clusterlib.UTXOData] = []
         for b in range(0, utxos_len, batch_size):
             LOGGER.info(f"Defragmenting UTxOs: Running loop {loop}, batch {batch_num}")
             batch = utxos[b : b + batch_size]
@@ -58,8 +60,17 @@ def defragment(
                 signing_key_files=[skey_file],
             )
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed_file)
+            # A Tx is applied atomically, so it is enough to check a single txin per Tx.
+            # Checking all of them could exceed the command line length limit.
+            loop_txins.append(tx_output.txins[0])
             batch_num += 1
 
-        LOGGER.info(f"Defragmenting UTxOs: Waiting for {new_blocks} new blocks after loop {loop}")
-        cluster_obj.wait_for_new_block(new_blocks=new_blocks)
+        LOGGER.info(
+            f"Defragmenting UTxOs: Waiting for the Txs of loop {loop} to make it to the chain"
+        )
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster_obj, txins=loop_txins)
+        except AssertionError:
+            # Defragmentation is best-effort, the next loop works with the current UTxOs
+            LOGGER.warning(f"Defragmenting UTxOs: Some Txs of loop {loop} didn't make it")
         loop += 1
