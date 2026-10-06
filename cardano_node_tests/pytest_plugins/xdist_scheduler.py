@@ -301,7 +301,9 @@ class OneLongScheduling(scheduler.LoadScopeScheduling):
 
             if long_pending:
                 # Try to find a work unit with no long-running test if there is already a
-                # long-running test pending
+                # long-running test pending. In the initial batch (two units per worker),
+                # this usually picks a dummy test from `tests/test_xdist_helper.py`, so no
+                # real test gets stuck waiting behind the long one.
                 scope = self._get_short_scope(avoid_split_keys=avoid_split_keys)
             else:
                 # Try to find a work unit with long-running test if there is no long-running
