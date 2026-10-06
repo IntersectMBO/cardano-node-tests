@@ -1585,17 +1585,53 @@ def cli_has(command: str) -> bool:
 
 
 def check_txins_spent(
-    *, cluster_obj: clusterlib.ClusterLib, txins: list[clusterlib.UTXOData], wait_blocks: int = 2
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    txins: tp.Sequence[clusterlib.UTXOData | str],
+    wait_blocks: int | None = None,
+    attempts: int = 10,
 ) -> None:
-    """Check that txins were spent."""
-    if wait_blocks > 0:
-        cluster_obj.wait_for_new_block(wait_blocks)
+    """Wait until txins are spent, i.e. until the transactions spending them make it to the chain.
 
-    utxo_data = cluster_obj.g_query.get_utxo(utxo=txins)
+    The txins are checked right away, as the transactions may already be on chain. If some
+    of the txins are not spent yet, wait for new blocks and check again. Unlike
+    `submit_tx`, the transactions are not resubmitted.
 
-    if utxo_data:
-        msg = f"Some txins were not spent: {txins}"
-        raise AssertionError(msg)
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        txins: Input UTxOs, as `clusterlib.UTXOData` records or `TxId#TxIx` strings.
+        wait_blocks: A number of new blocks to wait for before checking again
+            (default = `cluster_obj.confirm_blocks`).
+        attempts: Max number of checks after waiting for new blocks. With 0, check just once,
+            without waiting.
+
+    Raises:
+        AssertionError: If some of the txins were not spent in time.
+    """
+    txins_str = [t if isinstance(t, str) else f"{t.utxo_hash}#{t.utxo_ix}" for t in txins]
+    if not txins_str:
+        return
+
+    wait_blocks = cluster_obj.confirm_blocks if wait_blocks is None else wait_blocks
+    if wait_blocks < 1:
+        msg = f"`wait_blocks` must be a positive number, got {wait_blocks}."
+        raise ValueError(msg)
+
+    unspent: list[clusterlib.UTXOData] = []
+    for r in range(attempts + 1):
+        if r > 0:
+            cluster_obj.wait_for_new_block(new_blocks=wait_blocks)
+
+        unspent = cluster_obj.g_query.get_utxo(txin=txins_str)
+        if not unspent:
+            return
+
+    unspent_str = sorted({f"{u.utxo_hash}#{u.utxo_ix}" for u in unspent})
+    msg = (
+        f"Some txins were not spent after waiting for {attempts * wait_blocks} blocks: "
+        f"{unspent_str}"
+    )
+    raise AssertionError(msg)
 
 
 def create_reference_utxo(

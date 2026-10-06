@@ -293,7 +293,12 @@ def _spend_locked_txin(  # noqa: C901
     if not script_valid:
         cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
 
-        cluster_obj.wait_for_new_block(new_blocks=2)
+        # Check that the collateral UTxO was spent
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster_obj, txins=collateral_utxos)
+        except AssertionError:
+            issues.consensus_973.finish_test()
+
         try:
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_signed)
         except clusterlib.CLIError as exc:
@@ -302,11 +307,6 @@ def _spend_locked_txin(  # noqa: C901
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
-
-        # Check that the collateral UTxO was spent
-        spent_collateral_utxo = cluster_obj.g_query.get_utxo(utxo=collateral_utxos)
-        if spent_collateral_utxo:
-            issues.consensus_973.finish_test()
 
         assert (
             cluster_obj.g_query.get_address_balance(dst_addr.address)

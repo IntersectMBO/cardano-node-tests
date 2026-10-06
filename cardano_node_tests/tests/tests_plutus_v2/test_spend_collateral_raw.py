@@ -162,7 +162,12 @@ class TestCollateralOutput:
                 raise
             issues.consensus_947.finish_test()
 
-        cluster.wait_for_new_block(new_blocks=2)
+        # Check that the collateral UTxO was spent
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=collateral_utxos)
+        except AssertionError:
+            issues.consensus_973.finish_test()
+
         try:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
         except clusterlib.CLIError as exc:
@@ -177,11 +182,6 @@ class TestCollateralOutput:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
-
-        # Check that the collateral UTxO was spent
-        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
-        if spent_collateral_utxo:
-            issues.consensus_973.finish_test()
 
         # Check that the right amount of collateral was spent
         dst_balance = cluster.g_query.get_address_balance(dst_addr.address)
@@ -323,7 +323,12 @@ class TestCollateralOutput:
                 raise
             issues.consensus_947.finish_test()
 
-        cluster.wait_for_new_block(new_blocks=2)
+        # Check that the collateral UTxO was spent
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=collateral_utxos)
+        except AssertionError:
+            issues.consensus_973.finish_test()
+
         try:
             cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
         except clusterlib.CLIError as exc:
@@ -338,11 +343,6 @@ class TestCollateralOutput:
                 raise
         else:
             pytest.fail("Transaction was not submitted successfully")
-
-        # Check that the collateral UTxO was spent
-        spent_collateral_utxo = cluster.g_query.get_utxo(utxo=collateral_utxos)
-        if spent_collateral_utxo:
-            issues.consensus_973.finish_test()
 
         # Check that the right amount of collateral was spent and that the tokens were returned
 
