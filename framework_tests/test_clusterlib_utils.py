@@ -9,6 +9,7 @@ import typing as tp
 
 import cbor2
 import pytest
+from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import clusterlib_utils
 from framework_tests import stubs
@@ -364,3 +365,166 @@ class TestGenesisWindows:
         assert (
             clusterlib_utils.get_block_interval_sec(cluster_obj=tp.cast(tp.Any, cluster_obj)) == 2
         )
+
+
+class SimulatedChainStub:
+    """Stub of `ClusterLib` with a simulated clock and chain, for `wait_for_epoch_interval`.
+
+    The current slot (wall clock) advances by sleeping and by waiting for blocks. The tip is
+    the slot of the last forged block, and new blocks are forged every `block_interval` slots.
+    """
+
+    epoch_length = 100
+    slot_length = 1.0
+    epoch_length_sec = 100.0
+    slots_offset = 0
+
+    def __init__(self, *, now: float, tip_slot: int, block_interval: int = 20) -> None:
+        self.now = now
+        self.tip_slot = tip_slot
+        self.block_interval = block_interval
+        self.blocks_waited = 0
+        self.slot_number_fails = False
+        self.slot_number_fails_after_epoch = False
+        # When stalled, no new blocks are forged and the tip doesn't move
+        self.stalled = False
+        self.g_query = self
+
+    def get_epoch(self) -> int:
+        return self.tip_slot // self.epoch_length
+
+    def get_slot_number(self, timestamp: tp.Any) -> int:
+        """Return the current slot, rounded up like the timestamp passed by the caller."""
+        assert timestamp.tzinfo is not None, "The timestamp must be timezone aware"
+        if self.slot_number_fails:
+            msg = "PastHorizon"
+            raise clusterlib.CLIError(msg)
+        return int(self.now) + 1
+
+    def time_from_epoch_start(self, tip: dict | None = None) -> float:
+        """Compute the time the same way as `ClusterLib` does."""
+        tip = tip or {"epoch": self.get_epoch(), "slot": self.tip_slot}
+        slots_to_go = (int(tip["epoch"]) + 1) * self.epoch_length - (int(tip["slot"]) - 1)
+        return float(self.epoch_length_sec - slots_to_go * self.slot_length)
+
+    def sleep(self, secs: float) -> None:
+        self.now += secs
+
+    def wait_for_new_block(self, new_blocks: int = 1) -> None:
+        for __ in range(new_blocks):
+            self.blocks_waited += 1
+            if self.stalled:
+                self.now += self.block_interval
+                continue
+            self.tip_slot = max(self.tip_slot, int(self.now)) + self.block_interval
+            self.now = self.tip_slot
+
+    def wait_for_new_epoch(self) -> None:
+        next_epoch = self.get_epoch() + 1
+        while self.get_epoch() < next_epoch:
+            self.wait_for_new_block()
+        if self.slot_number_fails_after_epoch:
+            self.slot_number_fails = True
+
+
+class TestWaitForEpochInterval:
+    """Tests for `wait_for_epoch_interval`."""
+
+    @pytest.fixture
+    def chain(self, monkeypatch: pytest.MonkeyPatch) -> tp.Callable[..., SimulatedChainStub]:
+        def _chain(**kwargs: tp.Any) -> SimulatedChainStub:
+            chain_obj = SimulatedChainStub(**kwargs)
+            monkeypatch.setattr(clusterlib_utils.time, "sleep", chain_obj.sleep)
+            return chain_obj
+
+        return _chain
+
+    def test_in_interval_no_block_wait(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Don't wait for a new block when already in the interval."""
+        chain_obj = chain(now=150, tip_slot=145)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=10, stop=-20
+        )
+        assert chain_obj.blocks_waited == 0
+        assert chain_obj.now == 150
+
+    def test_sleep_until_start(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Sleep until the start of the interval, based on wall clock."""
+        chain_obj = chain(now=105, tip_slot=102)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=30, stop=-20
+        )
+        assert chain_obj.blocks_waited == 0
+        assert 130 <= chain_obj.now <= 132
+
+    def test_tip_in_previous_epoch(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Wait until the tip is in the epoch of the interval."""
+        chain_obj = chain(now=205, tip_slot=190)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=1, stop=-20
+        )
+        assert chain_obj.blocks_waited == 1
+        assert chain_obj.get_epoch() == 2
+
+    def test_after_interval(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Wait for the next epoch when already past the interval."""
+        chain_obj = chain(now=190, tip_slot=185)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=1, stop=-20
+        )
+        assert chain_obj.get_epoch() == 2
+        assert 200 <= chain_obj.now <= 280
+
+    def test_check_slot_uses_tip(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Use the tip, with an up-to-date slot number, when the slot needs to be checked."""
+        chain_obj = chain(now=150, tip_slot=145)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=10, stop=-20, check_slot=True
+        )
+        assert chain_obj.blocks_waited == 1
+
+    def test_slot_number_query_fails(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Fall back to the tip when the slot number for the current time can't be queried."""
+        chain_obj = chain(now=150, tip_slot=145)
+        chain_obj.slot_number_fails = True
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=10, stop=-20
+        )
+        assert chain_obj.blocks_waited == 1
+
+    def test_first_block_after_stop(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Wait for the next epoch when the first block of the epoch comes after the interval."""
+        chain_obj = chain(now=205, tip_slot=190, block_interval=60)
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=10, stop=50
+        )
+        assert chain_obj.get_epoch() == 3
+        assert 310 <= chain_obj.now <= 350
+
+    def test_force_epoch(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Fail when the interval cannot be reached in the current epoch."""
+        chain_obj = chain(now=190, tip_slot=185)
+        with pytest.raises(RuntimeError, match="Cannot reach the given interval"):
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=tp.cast(tp.Any, chain_obj), start=1, stop=-20, force_epoch=True
+            )
+
+    def test_tip_doesnt_reach_epoch(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Fail when the tip doesn't reach the current epoch."""
+        chain_obj = chain(now=205, tip_slot=190)
+        chain_obj.stalled = True
+        with pytest.raises(RuntimeError, match="The tip didn't reach the current epoch"):
+            clusterlib_utils.wait_for_epoch_interval(
+                cluster_obj=tp.cast(tp.Any, chain_obj), start=1, stop=-20
+            )
+        assert chain_obj.blocks_waited == clusterlib_utils.TIP_EPOCH_MAX_BLOCKS
+
+    def test_slot_number_query_fails_later(self, chain: tp.Callable[..., SimulatedChainStub]):
+        """Switch to the tip when the wall clock query starts failing in the middle of the wait."""
+        chain_obj = chain(now=190, tip_slot=185)
+        chain_obj.slot_number_fails_after_epoch = True
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=tp.cast(tp.Any, chain_obj), start=1, stop=-20
+        )
+        assert chain_obj.get_epoch() == 2
+        assert chain_obj.slot_number_fails

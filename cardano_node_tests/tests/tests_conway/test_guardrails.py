@@ -275,11 +275,9 @@ def propose_param_changes(
         ],
     )
 
-    # Make sure we have enough time to submit the proposal in one epoch
-    clusterlib_utils.wait_for_epoch_interval(
-        cluster_obj=cluster, start=1, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
-    )
-
+    # No need to wait for a suitable time in the epoch. The proposals are never voted on, and
+    # with the committee and DReps locked, no other pparam update can be enacted and change
+    # the previous action ID used in the proposal.
     tx_output_action = clusterlib_utils.build_and_submit_tx(
         cluster_obj=cluster,
         name_template=f"{temp_template}_action",

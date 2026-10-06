@@ -2,6 +2,7 @@
 
 import base64
 import dataclasses
+import datetime
 import enum
 import fractions
 import itertools
@@ -1285,6 +1286,63 @@ def get_randomness_stabilisation_window(*, cluster_obj: clusterlib.ClusterLib) -
     return math.ceil(4 * security_param / active_slots_coeff)
 
 
+# Max number of blocks to wait for the tip to reach the current epoch. The first block of
+# an epoch normally comes within a few blocks' time, this is just a safety limit.
+TIP_EPOCH_MAX_BLOCKS = 20
+
+
+def _get_time_from_epoch_start(
+    *, cluster_obj: clusterlib.ClusterLib, use_wall_clock: bool
+) -> tuple[float, int | None]:
+    """Return how many seconds passed from start of the current epoch.
+
+    With `use_wall_clock`, the current slot is derived from the current time, instead of
+    using the slot of the last block on the tip. That way it is not necessary to wait for
+    a new block to get an up-to-date slot number, which can take long on testnets that
+    produce blocks slowly. If the slot number for the current time cannot be queried
+    (e.g. it is past the forecast horizon of the node), fall back to the tip.
+
+    With the wall clock, the tip is also waited for until it is in the current epoch, as
+    the first block of an epoch can be forged a while after the epoch started. Callers
+    of `wait_for_epoch_interval` often query the current epoch right after the wait.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        use_wall_clock: A bool indicating whether to use wall clock instead of the tip.
+
+    Returns:
+        tuple[float, int | None]: The number of seconds, and the current epoch when
+        the wall clock was used (None when the tip was used).
+    """
+    if not use_wall_clock:
+        return cluster_obj.time_from_epoch_start(), None
+
+    for __ in range(TIP_EPOCH_MAX_BLOCKS):
+        # The timestamp has a resolution of whole seconds. Round it up, so the time is
+        # never earlier than the actual current time. It can be slightly ahead, even in
+        # the next epoch, but then the tip is waited for until it reaches that epoch.
+        now = datetime.datetime.now(tz=datetime.UTC) + datetime.timedelta(seconds=1)
+        try:
+            slot_now = cluster_obj.g_query.get_slot_number(timestamp=now)
+        except clusterlib.CLIError:
+            LOGGER.warning("Failed to get slot number for the current time, using the tip.")
+            # Wait for new block so we start counting with an up-to-date slot number
+            cluster_obj.wait_for_new_block()
+            return cluster_obj.time_from_epoch_start(), None
+
+        epoch_now = (slot_now + cluster_obj.slots_offset) // cluster_obj.epoch_length
+        if cluster_obj.g_query.get_epoch() >= epoch_now:
+            tip = {"epoch": epoch_now, "slot": slot_now}
+            return cluster_obj.time_from_epoch_start(tip=tip), epoch_now
+
+        # The tip is still in the previous epoch. Wait for a block and measure the time
+        # again, as the block can come late in the epoch.
+        cluster_obj.wait_for_new_block()
+
+    msg = "The tip didn't reach the current epoch."
+    raise RuntimeError(msg)
+
+
 def wait_for_epoch_interval(
     *,
     cluster_obj: clusterlib.ClusterLib,
@@ -1294,6 +1352,11 @@ def wait_for_epoch_interval(
     check_slot: bool = False,
 ) -> None:
     """Wait for time interval within an epoch.
+
+    The current time in the epoch is based on wall clock, so it is not necessary to wait for
+    a new block to get an up-to-date slot number. When `check_slot` is set, it is based on
+    the slot of the last forged block instead. After the wait, the tip is in the epoch of
+    the interval, so the current epoch can be queried right away.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -1315,11 +1378,19 @@ def wait_for_epoch_interval(
 
     start_epoch = cluster_obj.g_query.get_epoch()
 
-    # Wait for new block so we start counting with an up-to-date slot number
-    cluster_obj.wait_for_new_block()
+    # When the slot number of the last forged block needs to match the interval, the time
+    # needs to be based on the tip, not on the wall clock
+    use_wall_clock = not check_slot
+    if not use_wall_clock:
+        # Wait for new block so we start counting with an up-to-date slot number
+        cluster_obj.wait_for_new_block()
 
     for __ in range(40):
-        s_from_epoch_start = cluster_obj.time_from_epoch_start()
+        s_from_epoch_start, wall_clock_epoch = _get_time_from_epoch_start(
+            cluster_obj=cluster_obj, use_wall_clock=use_wall_clock
+        )
+        # Once the wall clock fails, keep using the tip for the rest of the wait
+        use_wall_clock = wall_clock_epoch is not None
 
         # Return if we are in the required interval
         if start_abs <= s_from_epoch_start <= stop_abs:
