@@ -2,6 +2,7 @@
 
 import enum
 import logging
+import math
 import pathlib as pl
 import typing as tp
 
@@ -16,7 +17,6 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.tests.tests_plutus import mint_build
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import helpers
@@ -34,6 +34,10 @@ BATCH6_PROT_VERSION = 11
 BATCH5_COST_MODEL_LEN = 297
 # Cost model length including batch6 built-in functions
 BATCH6_COST_MODEL_LEN = 330
+# Lovelace amount used for minting with a single script
+SCRIPT_FUND = 10_000_000
+# Max number of scripts to fund the token issuer for in a single transaction
+FUND_CHUNK_SIZE = 30
 
 pytestmark = [
     markers.SKIPIF_PLUTUSV3_UNUSABLE,
@@ -105,51 +109,88 @@ def update_cost_model(
     )
 
 
+class IssuerFunds(tp.NamedTuple):
+    """UTxOs prepared on the token issuer address for minting with a single script."""
+
+    mint_utxos: list[clusterlib.UTXOData]
+    collateral_utxos: list[clusterlib.UTXOData]
+
+
+def fund_issuer_batch(
+    cluster_obj: clusterlib.ClusterLib,
+    temp_template: str,
+    payment_addr: clusterlib.AddressRecord,
+    issuer_addr: clusterlib.AddressRecord,
+    minting_costs: list[plutus_common.ScriptCost],
+    amount: int,
+) -> list[IssuerFunds]:
+    """Fund the token issuer for minting with multiple scripts in a single transaction.
+
+    For each minting cost, create one UTxO for minting and one UTxO for collateral.
+    Funding all scripts at once saves one transaction (and one wait for a block) per script.
+
+    Returns:
+        list[IssuerFunds]: The minting and collateral UTxOs, in the order of `minting_costs`.
+    """
+    txouts = []
+    for cost in minting_costs:
+        txouts.append(clusterlib.TxOut(address=issuer_addr.address, amount=amount))
+        txouts.append(clusterlib.TxOut(address=issuer_addr.address, amount=cost.collateral))
+
+    tx_output = clusterlib_utils.build_and_submit_tx(
+        cluster_obj=cluster_obj,
+        name_template=f"{temp_template}_fund_issuer",
+        src_address=payment_addr.address,
+        build_method=clusterlib_utils.BuildMethods.BUILD,
+        tx_files=clusterlib.TxFiles(signing_key_files=[payment_addr.skey_file]),
+        txouts=txouts,
+        fee_buffer=2_000_000,
+        # Don't join the txouts, we need separate UTxOs
+        join_txouts=False,
+    )
+
+    out_utxos = sorted(
+        cluster_obj.g_query.get_utxo(tx_raw_output=tx_output), key=lambda u: u.utxo_ix
+    )
+    # Check the outputs of the funding tx, not the address balance. Minting txs that were
+    # submitted earlier can still change the balance of the token issuer address.
+    issuer_amount = sum(u.amount for u in out_utxos if u.address == issuer_addr.address)
+    assert issuer_amount == sum(t.amount for t in txouts), (
+        f"Incorrect amount funded to token issuer address `{issuer_addr.address}`"
+    )
+    utxo_ix_offset = clusterlib_utils.get_utxo_ix_offset(utxos=out_utxos, txouts=txouts)
+    utxos_by_ix = {u.utxo_ix: u for u in out_utxos}
+
+    return [
+        IssuerFunds(
+            mint_utxos=[utxos_by_ix[utxo_ix_offset + 2 * i]],
+            collateral_utxos=[utxos_by_ix[utxo_ix_offset + 2 * i + 1]],
+        )
+        for i in range(len(minting_costs))
+    ]
+
+
 def run_scenario(
-    cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
     plutus_v_record: plutus_common.PlutusScriptData,
+    payment_addr: clusterlib.AddressRecord,
+    issuer_addr: clusterlib.AddressRecord,
+    issuer_funds: IssuerFunds,
     outcome: Outcomes,
     is_cost_model_ok: bool,
     is_prot_version_ok: bool,
 ):
-    """Run an e2e test for a Plutus builtin."""
-    payment_addrs = addrs_common.get_payment_addrs(
-        name_template=temp_template,
-        cluster_manager=cluster_manager,
-        cluster_obj=cluster_obj,
-        num=2,
-        fund_idx=[0],
-        caching_key="plutusv3_builtins_batch_testing",
-        amount=1_000_000_000,
-        min_amount=300_000_000,
-    )
+    """Run an e2e test for a Plutus builtin.
 
-    payment_addr = payment_addrs[0]
-    issuer_addr = payment_addrs[1]
-
+    The token issuer is expected to be already funded (see `fund_issuer_batch`).
+    """
     lovelace_amount = 2_000_000
     token_amount = 5
-    script_fund = 10_000_000
+    mint_utxos = issuer_funds.mint_utxos
+    collateral_utxos = issuer_funds.collateral_utxos
 
-    minting_cost = plutus_common.compute_cost(
-        execution_cost=plutus_v_record.execution_cost,
-        protocol_params=cluster_obj.g_query.get_protocol_params(),
-    )
-
-    # Step 1: fund the token issuer and create UTXO for collaterals
-
-    mint_utxos, collateral_utxos, _tx_output_step1 = mint_build._fund_issuer(
-        cluster_obj=cluster_obj,
-        temp_template=temp_template,
-        payment_addr=payment_addr,
-        issuer_addr=issuer_addr,
-        minting_cost=minting_cost,
-        amount=script_fund,
-    )
-
-    # Step 2: mint the "qacoin"
+    # Mint the "qacoin"
 
     policyid = cluster_obj.g_transaction.get_policyid(plutus_v_record.script_file)
     asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
@@ -165,10 +206,10 @@ def run_scenario(
         )
     ]
 
-    tx_files_step2 = clusterlib.TxFiles(
+    tx_files_mint = clusterlib.TxFiles(
         signing_key_files=[issuer_addr.skey_file],
     )
-    txouts_step2 = [
+    txouts_mint = [
         clusterlib.TxOut(address=issuer_addr.address, amount=lovelace_amount),
         *mint_txouts,
     ]
@@ -178,9 +219,9 @@ def run_scenario(
             cluster_obj.g_transaction.calculate_plutus_script_cost(
                 src_address=payment_addr.address,
                 tx_name=plutus_v_record.script_file.name,
-                tx_files=tx_files_step2,
+                tx_files=tx_files_mint,
                 txins=mint_utxos,
-                txouts=txouts_step2,
+                txouts=txouts_mint,
                 mint=plutus_mint_data,
             )
         except clusterlib.CLIError:
@@ -189,14 +230,14 @@ def run_scenario(
     _dump_cost()
 
     try:
-        tx_output_step2 = clusterlib_utils.build_and_submit_tx(
+        tx_output_mint = clusterlib_utils.build_and_submit_tx(
             cluster_obj=cluster_obj,
-            name_template=f"{temp_template}_step2",
+            name_template=f"{temp_template}_mint",
             src_address=payment_addr.address,
             build_method=clusterlib_utils.BuildMethods.BUILD,
-            tx_files=tx_files_step2,
+            tx_files=tx_files_mint,
             txins=mint_utxos,
-            txouts=txouts_step2,
+            txouts=txouts_mint,
             mint=plutus_mint_data,
         )
     except clusterlib.CLIError as excp:
@@ -218,7 +259,7 @@ def run_scenario(
             return
         raise
 
-    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_step2)
+    out_utxos = cluster_obj.g_query.get_utxo(tx_raw_output=tx_output_mint)
     token_utxo = clusterlib.filter_utxos(utxos=out_utxos, address=issuer_addr.address, coin=token)
     assert token_utxo and token_utxo[0].amount == token_amount, "The token was not minted"
 
@@ -235,22 +276,63 @@ def run_plutusv3_builtins_test(
     is_prot_version_ok: bool,
     subtests: pytest_subtests.SubTests,
 ):
-    """Run minting tests with the tested Plutus Core built-in functions."""
-    cases = (
-        (success_scripts, Outcomes.SUCCESS),
-        (fail_scripts, Outcomes.ERROR),
-        (overspend_scripts, Outcomes.OVERSPEND),
+    """Run minting tests with the tested Plutus Core built-in functions.
+
+    The token issuer is funded for multiple scripts at once, in chunks of
+    `FUND_CHUNK_SIZE` scripts, to save one funding transaction per script.
+    """
+    cases = [
+        *((s, Outcomes.SUCCESS) for s in success_scripts),
+        *((s, Outcomes.ERROR) for s in fail_scripts),
+        *((s, Outcomes.OVERSPEND) for s in overspend_scripts),
+    ]
+    protocol_params = cluster_obj.g_query.get_protocol_params()
+    all_minting_costs = [
+        plutus_common.compute_cost(
+            execution_cost=script.execution_cost, protocol_params=protocol_params
+        )
+        for script, __ in cases
+    ]
+
+    # Make sure the payment address has enough funds for all the chunks, plus fees.
+    # The addresses are cached per variant, so tests running in parallel on the same
+    # cluster instance don't share them.
+    num_chunks = math.ceil(len(cases) / FUND_CHUNK_SIZE)
+    total_amount = (
+        sum(SCRIPT_FUND + c.collateral for c in all_minting_costs) + num_chunks * 10_000_000
+    )
+    payment_addr, issuer_addr = addrs_common.get_payment_addrs(
+        name_template=temp_template,
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster_obj,
+        num=2,
+        fund_idx=[0],
+        caching_key=f"plutusv3_builtins_batch_testing_{variant}",
+        amount=max(1_000_000_000, total_amount),
+        min_amount=total_amount,
     )
 
-    for scripts, outcome in cases:
-        for script in scripts:
+    for chunk_idx, chunk_start in enumerate(range(0, len(cases), FUND_CHUNK_SIZE)):
+        chunk = cases[chunk_start : chunk_start + FUND_CHUNK_SIZE]
+        all_issuer_funds = fund_issuer_batch(
+            cluster_obj=cluster_obj,
+            temp_template=f"{temp_template}_chunk{chunk_idx}",
+            payment_addr=payment_addr,
+            issuer_addr=issuer_addr,
+            minting_costs=all_minting_costs[chunk_start : chunk_start + FUND_CHUNK_SIZE],
+            amount=SCRIPT_FUND,
+        )
+
+        for (script, outcome), issuer_funds in zip(chunk, all_issuer_funds, strict=True):
             script_stem = script.script_file.stem
             with subtests.test(variant=f"{variant}_{script_stem}"):
                 run_scenario(
-                    cluster_manager=cluster_manager,
                     cluster_obj=cluster_obj,
                     temp_template=f"{temp_template}_{script_stem}",
                     plutus_v_record=script,
+                    payment_addr=payment_addr,
+                    issuer_addr=issuer_addr,
+                    issuer_funds=issuer_funds,
                     outcome=outcome,
                     is_cost_model_ok=is_cost_model_ok,
                     is_prot_version_ok=is_prot_version_ok,
