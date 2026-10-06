@@ -85,7 +85,7 @@ When a test leaves the cluster instance in a state that cannot be reverted, the 
 
 - `cleanup=True` in `cluster_manager.get()` - respin after the test, always. Combine with locking `CLUSTER`.
 - `cluster_manager.set_needs_respin()` - respin once no test is running on the instance. Call it before the irreversible change, not after.
-- `with cluster_manager.respin_on_failure():` - respin only when the wrapped code raises. Use it when the test itself reverts the change at the end.
+- `with cluster_manager.respin_on_failure():` - respin only when the wrapped code raises. Use it when the test itself reverts the change at the end. Any exception except `KeyboardInterrupt` triggers the respin, including `pytest.skip`, `pytest.xfail` and `pytest.fail` (also when raised from helpers such as `blockers.GH.finish_test`), so don't call `set_needs_respin()` before them inside the guard. A `return` from inside the guard skips the revert at the end without a respin.
 
 ## Sharing Expensive Setup
 
