@@ -361,6 +361,7 @@ class TestPlutusV3Builtins:
         )
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
     @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
     @pytest.mark.team_plutus
