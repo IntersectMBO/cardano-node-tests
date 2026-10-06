@@ -169,7 +169,8 @@ class TestSetup:
 
         * Get current protocol version and calculate target version (current + 1)
         * Skip if already at last supported protocol version
-        * Check that ExperimentalHardForksEnabled is true in node config
+        * Skip if ExperimentalHardForksEnabled is needed (node version < target protocol
+          version) but not enabled in node config
         * Get default governance data (DReps, committee members, pools)
         * Wait for any delayed ratification to complete
         * Create hardfork governance action with target protocol version
@@ -196,8 +197,13 @@ class TestSetup:
             cluster_nodes.get_cluster_env().state_dir / "config-pool1.json", encoding="utf-8"
         ) as in_json:
             is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
-        if VERSIONS.node < version.parse("11.0.0") and not is_experimental_enabled:
-            pytest.skip("Enabled experimental hard-forks are needed for this node version.")
+        # Experimental hard forks are needed when the node version is lower than the target
+        # protocol version, e.g. for PV11 with node < 11.0.0, or for PV12 with node < 12.0.0.
+        if not is_experimental_enabled and VERSIONS.node < version.parse(f"{prot_ver_target}.0.0"):
+            pytest.skip(
+                "Enabled experimental hard-forks are needed for this node version "
+                f"and target protocol version {prot_ver_target}."
+            )
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster

@@ -179,11 +179,13 @@ Three steps, driven by `runner/node_upgrade_pytest.sh`, each producing its own r
 | step2 | Upgrade every node **except `pool3`**, regenerate configs and topologies keeping the original genesis files, restart. `pool3` keeps running the base binary, so the network is mixed-version. Plutus cost models are updated via a governance action (`test_update_cost_models`). | `smoke or upgrade_step2` |
 | step3 | Upgrade `pool3` too. `pool1` uses a ledger peer snapshot taken with the base version, `pool3` one taken with the new version, both switched to `GenesisMode`. If the target protocol version is higher than the base one, `test_hardfork` performs the hard fork. | `smoke or upgrade_step3` |
 
-The base and target protocol versions are the `BASE_PROT_VER` / `TARGET_PROT_VER` constants at
-the top of `runner/node_upgrade_pytest.sh`. When they are equal (as for 11.1.1: 11 -> 11) no hard
-fork is performed and the run only tests the binary upgrade. Each step also runs
-`test_ignore_log_errors` first, which registers the log errors that are expected during the
-upgrade.
+The base protocol version is the `BASE_PROT_VER` constant at the top of
+`runner/node_upgrade_pytest.sh`. The target protocol version is set by the `UPGRADE_PROT_VER` env
+variable (workflow input `upgrade_prot_ver`) and defaults to the base one. When they are equal (as
+for 11.1.1: 11 -> 11) no hard fork is performed and the run only tests the binary upgrade. Base + 1
+performs the hard fork, e.g. `UPGRADE_PROT_VER=12` upgrades to Dijkstra for feature branches. Each
+step also runs `test_ignore_log_errors` first, which registers the log errors that are expected
+during the upgrade.
 
 **Value:** catches issues that only appear across versions - config/genesis incompatibilities,
 mixed-version block diffusion, cost model updates, hard fork handling, and log errors that would
