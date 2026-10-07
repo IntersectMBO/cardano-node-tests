@@ -35,6 +35,8 @@ Unit tests for the framework components are organized under:
 
 - `framework_tests/` - Unit tests for cluster management, log file checking, etc.
 
+Agent skills are under `.agents/skills/`, shared by all agents. `.claude/skills` is a symlink to it, so add or edit skills only under `.agents/skills/`.
+
 ---
 
 ## Making Code Changes

@@ -1,6 +1,6 @@
 ---
 name: analyze-failures
-description: Triage a failed cardano-node-tests run, and answer questions about where a test run's logs and artifacts live. Use when the user asks to analyze, triage, or explain failures in a regression run, a node-upgrade run, a run_workdir, a saved run directory or artifacts downloaded from a CI run, and also when they ask where to find node logs, cluster logs, test artifacts, allure results or the cluster-management status database after running tests. Accepts an optional run directory argument (default `run_workdir`).
+description: Triage a failed cardano-node-tests run, and answer questions about where a test run's logs and artifacts live. Use when the user asks to analyze, triage, or explain failures in a regression run, a node-upgrade run, a run_workdir, a saved run directory or artifacts downloaded from a CI run, and also when they ask where to find node logs, cluster logs, test artifacts, allure results or the cluster-management status database after running tests. Accepts an optional run directory (default `run_workdir`).
 ---
 
 # Analyze test run failures
@@ -10,10 +10,10 @@ for each group.
 
 ## 1. Resolve the run directory
 
-The directory passed as the skill argument, or `run_workdir` if none was given. The path may be
-relative to the current working directory or absolute; it can be a fresh run produced by
-`runner/regression.sh`, artifacts downloaded from a CI run, or any saved historical run
-directory.
+The directory given in the invocation or the request, or `run_workdir` if none was given. The
+path may be relative to the current working directory or absolute; it can be a fresh run
+produced by `runner/regression.sh`, artifacts downloaded from a CI run, or any saved historical
+run directory.
 
 If the directory does not exist, stop and say so - do not guess another path.
 
