@@ -57,9 +57,9 @@ which case do every step below for each of them.
 ## When this skill is invoked, do this immediately
 
 1. Work out which dependency (or both) is being synced. If the invocation
-   argument or the surrounding conversation names one, use that. If it is
+   or the surrounding conversation names one, use that. If it is
    ambiguous, ask, do not guess.
-2. If a branch/ref was given as an argument, use it. Otherwise ask the user
+2. If a branch/ref was given in the invocation, use it. Otherwise ask the user
    which branch, tag, or commit to sync to before doing anything else. Do
    not guess or default to `master` silently, confirm it.
 3. Run the sync procedure below against that ref, in `cardano-node-tests`.
