@@ -6,6 +6,8 @@
 # BASE_REVISION - revision of cardano-node to upgrade from (alternative to BASE_TAR_URL)
 # UPGRADE_REVISION - revision of cardano-node to upgrade to
 # UPGRADE_CLI_REVISION - revision of cardano-cli to upgrade to (optional)
+# UPGRADE_PROT_VER - protocol version to upgrade to (optional); defaults to the base protocol
+#   version (no hard fork), base version + 1 performs a hard fork (e.g. 12 for Dijkstra)
 
 set -Eeuo pipefail
 # shellcheck disable=SC2016

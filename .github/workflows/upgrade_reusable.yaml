@@ -22,6 +22,10 @@ on:
         required: false
         type: string
         default: ""
+      upgrade_prot_ver:
+        required: false
+        type: string
+        default: ""
       byron_cluster:
         required: false
         type: boolean
@@ -42,6 +46,7 @@ env:
   BASE_TAR_URL: ${{ inputs.base_tar_url }}
   UPGRADE_REVISION: ${{ inputs.upgrade_rev }}
   UPGRADE_CLI_REVISION: ${{ inputs.upgrade_cli_rev }}
+  UPGRADE_PROT_VER: ${{ inputs.upgrade_prot_ver }}
   CI_BYRON_CLUSTER: ${{ inputs.byron_cluster }}
 
 jobs:

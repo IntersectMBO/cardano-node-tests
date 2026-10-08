@@ -15,6 +15,13 @@ on:
       upgrade_cli_rev:
         description: "cardano-cli upgrade revision (optional)"
         default: ""
+      upgrade_prot_ver:
+        type: choice
+        description: "Protocol version to upgrade to (12 = hard fork to Dijkstra)"
+        options:
+          - "11"
+          - "12"
+        default: "11"
       byron_cluster:
         type: boolean
         default: false
@@ -32,5 +39,6 @@ jobs:
       base_tar_url: ${{ inputs.base_tar_url }}
       upgrade_rev: ${{ inputs.upgrade_rev }}
       upgrade_cli_rev: ${{ inputs.upgrade_cli_rev }}
+      upgrade_prot_ver: ${{ inputs.upgrade_prot_ver }}
       byron_cluster: ${{ inputs.byron_cluster }}
       env-path: runner/env_upgrade

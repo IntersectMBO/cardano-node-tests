@@ -12,16 +12,20 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests.tests_conway import conway_common
+from cardano_node_tests.tests.tests_dijkstra import bls
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import faucet
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
 from cardano_node_tests.utils.versions import VERSIONS
+from cardano_node_tests.utils.versions import EraName
 
 LOGGER = logging.getLogger(__name__)
 
@@ -169,7 +173,8 @@ class TestSetup:
 
         * Get current protocol version and calculate target version (current + 1)
         * Skip if already at last supported protocol version
-        * Check that ExperimentalHardForksEnabled is true in node config
+        * Skip if ExperimentalHardForksEnabled is needed (node version < target protocol
+          version) but not enabled in node config
         * Get default governance data (DReps, committee members, pools)
         * Wait for any delayed ratification to complete
         * Create hardfork governance action with target protocol version
@@ -196,8 +201,13 @@ class TestSetup:
             cluster_nodes.get_cluster_env().state_dir / "config-pool1.json", encoding="utf-8"
         ) as in_json:
             is_experimental_enabled = bool(json.load(in_json).get("ExperimentalHardForksEnabled"))
-        if VERSIONS.node < version.parse("11.0.0") and not is_experimental_enabled:
-            pytest.skip("Enabled experimental hard-forks are needed for this node version.")
+        # Experimental hard forks are needed when the node version is lower than the target
+        # protocol version, e.g. for PV11 with node < 11.0.0, or for PV12 with node < 12.0.0.
+        if not is_experimental_enabled and VERSIONS.node < version.parse(f"{prot_ver_target}.0.0"):
+            pytest.skip(
+                "Enabled experimental hard-forks are needed for this node version "
+                f"and target protocol version {prot_ver_target}."
+            )
 
         governance_data = governance_setup.get_default_governance(
             cluster_manager=cluster_manager, cluster_obj=cluster
@@ -305,6 +315,121 @@ class TestSetup:
         assert enact_gov_state["currentPParams"]["protocolVersion"]["major"] == prot_ver_target, (
             "Incorrect major version"
         )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(UPGRADE_TESTS_STEP != 3, reason="runs only on step 3 of upgrade testing")
+    @pytest.mark.skipif(
+        VERSIONS.cluster_era_name != EraName.DIJKSTRA,
+        reason="runs only in Dijkstra era",
+    )
+    def test_register_pools_bls_keys(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+        worker_id: str,
+    ):
+        """Register BLS keys of the cluster pools after the hard fork to Dijkstra.
+
+        The cluster pools were registered before Dijkstra, so they have no BLS keys. Runs
+        only on step 3 of upgrade testing sequence, after the hard fork to Dijkstra.
+
+        * Skip if the node doesn't support BLS keys
+        * Skip if the pools already have BLS keys registered, i.e. the cluster was already
+          running in Dijkstra before the upgrade
+        * Check that the pool start scripts pick up a BLS key when there is one
+        * Generate a BLS key pair for every cluster pool
+        * Fund the pool owners, who pay for the re-registration transactions
+        * Re-register every pool with its BLS key, keeping the other pool parameters
+        * Put the BLS keys where the pool start scripts pick them up and restart the nodes
+        * Wait for the next epoch and check that every pool has its BLS key registered
+        """
+        cluster = cluster_singleton
+        temp_template = common.get_test_id(cluster)
+        state_dir = cluster_nodes.get_cluster_env().state_dir
+        pool_names = cluster_management.Resources.ALL_POOLS
+        addrs_data = cluster_manager.cache.addrs_data
+
+        node_help = helpers.run_command(
+            "cardano-node run --help", ignore_fail=True, merge_stderr=True
+        ).decode()
+        if "--shelley-bls-key" not in node_help:
+            pytest.skip("The node doesn't support BLS keys.")
+
+        pool_ids = {
+            p: delegation.get_pool_id(cluster_obj=cluster, addrs_data=addrs_data, pool_name=p)
+            for p in pool_names
+        }
+
+        # When the cluster was already running in Dijkstra before the upgrade, the pools
+        # already have their BLS keys registered
+        if all(
+            bls.get_registered_bls_key(cluster_obj=cluster, pool_id=pool_id)
+            for pool_id in pool_ids.values()
+        ):
+            pytest.skip("The pools already have BLS keys registered.")
+
+        # The start scripts check for the BLS key file on every node start, so a script
+        # generated before the key existed passes the key once it is in place.
+        for pool_name in pool_names:
+            start_script = state_dir / f"cardano-node-{pool_name.replace('node-', '')}"
+            assert "--shelley-bls-key" in start_script.read_text(), (
+                f"The start script '{start_script}' doesn't pick up a BLS key"
+            )
+
+        bls_key_pairs = {
+            p: cluster.g_node.gen_bls_key_pair(node_name=f"{temp_template}_{p}") for p in pool_names
+        }
+
+        # The pool owners pay for the re-registration transactions
+        faucet.fund_from_faucet(
+            *[addrs_data[p]["payment"] for p in pool_names],
+            cluster_obj=cluster,
+            all_faucets=addrs_data,
+            amount=100_000_000,
+            tx_name=f"{temp_template}_fund_owners",
+            force=True,
+        )
+
+        # The hard fork to Dijkstra records the VRF key hashes of the pools, so the known
+        # ledger issue with pools from the genesis doesn't apply here and must not be xfailed
+        for pool_name in pool_names:
+            bls.reregister_cluster_pool(
+                cluster_obj=cluster,
+                pool_rec=addrs_data[pool_name],
+                pool_name=pool_name,
+                pool_id=pool_ids[pool_name],
+                bls_skey_file=bls_key_pairs[pool_name].skey_file,
+                tx_name=f"{temp_template}_{pool_name}_rereg",
+                allow_xfail=False,
+            )
+
+        # The node reads its BLS key only on startup, so the nodes need a restart
+        for pool_name, key_pair in bls_key_pairs.items():
+            pool_data_dir = state_dir / "nodes" / pool_name
+            shutil.copy(key_pair.skey_file, pool_data_dir / "bls.skey")
+            shutil.copy(key_pair.vkey_file, pool_data_dir / "bls.vkey")
+
+        # Restarting the nodes drops the connections between them
+        logfiles.add_ignore_rule(
+            files_glob="*.stdout",
+            regex="MuxBearerClosed",
+            ignore_file_id=worker_id,
+        )
+        cluster_nodes.restart_all_nodes(delay=5)
+        cluster.wait_for_new_block(new_blocks=2)
+
+        # The pool update takes effect on the next epoch boundary
+        cluster.wait_for_new_epoch(padding_seconds=5)
+        errors = []
+        for pool_name, key_pair in bls_key_pairs.items():
+            registered_key = bls.get_bls_pub_key(
+                bls_key_state=bls.get_registered_bls_key(
+                    cluster_obj=cluster, pool_id=pool_ids[pool_name]
+                )
+            )
+            if registered_key != bls.get_vkey_hex(vkey_file=key_pair.vkey_file):
+                errors.append(f"The pool '{pool_name}' has unexpected BLS key: {registered_key}")
+        assert not errors, "\n".join(errors)
 
 
 class TestUpgrade:
