@@ -54,6 +54,14 @@ Counting the worst-case `N`:
 - `clusterlib_utils.wait_for_epoch_interval()` waits only when the current time is already past `stop`. A wide window (e.g. `start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)`) costs at most `start` plus the buffer (under a minute on `local_fast`, ~4 minutes on `leios_fast`) and counts as 0. A narrow window near the end of an epoch (e.g. `common.get_epoch_start_sec_ledger_state(cluster_obj=cluster)` to `common.EPOCH_STOP_SEC_LEDGER_STATE`) counts as 1.
 - Include epoch waits in helper functions the test calls (governance ratification and enactment, waiting for rewards, etc.), in test-specific fixtures and in finalizers. Values derived from genesis (e.g. `cluster.conway_genesis["govActionLifetime"]`) or from the current cluster state (e.g. `clusterlib_utils.get_epochs_to_rewards()`) can be used directly.
 
+## Node Restarts
+
+The networking code (ouroboros-network) has hard-coded, non-configurable timings for re-establishing a lost connection to a peer. They are tuned for mainnet and public testnet epochs and security parameter `k` (`securityParam` in Shelley genesis). On local testnets with short epochs and small `k`, a single restarted node may never reconnect to its peers.
+
+- When a test needs to restart a node on a local testnet, restart all nodes of the cluster instance with `cluster_nodes.restart_all_nodes()`, even when only a single node needs the restart (e.g. after changing its config). Don't use `cluster_nodes.restart_nodes()` or `stop_nodes()` / `start_nodes()` for a subset of nodes.
+- Tests that specifically need to restart or disconnect only some of the nodes (reconnection, rollback tests) must run on the `mainnet_fast` testnet variant, which has mainnet-like epoch length and `k`. Skip them on other variants with `"mainnet_fast" not in configuration.TESTNET_VARIANT` (see `test_reconnect.py`).
+- Restarting nodes changes the state of the whole cluster instance, so the test must use the `cluster_singleton` fixture (see `agent_docs/resource_management.md`).
+
 ## Summary Checklist
 
 When writing a new E2E test, or making larger changes to an existing one, ensure:
@@ -66,6 +74,7 @@ When writing a new E2E test, or making larger changes to an existing one, ensure
 - [ ] `common.get_test_id(cluster)` is used for unique naming
 - [ ] Appropriate pytest markers are set (see Pytest Markers above)
 - [ ] Tests that wait for epochs call `common.skip_on_long_epochs` (see Epoch Waits above)
+- [ ] Node restarts on local testnets restart all nodes (see Node Restarts above)
 - [ ] db-sync checks are added where results are verifiable in db-sync (see `agent_docs/dbsync.md`)
 - [ ] Code follows Google Python Style Guide
 - [ ] Linters pass
