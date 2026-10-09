@@ -71,7 +71,7 @@ Or run the upgrade test suite:
 
 ### Analyzing Failures
 
-In Claude Code, `/analyze-failures [run_dir]` triages a finished run (`run_workdir` by default, also artifacts downloaded from a CI run) and answers where a run's logs and artifacts live.
+In AI agent, `/analyze-failures [run_dir]` triages a finished run (`run_workdir` by default, also artifacts downloaded from a CI run) and answers where a run's logs and artifacts live.
 
 ---
 

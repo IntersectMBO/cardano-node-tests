@@ -76,7 +76,7 @@ Results land in `run_workdir`.
 
 ### Locally
 
-In Claude Code:
+In AI agent:
 
 ```text
 /analyze-failures
