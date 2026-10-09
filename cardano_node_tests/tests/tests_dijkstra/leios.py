@@ -12,11 +12,9 @@ handling here, without adding the experimental query to clusterlib.
 
 import ctypes
 import ctypes.util
-import dataclasses
 import functools
 import hashlib
 import json
-import logging
 import pathlib as pl
 import re
 import shutil
@@ -30,8 +28,6 @@ from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
-
-LOGGER = logging.getLogger(__name__)
 
 # Why the Leios tests cannot run, empty when they can. The Tx load generator is needed
 # because an EB is forged from the mempool backlog that doesn't fit into a Praos block.
@@ -491,290 +487,6 @@ def skip_if_no_ebs(*, cluster_obj: clusterlib.ClusterLib) -> None:
     skip_if_no_ebs_in_genesis(genesis=cluster_obj.genesis)
 
 
-@dataclasses.dataclass
-class LogSearch:
-    """Where to continue searching a log file, and what was already found in it."""
-
-    seek_offset: int
-    inode: int
-    timestamp: float
-    found: set[str] = dataclasses.field(default_factory=set)
-
-
-def get_log_position(logfile: pl.Path) -> tuple[int, int, float]:
-    """Return the current end of the log file as (byte offset, inode, timestamp).
-
-    A single `stat` call, so that the offset (file size) and the inode belong to the
-    same file even when the file is rotated in between.
-    """
-    logfile_stat = logfile.stat()
-    return logfile_stat.st_size, logfile_stat.st_ino, time.time()
-
-
-def find_msgs(
-    *,
-    regexes: tp.Collection[str],
-    logfile: pl.Path,
-    seek_offset: int,
-    inode: int,
-    timestamp: float,
-) -> set[str]:
-    """Return the searched message regexes that are present in the log file.
-
-    Args:
-        regexes: The message regexes to search for. Duplicates are collapsed, so that
-            the "found everything" early exit is reachable.
-        logfile: Path to the node log file.
-        seek_offset: Byte offset to start the search at.
-        inode: Inode of the log file the `seek_offset` was recorded for.
-        timestamp: Time the search offset was recorded at.
-
-    Returns:
-        The subset of `regexes` that matched at least one log line.
-    """
-    regexes = frozenset(regexes)
-
-    # One pass over the log file for all the regexes
-    lines = logfiles.find_msgs_in_logs(
-        regex="|".join(f"(?:{r})" for r in regexes),
-        logfile=logfile,
-        seek_offset=seek_offset,
-        timestamp=timestamp,
-        inode=inode,
-    )
-
-    found: set[str] = set()
-    for line in lines:
-        for regex in regexes:
-            if regex not in found and re.search(regex, line):
-                found.add(regex)
-        if len(found) == len(regexes):
-            break
-
-    return found
-
-
-def init_searches(logfiles_list: tp.Iterable[pl.Path]) -> dict[pl.Path, LogSearch]:
-    """Return the search state for each log file, starting at its current end."""
-    searches: dict[pl.Path, LogSearch] = {}
-    for logfile in logfiles_list:
-        seek_offset, inode, timestamp = get_log_position(logfile)
-        searches[logfile] = LogSearch(seek_offset=seek_offset, inode=inode, timestamp=timestamp)
-    return searches
-
-
-def _search_one[T](
-    *,
-    logfile: pl.Path,
-    search: LogSearch,
-    search_func: tp.Callable[..., T],
-    log_errors: dict[pl.Path, str],
-) -> T | None:
-    """Search the part of one log file that was appended since the previous search.
-
-    Moves the search position of `search` past the searched part, and records in
-    `log_errors` whether the log file could be searched.
-
-    Args:
-        logfile: Path to the node log file.
-        search: The search state of the log file, updated in place.
-        search_func: Does the actual search. Called with the `logfile`, `seek_offset`,
-            `inode` and `timestamp` keyword arguments, like `find_msgs` and
-            `logfiles.find_msgs_in_logs` take them.
-        log_errors: Only the last outcome per log file, see `search_round`.
-
-    Returns:
-        What `search_func` returned, or `None` when the log file could not be searched.
-    """
-    try:
-        # Record the new search position before the search, so that lines appended
-        # while the search is running are not skipped in the next round
-        next_position = get_log_position(logfile)
-        result = search_func(
-            logfile=logfile,
-            seek_offset=search.seek_offset,
-            inode=search.inode,
-            timestamp=search.timestamp,
-        )
-    except FileNotFoundError as err:
-        # The log file kept getting rotated during the search. Keep the search
-        # position, so that the same part of the log is searched again.
-        msg = f"Cannot search '{logfile}': {err}"
-        LOGGER.warning("%s", msg)
-        log_errors[logfile] = msg
-        return None
-
-    # The search position was kept on failure, so a failure that a later round
-    # recovered from didn't cost any log content
-    log_errors.pop(logfile, None)
-    search.seek_offset, search.inode, search.timestamp = next_position
-    return result
-
-
-def search_round(
-    *,
-    searches: dict[pl.Path, LogSearch],
-    missing_msgs: tp.Callable[[LogSearch], tp.Collection[str]],
-    log_errors: dict[pl.Path, str],
-) -> None:
-    """Search the part of each log file that was appended since the previous round.
-
-    Updates `searches` in place with what was found and where to continue, and
-    `log_errors` with the log files that could not be searched.
-
-    Args:
-        searches: The search state per log file.
-        missing_msgs: Returns the messages a given search state is still missing, so the
-            caller decides what the round looks for.
-        log_errors: Only the last outcome per log file, so that repeated rotations don't
-            pile up near-duplicate reports - the error names the rotated file the search
-            died on. An entry is removed once a later round recovered from the failure.
-    """
-    for logfile, search in searches.items():
-        missing = missing_msgs(search)
-        if not missing:
-            continue
-
-        found = _search_one(
-            logfile=logfile,
-            search=search,
-            search_func=functools.partial(find_msgs, regexes=missing),
-            log_errors=log_errors,
-        )
-        if found is not None:
-            search.found |= found
-
-
-def search_lines_round(
-    *,
-    searches: dict[pl.Path, LogSearch],
-    regex: str,
-    log_errors: dict[pl.Path, str],
-) -> dict[pl.Path, list[str]]:
-    """Return the lines matching a regex that were appended since the previous round.
-
-    The counterpart of `search_round` for a caller that needs the matching lines
-    themselves, not just whether a message is there. Updates the search positions in
-    `searches` in place; the `found` sets are left alone.
-
-    Args:
-        searches: The search state per log file.
-        regex: The regex to search for.
-        log_errors: The log files that could not be searched, updated the same way as by
-            `search_round`.
-
-    Returns:
-        The new matching lines per log file.
-    """
-    new_lines: dict[pl.Path, list[str]] = {}
-    for logfile, search in searches.items():
-        lines = _search_one(
-            logfile=logfile,
-            search=search,
-            search_func=functools.partial(logfiles.find_msgs_in_logs, regex=regex),
-            log_errors=log_errors,
-        )
-        new_lines[logfile] = lines or []
-
-    return new_lines
-
-
-def wait_for_msgs(
-    *,
-    logfile: pl.Path,
-    regexes: tp.Collection[str],
-    deadline: float,
-    stop_on: tp.Collection[str] = (),
-) -> tuple[set[str], list[str]]:
-    """Search one log file for messages until they are all found, or the deadline passes.
-
-    Only the log content that gets appended while the search runs is searched, and each
-    round searches only the part that is new since the previous one.
-
-    Args:
-        logfile: Path to the node log file.
-        regexes: The message regexes to search for.
-        deadline: A `time.monotonic()` value the search must not go past.
-        stop_on: Messages that end the search as soon as any of them is found, on top of
-            having found all of `regexes`. Used when the searched messages are mutually
-            exclusive outcomes and any one of them answers the question.
-
-    Returns:
-        The messages that were found, and the problems that got in the way of the search.
-        A problem explains a missing message, so it is reported only together with one.
-    """
-    searches = init_searches([logfile])
-    log_errors: dict[pl.Path, str] = {}
-    all_msgs = frozenset(regexes)
-    stop_msgs = frozenset(stop_on)
-    searched_msgs = all_msgs | stop_msgs
-
-    while True:
-        time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
-
-        search_round(
-            searches=searches,
-            missing_msgs=lambda search: searched_msgs - search.found,
-            log_errors=log_errors,
-        )
-
-        found = searches[logfile].found
-        if all_msgs <= found or found & stop_msgs or time.monotonic() >= deadline:
-            break
-
-    return searches[logfile].found, list(log_errors.values())
-
-
-def search_logs_until(
-    *,
-    searches: dict[pl.Path, LogSearch],
-    regexes: tp.Collection[str],
-    deadline: float,
-    stop_on: tp.Collection[str] = (),
-) -> list[str]:
-    """Keep searching several log files for messages until the deadline passes.
-
-    Continues the given searches, so that the caller decides where the searched window
-    starts - e.g. before doing something that takes a while, and whose effects are what
-    the search is for. A last search round is done even when the deadline has already
-    passed, so that the log content appended up to now is always searched.
-
-    Args:
-        searches: The search state per log file, updated in place.
-        regexes: The message regexes to search for in every log file.
-        deadline: A `time.monotonic()` value the search must not go past.
-        stop_on: Messages that end the search as soon as any of them is found in any of
-            the log files, on top of having found all of `regexes` in all of them.
-
-    Returns:
-        The errors of the log files that could not be searched in the last round, see
-        `search_round`.
-    """
-    log_errors: dict[pl.Path, str] = {}
-    all_msgs = frozenset(regexes)
-    stop_msgs = frozenset(stop_on)
-    searched_msgs = all_msgs | stop_msgs
-
-    while True:
-        search_round(
-            searches=searches,
-            missing_msgs=lambda search: searched_msgs - search.found,
-            log_errors=log_errors,
-        )
-
-        found_any = {m for s in searches.values() for m in s.found}
-        if (
-            found_any & stop_msgs
-            or all(all_msgs <= s.found for s in searches.values())
-            or time.monotonic() >= deadline
-        ):
-            break
-
-        time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
-
-    return list(log_errors.values())
-
-
 def collect_vote_outcome_msgs(
     *, pool_logs: list[pl.Path], deadline: float
 ) -> tuple[dict[pl.Path, set[str]], list[str]]:
@@ -796,13 +508,13 @@ def collect_vote_outcome_msgs(
         way of the search - a log file that could not be searched. They explain a missing
         message, so they are reported only together with one.
     """
-    searches = init_searches(pool_logs)
+    searches = logfiles.init_searches(pool_logs)
     log_errors: dict[pl.Path, str] = {}
 
     while True:
         time.sleep(min(SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
 
-        search_round(
+        logfiles.search_round(
             searches=searches,
             missing_msgs=lambda search: _VOTE_OUTCOME_MSGS_SET - search.found,
             log_errors=log_errors,

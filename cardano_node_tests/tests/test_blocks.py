@@ -64,11 +64,7 @@ class TestLeadershipSchedule:
         pool_id = cluster.g_stake_pool.get_stake_pool_id(pool_rec["cold_key_pair"].vkey_file)
 
         pool_log = cluster_nodes.get_cluster_env().state_dir / f"{pool_short_name}.stdout"
-        # Single `stat` call, so the offset (file size) and the inode belong to the same file
-        pool_log_stat = pool_log.stat()
-        seek_offset = pool_log_stat.st_size
-        pool_log_inode = pool_log_stat.st_ino
-        timestamp = time.time()
+        seek_offset, pool_log_inode, timestamp = logfiles.get_log_position(pool_log)
 
         if for_epoch == "current":
             # Wait for beginning of an epoch

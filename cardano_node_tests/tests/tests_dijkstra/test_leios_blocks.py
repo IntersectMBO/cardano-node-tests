@@ -279,11 +279,11 @@ def _collect_eb_msgs(
         the search - a log file that could not be searched, or a stalled chain. They
         explain a missing message, so they are reported only together with one.
     """
-    searches = leios.init_searches(pool_logs)
+    searches = logfiles.init_searches(pool_logs)
     stall_error = ""
     log_errors: dict[pl.Path, str] = {}
 
-    def _missing_msgs(search: leios.LogSearch) -> tp.Collection[str]:
+    def _missing_msgs(search: logfiles.LogCursor) -> tp.Collection[str]:
         found_any_pool = {m for s in searches.values() for m in s.found}
         return (_ALL_POOLS_MSGS_SET - search.found) | (_ANY_POOL_MSGS_SET - found_any_pool)
 
@@ -295,7 +295,7 @@ def _collect_eb_msgs(
             # report what was still missing and not just the stall itself.
             stall_error = f"The chain stalled while waiting for new blocks: {err}"
 
-        leios.search_round(searches=searches, missing_msgs=_missing_msgs, log_errors=log_errors)
+        logfiles.search_round(searches=searches, missing_msgs=_missing_msgs, log_errors=log_errors)
 
         found_per_pool = {p: s.found for p, s in searches.items()}
         if stall_error or not _get_missing_msgs_errors(found_per_pool=found_per_pool):
@@ -328,13 +328,13 @@ def _collect_pre_voting_msgs(
         way of the search - a log file that could not be searched. They explain a missing
         message, so they are reported only together with one.
     """
-    searches = leios.init_searches(pool_logs)
+    searches = logfiles.init_searches(pool_logs)
     log_errors: dict[pl.Path, str] = {}
 
     while True:
         time.sleep(min(leios.SEARCH_STEP_SEC, max(0.0, deadline - time.monotonic())))
 
-        leios.search_round(
+        logfiles.search_round(
             searches=searches,
             missing_msgs=lambda search: _PRE_VOTING_MSGS_SET - search.found,
             log_errors=log_errors,
@@ -927,7 +927,7 @@ def _find_certified_ebs(
 
 def _collect_lines(
     *,
-    searches: dict[pl.Path, leios.LogSearch],
+    searches: dict[pl.Path, logfiles.LogCursor],
     regex: str,
     log_errors: dict[pl.Path, str],
     lines_per_log: dict[pl.Path, list[str]],
@@ -940,7 +940,7 @@ def _collect_lines(
         log_errors: The log files that could not be searched.
         lines_per_log: The lines found so far in each log file.
     """
-    for logfile, lines in leios.search_lines_round(
+    for logfile, lines in logfiles.search_lines_round(
         searches=searches, regex=regex, log_errors=log_errors
     ).items():
         lines_per_log[logfile].extend(lines)
@@ -1115,7 +1115,7 @@ class TestLeiosEbTxs:
                 txids[tx_hash] = cluster.g_transaction.get_txid(tx_file=tx_file)
                 tx_files.append(tx_file)
 
-            searches = leios.init_searches(node_logs)
+            searches = logfiles.init_searches(node_logs)
             log_errors: dict[pl.Path, str] = {}
             lines_per_log: dict[pl.Path, list[str]] = {p: [] for p in node_logs}
 
@@ -1306,8 +1306,9 @@ class TestLeiosQuorum:
 
         # Make sure the cluster does certify EBs, otherwise the absence of certificates
         # while the pool is stopped would say nothing
-        baseline_searches = leios.init_searches(pool_logs.values())
-        baseline_problems = leios.search_logs_until(
+        baseline_searches = logfiles.init_searches(pool_logs.values())
+        baseline_problems = logfiles.search_logs_until(
+            search_step_sec=leios.SEARCH_STEP_SEC,
             searches=baseline_searches,
             regexes=[leios.MSG_CERTIFIED],
             deadline=time.monotonic() + leios.MAX_SEARCH_SEC,
@@ -1356,7 +1357,7 @@ class TestLeiosQuorum:
                 cluster.wait_for_new_block(new_blocks=2)
                 time.sleep(QUORUM_VOTE_SETTLE_SEC)
 
-                outage_searches = leios.init_searches(running_logs)
+                outage_searches = logfiles.init_searches(running_logs)
                 outage_deadline = time.monotonic() + leios.MAX_SEARCH_SEC
                 outage_start_block = cluster.g_query.get_block_no()
 
@@ -1380,7 +1381,8 @@ class TestLeiosQuorum:
                     )
                 ]
 
-                outage_problems = leios.search_logs_until(
+                outage_problems = logfiles.search_logs_until(
+                    search_step_sec=leios.SEARCH_STEP_SEC,
                     searches=outage_searches,
                     regexes=[
                         leios.MSG_CERTIFIED,
@@ -1429,11 +1431,12 @@ class TestLeiosQuorum:
 
                 # Search from right before the start, so that a certificate assembled
                 # as soon as the node is back is not missed
-                recovery_searches = leios.init_searches(pool_logs.values())
+                recovery_searches = logfiles.init_searches(pool_logs.values())
                 cluster_nodes.start_nodes([stopped_node])
                 node_stopped = False
 
-                recovery_problems = leios.search_logs_until(
+                recovery_problems = logfiles.search_logs_until(
+                    search_step_sec=leios.SEARCH_STEP_SEC,
                     searches=recovery_searches,
                     regexes=[
                         leios.MSG_CERTIFIED,
