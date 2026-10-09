@@ -85,4 +85,4 @@ jobs:
     secrets:
       TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
       TCACHE_URL: ${{ secrets.TCACHE_URL }}
-      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}

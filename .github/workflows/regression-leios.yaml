@@ -37,4 +37,4 @@ jobs:
       ci_args: -k "smoke or leios or tests_dijkstra"
       env-path: runner/env_leios
     secrets:
-      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
