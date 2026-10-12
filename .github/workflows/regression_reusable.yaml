@@ -278,9 +278,12 @@ jobs:
             # `TCACHE_URL` ends in `/results`; `/history` is a sibling route.
             root="${TCACHE_URL%/}"
             entry="${root%/results}/history/${HISTORY_NAME}/${RUN_NUMBER}"
-            curl -s -X PUT --fail-with-body -u "$TCACHE_BASIC_AUTH" "$entry" -F "junitxml=@$report"
+            # Time out so a tcache that never answers cannot hold up the job.
+            curl -s -X PUT --fail-with-body --connect-timeout 10 --max-time 60 \
+              -u "$TCACHE_BASIC_AUTH" "$entry" -F "junitxml=@$report"
             # A proxy with no `/history` route answers 200 with an empty body.
-            stored="$(curl -s -o /dev/null -w '%{size_download}' -u "$TCACHE_BASIC_AUTH" "$entry/xml")"
+            stored="$(curl -s --connect-timeout 10 --max-time 60 -o /dev/null \
+              -w '%{size_download}' -u "$TCACHE_BASIC_AUTH" "$entry/xml")"
             if [ "$stored" != "$(stat -c%s "$report")" ]; then
               echo "::error::The tcache holds $stored bytes for run $RUN_NUMBER; is /history routed?"
               exit 1
