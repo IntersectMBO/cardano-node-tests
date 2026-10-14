@@ -9,6 +9,7 @@ import allure
 import cbor2
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
@@ -22,6 +23,16 @@ pytestmark = pytest.mark.skipif(
     VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
     reason="BLS keys are available only in Dijkstra+ eras",
 )
+
+
+def check_envelope_key(*, key_file: pl.Path, spec: bls.KeySpec) -> bytes:
+    """Check a BLS envelope, tolerating the CLI <= 11.3.0.0 spelling typo."""
+    if VERSIONS.cli <= version.parse("11.3.0.0"):
+        envelope = clusterlib_utils.load_envelope(envelope_file=key_file)
+        legacy_type = spec.envelope_type.replace("Minimal", "Mininimal")
+        if envelope["type"] == legacy_type:
+            spec = dataclasses.replace(spec, envelope_type=legacy_type)
+    return bls.check_envelope_key(key_file=key_file, spec=spec)
 
 
 class TestBlsKeys:
@@ -50,8 +61,8 @@ class TestBlsKeys:
         assert key_pair.vkey_file.exists(), f"The file `{key_pair.vkey_file}` doesn't exist"
         assert key_pair.skey_file.exists(), f"The file `{key_pair.skey_file}` doesn't exist"
 
-        bls.check_envelope_key(key_file=key_pair.vkey_file, spec=bls.VKEY_SPEC)
-        bls.check_envelope_key(key_file=key_pair.skey_file, spec=bls.SKEY_SPEC)
+        check_envelope_key(key_file=key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        check_envelope_key(key_file=key_pair.skey_file, spec=bls.SKEY_SPEC)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -74,12 +85,8 @@ class TestBlsKeys:
             for i in range(num_keys)
         ]
 
-        vkeys = {
-            bls.check_envelope_key(key_file=k.vkey_file, spec=bls.VKEY_SPEC) for k in key_pairs
-        }
-        skeys = {
-            bls.check_envelope_key(key_file=k.skey_file, spec=bls.SKEY_SPEC) for k in key_pairs
-        }
+        vkeys = {check_envelope_key(key_file=k.vkey_file, spec=bls.VKEY_SPEC) for k in key_pairs}
+        skeys = {check_envelope_key(key_file=k.skey_file, spec=bls.SKEY_SPEC) for k in key_pairs}
 
         assert len(vkeys) == num_keys, "The generated verification keys are not unique"
         assert len(skeys) == num_keys, "The generated signing keys are not unique"
@@ -116,9 +123,7 @@ class TestBlsKeys:
             ]
         )
 
-        check_key = (
-            bls.check_envelope_key if out_format == "text-envelope" else bls.check_bech32_key
-        )
+        check_key = check_envelope_key if out_format == "text-envelope" else bls.check_bech32_key
         check_key(key_file=vkey_file, spec=bls.VKEY_SPEC)
         check_key(key_file=skey_file, spec=bls.SKEY_SPEC)
 
@@ -143,8 +148,8 @@ class TestBlsKeys:
         temp_template = common.get_test_id(cluster)
 
         bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
-        vkey = bls.check_envelope_key(key_file=bls_key_pair.vkey_file, spec=bls.VKEY_SPEC)
-        bls.check_envelope_key(key_file=bls_key_pair.skey_file, spec=bls.SKEY_SPEC)
+        vkey = check_envelope_key(key_file=bls_key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        check_envelope_key(key_file=bls_key_pair.skey_file, spec=bls.SKEY_SPEC)
 
         node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
@@ -317,6 +322,8 @@ class TestNegativeBlsKeys:
                 bls_signing_key_file=bls_key_pair.vkey_file,
             )
         exc_value = str(excinfo.value)
+        if VERSIONS.cli <= version.parse("11.3.0.0"):
+            exc_value = exc_value.replace("Mininimal", "Minimal")
         with common.allow_unstable_error_messages():
             assert "TextEnvelope type error" in exc_value, exc_value
             assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value
@@ -351,6 +358,8 @@ class TestNegativeBlsKeys:
                 ]
             )
         exc_value = str(excinfo.value)
+        if VERSIONS.cli <= version.parse("11.3.0.0"):
+            exc_value = exc_value.replace("Mininimal", "Minimal")
         with common.allow_unstable_error_messages():
             assert "TextEnvelope type error" in exc_value, exc_value
             assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value
