@@ -7,6 +7,7 @@ import typing as tp
 
 import allure
 import pytest
+from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -19,6 +20,7 @@ from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import node_consistency
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +43,22 @@ def cluster_lock_pool_use_rewards(
 
 
 class TestNoRewards:
+    @pytest.fixture
+    def cluster_pool_registration_cmd(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_lock_pool: tuple[clusterlib.ClusterLib, str],
+        request: FixtureRequest,
+    ) -> clusterlib.ClusterLib:
+        """Use Conway pool certificates when a Dijkstra pool has no BLS key."""
+        cluster, pool_name = cluster_lock_pool
+        pool_rec = cluster_manager.cache.addrs_data[pool_name]
+        if VERSIONS.transaction_era >= VERSIONS.DIJKSTRA_FIRST and not pool_rec.get("bls_key_pair"):
+            return common.get_fixture_cluster_obj(
+                request=request, command_era=clusterlib.CommandEras.CONWAY
+            )
+        return cluster
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.order(6)
     @pytest.mark.long
@@ -48,11 +66,14 @@ class TestNoRewards:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_lock_pool: tuple[clusterlib.ClusterLib, str],
+        cluster_pool_registration_cmd: clusterlib.ClusterLib,
     ):
         """Check that the stake pool is not receiving rewards when pledge is not met.
 
         When the pledge is higher than available funds, neither pool owners nor those who
         delegate to that pool receive rewards.
+
+        Pools without BLS keys are updated using Conway-era certificates, also in Dijkstra+.
 
         * Delegate stake address
         * Wait for first reward
@@ -70,6 +91,34 @@ class TestNoRewards:
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
         temp_template = common.get_test_id(cluster)
+
+        def _reregister_pool(
+            pool_data: clusterlib.PoolData, tx_name: str
+        ) -> clusterlib.TxRawOutput:
+            """Generate a pool certificate and submit it in the current transaction era."""
+            bls_key_pair = pool_rec.get("bls_key_pair")
+            pool_reg_cert = cluster_pool_registration_cmd.g_stake_pool.gen_pool_registration_cert(
+                pool_data=dataclasses.replace(pool_data, pool_name=tx_name),
+                vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+                cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
+                owner_stake_vkey_files=[pool_owner.stake.vkey_file],
+                reward_account_vkey_file=pool_rec["reward"].vkey_file,
+                bls_signing_key_file=bls_key_pair.skey_file if bls_key_pair else None,
+            )
+            tx_files = clusterlib.TxFiles(
+                certificate_files=[pool_reg_cert],
+                signing_key_files=[
+                    pool_owner.payment.skey_file,
+                    pool_owner.stake.skey_file,
+                    pool_rec["cold_key_pair"].skey_file,
+                ],
+            )
+            return cluster.g_transaction.send_tx(
+                src_address=pool_owner.payment.address,
+                tx_name=tx_name,
+                tx_files=tx_files,
+                deposit=0,  # no additional deposit, the pool is already registered
+            )
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name
@@ -114,17 +163,9 @@ class TestNoRewards:
 
         # Increase the needed pledge amount - update the pool parameters by resubmitting the pool
         # registration certificate
-        __, tx_raw_update_pool = cluster.g_stake_pool.register_stake_pool(
+        tx_raw_update_pool = _reregister_pool(
             pool_data=pool_data_updated,
-            pool_owners=[pool_owner],
-            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-            cold_key_pair=pool_rec["cold_key_pair"],
             tx_name=f"{temp_template}_update_param",
-            reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
-                key_pair=pool_rec.get("bls_key_pair")
-            ),
-            deposit=0,  # no additional deposit, the pool is already registered
         )
 
         node_consistency.check_tx_on_all_nodes(
@@ -176,17 +217,9 @@ class TestNoRewards:
 
             # Update the pool to original parameters by resubmitting
             # the pool registration certificate
-            __, tx_raw_update_pool = cluster.g_stake_pool.register_stake_pool(
+            tx_raw_update_pool = _reregister_pool(
                 pool_data=loaded_data,
-                pool_owners=[pool_owner],
-                vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-                cold_key_pair=pool_rec["cold_key_pair"],
                 tx_name=f"{temp_template}_update_to_orig",
-                reward_account_vkey_file=pool_rec["reward"].vkey_file,
-                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
-                    key_pair=pool_rec.get("bls_key_pair")
-                ),
-                deposit=0,  # no additional deposit, the pool is already registered
             )
             node_consistency.check_tx_on_all_nodes(
                 cluster_obj=cluster, tx_raw_output=tx_raw_update_pool
