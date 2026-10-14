@@ -69,6 +69,27 @@ def _project() -> str:
     return DEFAULT_PROJECT
 
 
+def _scrub(name: str) -> str:
+    """Keep only the characters the workflows keep in a testrun name.
+
+    Args:
+        name: The raw name.
+
+    Returns:
+        The name with the same scrub as `${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}`.
+    """
+    return "".join(c for c in name if c.isalnum() or c in "_-")
+
+
+def _typed_testrun_name() -> str:
+    """Return the testrun name typed for a manual run, scrubbed.
+
+    Returns:
+        The scrubbed name, or an empty string when none was typed.
+    """
+    return _scrub(os.environ.get("CI_TESTRUN_NAME", ""))
+
+
 def _identity(step: str) -> dict:
     """Gather the five fields that identify a testrun.
 
@@ -79,16 +100,15 @@ def _identity(step: str) -> dict:
         The identity fields.
     """
     on_ci = bool(os.environ.get("GITHUB_ACTIONS"))
+    # A name typed for a release run wins over the default in the workflow's env file.
     testrun_name = (
-        os.environ.get("TCACHE_TESTRUN_NAME")
-        or os.environ.get("CI_TESTRUN_NAME")
+        _typed_testrun_name()
+        or _scrub(os.environ.get("TCACHE_TESTRUN_NAME", ""))
         or DEFAULT_TESTRUN_NAME
     )
-    # Same scrub as the workflows' `${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}`.
-    testrun_name = "".join(c for c in testrun_name if c.isalnum() or c in "_-")
     return {
         "project": _project(),
-        "testrun_name": testrun_name or DEFAULT_TESTRUN_NAME,
+        "testrun_name": testrun_name,
         "run_id": os.environ.get("GITHUB_RUN_NUMBER") or _local_run_id(),
         "step": step,
         "origin": "ci" if on_ci else "local",
@@ -281,6 +301,7 @@ def build_document(
         "duration": duration,
         "exit_code": exit_code,
         "filtered": filtered,
+        "release": bool(_typed_testrun_name()),
         "counts": _counts(best),
         "quality": _quality(best, no_history_id, read_errors),
         "versions": _versions(),
