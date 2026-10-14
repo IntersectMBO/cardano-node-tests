@@ -113,7 +113,13 @@ def short_bls_keyage_start_cluster() -> pl.Path:
     ``slotsPerKESPeriod``, so `slotsPerKESPeriod` is picked to make the KES lifetime
     exactly `KES_LIFETIME_EPOCHS` epochs. That makes ``maxKeyAge``
     `SHORT_MAX_KEY_AGE` epochs on any testnet variant, regardless of its epoch length.
+
+    Skip when the node cannot load BLS signing keys.
     """
+    node_help = helpers.run_command("cardano-node run --help", merge_stderr=True).decode()
+    if "--shelley-bls-key" not in node_help:
+        pytest.skip("The node doesn't support --shelley-bls-key.")
+
     shared_tmp = temptools.get_pytest_shared_tmp()
 
     # Need to lock because this same fixture can run on several workers in parallel
