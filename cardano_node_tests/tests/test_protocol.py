@@ -78,6 +78,14 @@ DIJKSTRA_PROTOCOL_PARAM_KEYS = frozenset(
         "maxRefScriptSizePerEndorserBlock",
         "maxRefScriptSizePerTx",
         "minPoolMargin",
+        "perasBootstrapRound",
+        "perasCertBoost",
+        "perasHealingFactor",
+        "perasMinCandidateBlockAge",
+        "perasQuorumThresholdSafetyMargin",
+        "perasTargetCommitteeSize",
+        "refInputsCostPerDatumByte",
+        "refInputsCostPerMultiAssetPolicy",
         "refScriptCostMultiplier",
         "refScriptCostStride",
     )
@@ -159,7 +167,7 @@ class TestProtocol:
           minPoolCost, stakeAddressDeposit, stakePoolDeposit, txFeeFixed, txFeePerByte,
           utxoCostPerByte, and other protocol parameters
         * In Dijkstra+ eras, check that output contains also the new Dijkstra protocol parameter
-          keys, e.g. the Leios ones and the reference script cost ones
+          keys, e.g. the Leios, Peras, reference input cost, and reference script cost ones
         * Verify no extra or missing keys in protocol parameters output
         """
         common.get_test_id(cluster)
