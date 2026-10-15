@@ -25,16 +25,6 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def check_envelope_key(*, key_file: pl.Path, spec: bls.KeySpec) -> bytes:
-    """Check a BLS envelope, tolerating the CLI <= 11.3.0.0 spelling typo."""
-    if VERSIONS.cli <= version.parse("11.3.0.0"):
-        envelope = clusterlib_utils.load_envelope(envelope_file=key_file)
-        legacy_type = spec.envelope_type.replace("Minimal", "Mininimal")
-        if envelope["type"] == legacy_type:
-            spec = dataclasses.replace(spec, envelope_type=legacy_type)
-    return bls.check_envelope_key(key_file=key_file, spec=spec)
-
-
 class TestBlsKeys:
     """Tests for generating node BLS key pairs."""
 
@@ -61,8 +51,8 @@ class TestBlsKeys:
         assert key_pair.vkey_file.exists(), f"The file `{key_pair.vkey_file}` doesn't exist"
         assert key_pair.skey_file.exists(), f"The file `{key_pair.skey_file}` doesn't exist"
 
-        check_envelope_key(key_file=key_pair.vkey_file, spec=bls.VKEY_SPEC)
-        check_envelope_key(key_file=key_pair.skey_file, spec=bls.SKEY_SPEC)
+        bls.check_envelope_key(key_file=key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        bls.check_envelope_key(key_file=key_pair.skey_file, spec=bls.SKEY_SPEC)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
@@ -85,8 +75,12 @@ class TestBlsKeys:
             for i in range(num_keys)
         ]
 
-        vkeys = {check_envelope_key(key_file=k.vkey_file, spec=bls.VKEY_SPEC) for k in key_pairs}
-        skeys = {check_envelope_key(key_file=k.skey_file, spec=bls.SKEY_SPEC) for k in key_pairs}
+        vkeys = {
+            bls.check_envelope_key(key_file=k.vkey_file, spec=bls.VKEY_SPEC) for k in key_pairs
+        }
+        skeys = {
+            bls.check_envelope_key(key_file=k.skey_file, spec=bls.SKEY_SPEC) for k in key_pairs
+        }
 
         assert len(vkeys) == num_keys, "The generated verification keys are not unique"
         assert len(skeys) == num_keys, "The generated signing keys are not unique"
@@ -123,7 +117,9 @@ class TestBlsKeys:
             ]
         )
 
-        check_key = check_envelope_key if out_format == "text-envelope" else bls.check_bech32_key
+        check_key = (
+            bls.check_envelope_key if out_format == "text-envelope" else bls.check_bech32_key
+        )
         check_key(key_file=vkey_file, spec=bls.VKEY_SPEC)
         check_key(key_file=skey_file, spec=bls.SKEY_SPEC)
 
@@ -148,8 +144,8 @@ class TestBlsKeys:
         temp_template = common.get_test_id(cluster)
 
         bls_key_pair = cluster.g_node.gen_bls_key_pair(node_name=temp_template)
-        vkey = check_envelope_key(key_file=bls_key_pair.vkey_file, spec=bls.VKEY_SPEC)
-        check_envelope_key(key_file=bls_key_pair.skey_file, spec=bls.SKEY_SPEC)
+        vkey = bls.check_envelope_key(key_file=bls_key_pair.vkey_file, spec=bls.VKEY_SPEC)
+        bls.check_envelope_key(key_file=bls_key_pair.skey_file, spec=bls.SKEY_SPEC)
 
         node_vrf = cluster.g_node.gen_vrf_key_pair(node_name=f"{temp_template}_vrf")
         node_cold = cluster.g_node.gen_cold_key_pair_and_counter(node_name=f"{temp_template}_cold")
