@@ -21,11 +21,13 @@ import math
 import pathlib as pl
 
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import node_consistency
+from cardano_node_tests.utils.versions import VERSIONS
 
 # Size of the proof of possession that accompanies the BLS key in a pool registration
 # certificate. It is mandatory: BLS aggregate signatures are otherwise open to rogue-key
@@ -64,8 +66,19 @@ SKEY_SPEC = KeySpec(
 )
 
 
+def _get_envelope_spec(*, envelope: dict[str, str], spec: KeySpec) -> KeySpec:
+    """Return the expected spec, allowing the CLI <= 11.3.0.0 type spelling typo."""
+    if VERSIONS.cli <= version.parse("11.3.0.0"):
+        legacy_type = spec.envelope_type.replace("Minimal", "Mininimal")
+        if envelope["type"] == legacy_type:
+            spec = dataclasses.replace(spec, envelope_type=legacy_type)
+    return spec
+
+
 def check_envelope_key(*, key_file: pl.Path, spec: KeySpec) -> bytes:
     """Check that the file is a BLS key text envelope of the expected kind.
+
+    Accepts the legacy ``Mininimal`` type spelling only for CLI <= 11.3.0.0.
 
     Args:
         key_file: A path to the key file.
@@ -75,11 +88,12 @@ def check_envelope_key(*, key_file: pl.Path, spec: KeySpec) -> bytes:
         bytes: The raw key material.
     """
     envelope = clusterlib_utils.load_envelope(envelope_file=key_file)
-    assert envelope["type"] == spec.envelope_type, envelope
-    assert envelope["description"] == spec.envelope_desc, envelope
+    expected_spec = _get_envelope_spec(envelope=envelope, spec=spec)
+    assert envelope["type"] == expected_spec.envelope_type, envelope
+    assert envelope["description"] == expected_spec.envelope_desc, envelope
 
     key: bytes = clusterlib_utils.decode_envelope_cbor(envelope=envelope)
-    assert len(key) == spec.key_len, f"Unexpected key length: {len(key)}"
+    assert len(key) == expected_spec.key_len, f"Unexpected key length: {len(key)}"
 
     return key
 
