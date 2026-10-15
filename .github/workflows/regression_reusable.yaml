@@ -173,7 +173,7 @@ jobs:
       - name: Set up Node.js for Copilot CLI
         if: (success() || failure()) && steps.testing-step.outcome != 'success' && env.HAS_COPILOT_TOKEN == 'true'
         continue-on-error: true
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Install Copilot CLI
