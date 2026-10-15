@@ -2,6 +2,8 @@
 
 This document applies only to E2E functional tests under `cardano_node_tests/tests/`. Unit tests for the framework itself live under `framework_tests/` and are plain pytest tests.
 
+Never add unit tests for code under `cardano_node_tests/tests/`, including test-specific helpers and fixtures. Validate changes to that code through E2E functional tests instead.
+
 The guidelines apply to writing new tests and also to larger changes of existing tests (refactoring, extending, moving tests or fixtures). When changing an existing test, bring the parts you touch in line with these guidelines, but don't rewrite unrelated code just to comply.
 
 Organize tests in classes that group related functionality.
