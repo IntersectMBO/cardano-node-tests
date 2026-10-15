@@ -398,23 +398,6 @@ def run_supervisorctl(
     return helpers.run_command([str(script), *args], ignore_fail=ignore_fail)
 
 
-def reload_supervisor_config(
-    *, instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
-) -> None:
-    """Reload supervisor configuration."""
-    LOGGER.info("Reloading supervisor configuration.")
-
-    try:
-        run_supervisorctl(args=["update"], instance_num=instance_num)
-    except Exception as exc:
-        msg = "Failed to reload configuration."
-        raise Exception(msg) from exc
-
-    # Wait for potential nodes restart
-    if delay > 0:
-        time.sleep(delay)
-
-
 def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
     """Start cluster."""
     args_str = " ".join(args)
