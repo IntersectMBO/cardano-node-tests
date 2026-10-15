@@ -427,6 +427,7 @@ class TestDynamicBlockProd:
         """Reconfigure cluster for dynamic block production.
 
         Reconfigure nodeX to be backup block production node for nodeY.
+        Stop all nodes before applying the Supervisor configuration, then start them once.
         """
         state_dir = cluster_nodes.get_cluster_env().state_dir
         supervisor_conf = state_dir / "supervisor.conf"
@@ -453,7 +454,13 @@ class TestDynamicBlockProd:
         with open(supervisor_conf, "w", encoding="utf-8") as fp_out:
             fp_out.write(supervisor_conf_content)
 
-        cluster_nodes.reload_supervisor_config(delay=0)
+        # All nodes must restart together on local testnets. Updating a running group
+        # and then restarting it would interrupt the nodes during startup.
+        cluster_nodes.stop_nodes(["*"])
+        cluster_nodes.services_action(service_names=["nodes"], action="update")
+        # Nodes auto-started by update are left running, not restarted by start.
+        cluster_nodes.start_nodes(["*"])
+        time.sleep(configuration.TX_SUBMISSION_DELAY)
 
     @pytest.fixture
     def payment_addrs(
@@ -539,7 +546,6 @@ class TestDynamicBlockProd:
 
         # Reconfigure cluster for dynamic block production
         self.reconf_for_dynamic()
-        cluster_nodes.restart_all_nodes()
 
         tip = cluster.g_query.get_tip()
         curr_epoch = cluster.g_query.get_epoch(tip=tip)
