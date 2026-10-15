@@ -15,6 +15,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import kes
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
@@ -95,30 +96,25 @@ class TestNoRewards:
         def _reregister_pool(
             pool_data: clusterlib.PoolData, tx_name: str
         ) -> clusterlib.TxRawOutput:
-            """Generate a pool certificate and submit it in the current transaction era."""
+            """Update the pool using the selected certificate era and current transaction era."""
             bls_key_pair = pool_rec.get("bls_key_pair")
-            pool_reg_cert = cluster_pool_registration_cmd.g_stake_pool.gen_pool_registration_cert(
-                pool_data=dataclasses.replace(pool_data, pool_name=tx_name),
-                vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-                cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
-                owner_stake_vkey_files=[pool_owner.stake.vkey_file],
-                reward_account_vkey_file=pool_rec["reward"].vkey_file,
-                bls_signing_key_file=bls_key_pair.skey_file if bls_key_pair else None,
-            )
-            tx_files = clusterlib.TxFiles(
-                certificate_files=[pool_reg_cert],
-                signing_key_files=[
-                    pool_owner.payment.skey_file,
-                    pool_owner.stake.skey_file,
-                    pool_rec["cold_key_pair"].skey_file,
-                ],
-            )
-            return cluster.g_transaction.send_tx(
-                src_address=pool_owner.payment.address,
-                tx_name=tx_name,
-                tx_files=tx_files,
-                deposit=0,  # no additional deposit, the pool is already registered
-            )
+            try:
+                __, tx_raw_reg = clusterlib_utils.reregister_cluster_pool(
+                    cluster_obj=cluster,
+                    name_template=tx_name,
+                    pool_data=pool_data,
+                    pool_rec=pool_rec,
+                    bls_skey_file=bls_key_pair.skey_file if bls_key_pair else None,
+                    pool_reg_cluster=cluster_pool_registration_cmd,
+                )
+            except clusterlib.CLIError as excinfo:
+                if (
+                    VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+                    and "VRFKeyHashAlreadyRegistered" in str(excinfo)
+                ):
+                    issues.ledger_6102.finish_test()
+                raise
+            return tx_raw_reg
 
         pool_id = delegation.get_pool_id(
             cluster_obj=cluster, addrs_data=cluster_manager.cache.addrs_data, pool_name=pool_name

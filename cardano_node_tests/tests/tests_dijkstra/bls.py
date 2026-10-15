@@ -216,15 +216,12 @@ def reregister_cluster_pool(
     )
 
     try:
-        __, tx_raw_reg = cluster_obj.g_stake_pool.register_stake_pool(
+        __, tx_raw_reg = clusterlib_utils.reregister_cluster_pool(
+            cluster_obj=cluster_obj,
+            name_template=tx_name,
             pool_data=pool_data,
-            pool_owners=[clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])],
-            vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
-            cold_key_pair=pool_rec["cold_key_pair"],
-            tx_name=tx_name,
-            reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            bls_signing_key_file=bls_skey_file,
-            deposit=0,  # no additional deposit, the pool is already registered
+            pool_rec=pool_rec,
+            bls_skey_file=bls_skey_file,
         )
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)
     except clusterlib.CLIError as excinfo:
