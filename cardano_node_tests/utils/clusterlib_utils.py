@@ -2049,3 +2049,56 @@ def check_reference_script_policyid(
     if policyid_file != policyid_data:
         msg = f"Reference script hash mismatch: file '{policyid_file}' vs data '{policyid_data}'"
         raise AssertionError(msg)
+
+
+def reregister_cluster_pool(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    name_template: str,
+    pool_data: clusterlib.PoolData,
+    pool_rec: dict,
+    bls_skey_file: cl_types.FileType | None = None,
+    pool_reg_cluster: clusterlib.ClusterLib | None = None,
+) -> tuple[pl.Path, clusterlib.TxRawOutput]:
+    """Re-register an existing cluster pool without paying another deposit.
+
+    Name the certificate after the transaction so repeated updates of the same pool
+    do not overwrite artifacts. The certificate era can differ from the transaction
+    era, e.g. for pools without BLS keys on a Dijkstra cluster.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        name_template: A name of the transaction.
+        pool_data: A `structs.PoolData` data container containing info about the stake pool.
+        pool_rec: The addresses and keys of the pool, from the cluster manager cache.
+        bls_skey_file: A path to the BLS signing key file to register.
+        pool_reg_cluster: Cluster object for generating the certificate.
+            Defaults to `cluster_obj`, which always submits the transaction.
+
+    Returns:
+        The pool registration certificate path and transaction output details.
+    """
+    cert_cluster = pool_reg_cluster or cluster_obj
+    cert = cert_cluster.g_stake_pool.gen_pool_registration_cert(
+        pool_data=dataclasses.replace(pool_data, pool_name=name_template),
+        vrf_vkey_file=pool_rec["vrf_key_pair"].vkey_file,
+        cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
+        owner_stake_vkey_files=[pool_rec["stake"].vkey_file],
+        reward_account_vkey_file=pool_rec["reward"].vkey_file,
+        bls_signing_key_file=bls_skey_file,
+    )
+    tx_files = clusterlib.TxFiles(
+        certificate_files=[cert],
+        signing_key_files=[
+            pool_rec["payment"].skey_file,
+            pool_rec["stake"].skey_file,
+            pool_rec["cold_key_pair"].skey_file,
+        ],
+    )
+    tx_raw_reg = cluster_obj.g_transaction.send_tx(
+        src_address=pool_rec["payment"].address,
+        tx_name=name_template,
+        tx_files=tx_files,
+        deposit=0,  # no additional deposit, the pool is already registered
+    )
+    return cert, tx_raw_reg
