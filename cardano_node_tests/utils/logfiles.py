@@ -153,7 +153,7 @@ def _get_ignored_error_regexes() -> list[str]:
 # Errors that are ignored if there are expected messages in the log file before the error
 ERRORS_LOOK_BACK_LINES = 10
 ERRORS_LOOK_BACK_MAP = {
-    "TraceNoLedgerState": "Switched to a fork",  # can happen when chain switched to a fork
+    r"Forge\.Loop\.NoLedgerState": "Switched to a fork",  # can happen on a fork switch
 }
 
 # Relevant errors from supervisord.log
