@@ -201,6 +201,18 @@ def cluster_leios_singleton(
     return cluster_obj
 
 
+@pytest.fixture
+def skip_on_absent_committee(cluster: clusterlib.ClusterLib) -> None:
+    """Skip unless the cluster's stake snapshot query reports the Leios committee.
+
+    An absent field means the query cannot report committee membership, not that the
+    committee is empty. Check the schema before registering pools or waiting for epochs.
+    """
+    snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
+    if "leiosCommittee" not in snapshot:
+        pytest.skip("The stake-snapshot query doesn't report the Leios committee.")
+
+
 def get_future_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
     """Return the BLS key of a pool update that is waiting for the next epoch boundary.
 
@@ -451,11 +463,14 @@ def register_pool_with_bls_key(
     temp_template: str,
     request: FixtureRequest,
 ) -> tuple[clusterlib.PoolCreationOutput, int, str]:
-    """Register a new stake pool with a BLS key, inside a single epoch.
+    """Register a new stake pool with a BLS key and delegate stake in a single epoch.
 
     The registration and the checks that read back the epoch it was stamped with must
     not be split by an epoch boundary, so the registration is started early enough in
     the epoch for the whole transaction to fit into it.
+
+    Register and delegate the funded owner's stake address so that the pool has active
+    stake when its registration epoch's snapshot reaches the Leios committee.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -481,8 +496,17 @@ def register_pool_with_bls_key(
         request=request,
     )
 
+    delegation.delegate_stake_addr(
+        cluster_obj=cluster_obj,
+        addrs_data=cluster_manager.cache.addrs_data,
+        temp_template=temp_template,
+        pool_user=pool_creation_out.pool_owners[0],
+        pool_id=pool_creation_out.stake_pool_id,
+    )
+
     assert cluster_obj.g_query.get_epoch() == reg_epoch, (
-        "The pool registration took longer than expected and would affect other checks"
+        "The pool registration and delegation took longer than expected "
+        "and would affect other checks"
     )
 
     bls_key_pair = get_pool_bls_key_pair(pool_creation_out=pool_creation_out)
@@ -635,6 +659,7 @@ class TestBlsKeyRotation:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.usefixtures("skip_on_absent_committee")
     def test_rotate_bls_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -643,8 +668,8 @@ class TestBlsKeyRotation:
     ):
         """Rotate the BLS key of a stake pool by re-registering the pool.
 
-        * Register a new stake pool with a BLS key and check that the ledger stamped the
-          key with the epoch the registration landed in
+        * Register a new stake pool with a BLS key, delegate owner stake to it, and check
+          that the ledger stamped the key with the epoch the registration landed in
         * Re-register the pool in the next epoch with a freshly generated BLS key
         * Check that the new key is pending in `futurePoolParams` and that the active
           key didn't change yet
@@ -785,7 +810,7 @@ class TestBlsKeyRotation:
         re-stamping the registration epoch. That works with the key the pool already
         holds, so an operator can renew without handling a new key.
 
-        * Register a new stake pool with a BLS key
+        * Register a new stake pool with a BLS key and delegate owner stake to it
         * Re-register the pool in the next epoch with the same BLS key
         * Check that after the epoch boundary the registered key is unchanged, but its
           registration epoch was re-stamped with the epoch the update took effect in
@@ -843,6 +868,7 @@ class TestBlsKeyRotation:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
+    @pytest.mark.usefixtures("skip_on_absent_committee")
     def test_drop_and_restore_bls_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -863,7 +889,7 @@ class TestBlsKeyRotation:
         key. What is checked here is the update path that takes a key away, and what the
         committee makes of the pool afterwards.
 
-        * Register a new stake pool with a BLS key
+        * Register a new stake pool with a BLS key and delegate owner stake to it
         * Re-register the pool in the same epoch with a Conway-era certificate, which
           carries no BLS key
         * Check that after the epoch boundary the pool has no registered BLS key
