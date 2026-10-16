@@ -164,6 +164,26 @@ def _as_number(value: object, kind: type) -> int | float | None:
     return kind(value)
 
 
+def _submits(node: dict) -> int:
+    """Sum the `transaction submit` invocations in a coverage report subtree.
+
+    Args:
+        node: A subtree of the CLI coverage report.
+
+    Returns:
+        The number of times `transaction submit` ran, in every era group.
+    """
+    total = 0
+    for key, child in node.items():
+        if not isinstance(child, dict):
+            continue
+        submit = child.get("submit") if key == "transaction" else None
+        if isinstance(submit, dict):
+            total += _as_number(submit.get("_count_submit"), int) or 0
+        total += _submits(child)
+    return total
+
+
 def _commands(coverage_file: pl.Path | None) -> dict:
     """Read the CLI coverage summary written by `runner/cli_coverage.sh`.
 
@@ -171,10 +191,10 @@ def _commands(coverage_file: pl.Path | None) -> dict:
         coverage_file: Path to `cli_coverage.json`, or None to skip.
 
     Returns:
-        The invocation count and the coverage percentage, both None when the
-        file is missing or empty.
+        The invocation count, the transactions submitted and the coverage
+        percentage, all None when the file is missing or empty.
     """
-    empty: dict = {"count": None, "coverage_pct": None}
+    empty: dict = {"count": None, "submits": None, "coverage_pct": None}
     if coverage_file is None or not coverage_file.is_file():
         return empty
     try:
@@ -187,6 +207,7 @@ def _commands(coverage_file: pl.Path | None) -> dict:
         return empty
     return {
         "count": _as_number(count, int),
+        "submits": _submits(covered) if isinstance(covered, dict) else None,
         "coverage_pct": _as_number(coverage, float),
     }
 
