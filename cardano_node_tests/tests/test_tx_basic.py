@@ -135,6 +135,56 @@ class TestBasicTransactions:
 
         return common.get_fixture_cluster_obj(request=request, command_era=wanted_command_era)
 
+    @pytest.fixture(scope="class")
+    @classmethod
+    def future_tx_era(cls) -> int:
+        """Return a known future protocol version with a distinct, CLI-supported era.
+
+        Search the next three protocol versions, skipping versions with the current era's
+        name and eras without a CLI `transaction build-raw` command. Skip the test if none
+        of these candidates is usable.
+        """
+        higher_eras = tuple(
+            he for i in range(1, 4) if VERSIONS.MAP.get(he := VERSIONS.cluster_era + i)
+        )
+        if not higher_eras:
+            pytest.skip(
+                "no known era with higher protocol version than the current cluster era "
+                f"({VERSIONS.cluster_era_name})"
+            )
+
+        current_era_name = VERSIONS.MAP[VERSIONS.cluster_era]
+        skip_msg = ""
+        for he in higher_eras:
+            future_era_name = VERSIONS.MAP[he]
+            if current_era_name == future_era_name:
+                skip_msg = (
+                    f"current cluster era ({current_era_name}) "
+                    f"is the same as the future era ({future_era_name})"
+                )
+            elif not clusterlib_utils.cli_has(f"{future_era_name} transaction build-raw"):
+                skip_msg = f"`{future_era_name} transaction build-raw` command is not available"
+            else:
+                return he
+
+        pytest.skip(skip_msg)
+
+    @pytest.fixture
+    def cluster_future_tx_era(
+        self,
+        future_tx_era: int,
+        cluster: clusterlib.ClusterLib,  # noqa: ARG002
+        request: SubRequest,
+    ) -> clusterlib.ClusterLib:
+        """Return a CLI wrapper for the assigned cluster using a future transaction era.
+
+        The `cluster` dependency ensures a cluster instance is assigned before creating
+        the wrapper; it does not start a separate cluster or change the network era.
+        """
+        return common.get_fixture_cluster_obj(
+            request=request, command_era=VERSIONS.MAP[future_tx_era]
+        )
+
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @markers.PARAM_BUILD_METHOD
@@ -1353,6 +1403,72 @@ class TestBasicTransactions:
 
         # Check `transaction view` command, this will check if the tx era is the expected
         tx_view.check_tx_view(cluster_obj=cluster, tx_raw_output=tx_output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.skipif(
+        VERSIONS.node < version.parse("11.2.0"),
+        reason="requires node version >= 11.2.0",
+    )
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
+    def test_future_tx_era(
+        self,
+        cluster: clusterlib.ClusterLib,
+        cluster_future_tx_era: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        submit_method: str,
+    ):
+        """Submit a simple payment built for an era later than the network era.
+
+        * Build and sign a 2 ADA payment using the future era's CLI commands.
+        * Use a fixed fee to avoid parsing current-era protocol parameters as a future era.
+        * Submit through the parametrized submission method and expect acceptance.
+        * Verify the destination output and source change, including the fee.
+        * Check transaction inclusion on all nodes and, optionally, in db-sync.
+        """
+        temp_template = common.get_test_id(cluster)
+        amount = 2_000_000
+
+        src_address = payment_addrs[0].address
+        dst_address = payment_addrs[1].address
+
+        txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
+        tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
+
+        # Future-era fee calculation may require protocol parameters the network does not emit.
+        tx_raw_output = cluster_future_tx_era.g_transaction.build_raw_tx(
+            src_address=src_address,
+            tx_name=temp_template,
+            txouts=txouts,
+            tx_files=tx_files,
+            fee=500_000,
+        )
+        out_file_signed = cluster_future_tx_era.g_transaction.sign_tx(
+            tx_body_file=tx_raw_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=temp_template,
+        )
+
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=out_file_signed,
+            txins=tx_raw_output.txins,
+        )
+
+        out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_raw_output)
+        assert (
+            clusterlib.filter_utxos(utxos=out_utxos, address=src_address)[0].amount
+            == clusterlib.calculate_utxos_balance(tx_raw_output.txins) - tx_raw_output.fee - amount
+        ), f"Incorrect change for source address `{src_address}`"
+        assert clusterlib.filter_utxos(utxos=out_utxos, address=dst_address)[0].amount == amount, (
+            f"Incorrect balance for destination address `{dst_address}`"
+        )
+
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
 
 class TestMultiInOut:

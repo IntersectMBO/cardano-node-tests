@@ -14,7 +14,6 @@ import allure
 import hypothesis
 import hypothesis.strategies as st
 import pytest
-from _pytest.fixtures import FixtureRequest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
@@ -35,53 +34,6 @@ LOGGER = logging.getLogger(__name__)
 
 class TestNegative:
     """Transaction tests that are expected to fail."""
-
-    @pytest.fixture(scope="class")
-    def future_tx_era(self) -> int:
-        """Return the protocol version of a usable era higher than the current cluster era.
-
-        Skip the test if no such era exists. Scans the next few protocol versions so that
-        eras sharing the current era's name (e.g. multiple conway protocol versions) are
-        skipped over in favor of a genuinely different, CLI-supported era.
-        """
-        higher_eras = tuple(
-            he for i in range(1, 4) if VERSIONS.MAP.get(he := VERSIONS.cluster_era + i)
-        )
-        if not higher_eras:
-            pytest.skip(
-                "no known era with higher protocol version than the current cluster era "
-                f"({VERSIONS.cluster_era_name})"
-            )
-
-        current_era_name = VERSIONS.MAP[VERSIONS.cluster_era]
-        skip_msg = ""
-        for he in higher_eras:
-            future_era_name = VERSIONS.MAP[he]
-            if current_era_name == future_era_name:
-                skip_msg = (
-                    f"current cluster era ({current_era_name}) "
-                    f"is the same as the future era ({future_era_name})"
-                )
-            elif not clusterlib_utils.cli_has(f"{future_era_name} transaction build-raw"):
-                skip_msg = f"`{future_era_name} transaction build-raw` command is not available"
-            else:
-                return he
-
-        pytest.skip(skip_msg)
-
-    @pytest.fixture
-    def cluster_wrong_tx_era(
-        self,
-        future_tx_era: int,
-        cluster: clusterlib.ClusterLib,  # noqa: ARG002
-        request: FixtureRequest,
-    ) -> clusterlib.ClusterLib:
-        # The `cluster` argument (representing the `cluster` fixture) needs to be present
-        # in order to have an actual cluster instance assigned at the time this fixture
-        # is executed
-        return common.get_fixture_cluster_obj(
-            request=request, command_era=VERSIONS.MAP[future_tx_era]
-        )
 
     @pytest.fixture
     def pool_users(
@@ -864,8 +816,6 @@ class TestNegative:
 
         Expect failure.
 
-        Uses `cardano-cli transaction send` command.
-
         * Prepare transaction from pool_users[0] to pool_users[1] with 1.5 ADA
         * Sign transaction with pool_users[1] signing key instead of pool_users[0]
         * Attempt to build and submit transaction with wrong signing key
@@ -888,53 +838,6 @@ class TestNegative:
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
             assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
-
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.smoke
-    @pytest.mark.testnets
-    def test_wrong_tx_era(
-        self,
-        cluster: clusterlib.ClusterLib,
-        cluster_wrong_tx_era: clusterlib.ClusterLib,
-        pool_users: list[clusterlib.PoolUser],
-    ):
-        """Try to send transaction using TX era higher than network era.
-
-        Expect failure.
-
-        Uses `cardano-cli transaction send` command with future era.
-
-        * Prepare transaction from pool_users[0] to pool_users[1] with 1.5 ADA
-        * Use cluster instance configured for era > current network era
-        * Pass a hardcoded fee to skip fee calculation
-        * Attempt to submit transaction built for future era
-        * Check that transaction fails with era mismatch error
-        """
-        temp_template = common.get_test_id(cluster)
-
-        tx_files = clusterlib.TxFiles(signing_key_files=[pool_users[0].payment.skey_file])
-        txouts = [clusterlib.TxOut(address=pool_users[1].payment.address, amount=1_500_000)]
-
-        # It should NOT be possible to submit a transaction when TX era > network era.
-        # The fee is hardcoded on purpose - fee calculation would make `cardano-cli` parse the
-        # protocol parameters of the current network era under the future era, and the parser
-        # of the future era can require protocol parameters that the current era doesn't emit.
-        # The transaction is expected to be rejected when it is submitted, not when its fee
-        # is calculated.
-        with pytest.raises(clusterlib.CLIError) as excinfo:
-            cluster_wrong_tx_era.g_transaction.send_tx(
-                src_address=pool_users[0].payment.address,
-                tx_name=temp_template,
-                txouts=txouts,
-                tx_files=tx_files,
-                fee=400_000,
-            )
-        exc_value = str(excinfo.value)
-        with common.allow_unstable_error_messages():
-            assert (
-                "The era of the node and the tx do not match" in exc_value
-                or "HardForkEncoderDisabledEra" in exc_value
-            ), exc_value
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_BUILD_METHOD
