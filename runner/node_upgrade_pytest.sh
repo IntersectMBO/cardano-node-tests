@@ -388,6 +388,7 @@ elif [ "$1" = "step3" ]; then
       | .DijkstraGenesisHash = $dijkstra_hash
       | .ExperimentalProtocolsEnabled = $experimental
       | .ExperimentalHardForksEnabled = $experimental
+      | .LeiosMinOfferLead = 30
       ' "$conf" > "$state_cluster/$fname"
   done
 

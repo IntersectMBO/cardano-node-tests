@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13, <4.0"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -207,7 +207,7 @@ docs = [
 requires-dist = [
     { name = "allure-pytest", specifier = ">=2.16.0,<3.0.0" },
     { name = "cardano-clusterlib", specifier = ">=0.10.7,<0.11.0" },
-    { name = "cardonnay", specifier = ">=0.4.9,<0.5.0" },
+    { name = "cardonnay", specifier = ">=0.4.10,<0.5.0" },
     { name = "cbor2", specifier = ">=6.1.4,<7.0.0" },
     { name = "filelock", specifier = ">=3.32.5,<4.0.0" },
     { name = "hypothesis", specifier = ">=6.167.1,<7.0.0" },
@@ -245,7 +245,7 @@ docs = [
 
 [[package]]
 name = "cardonnay"
-version = "0.4.9"
+version = "0.4.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -255,9 +255,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "supervisor" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/e6/8194584425670f7475a8f809464c51bea19e0f4a0105d722a1cc6a182108/cardonnay-0.4.9.tar.gz", hash = "sha256:3e7c02c1f3d4444397b24711a70a94f3a38dfea12b43feb18dcf8ea40ad4d0ab", size = 108350, upload-time = "2026-10-09T17:40:32.275Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/0c/ccaf7dba2c0db4e73ea4def818af804077f3300b280d088e6265e5c9460d/cardonnay-0.4.10.tar.gz", hash = "sha256:119f871aa65dbdb123cb51a12e0079cc495f518cf11d4c79cd9f2bd41e36565e", size = 108420, upload-time = "2026-10-16T15:29:48.986Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/77/26440d25e7c6ed9c3dabe6a96fbf5505fb65e3c911f60dbdd8129d39674a/cardonnay-0.4.9-py3-none-any.whl", hash = "sha256:544608347c73b1458f88e995258bb9c6641be4c935dc9102b12a220a3b0224c5", size = 112524, upload-time = "2026-10-09T17:40:30.813Z" },
+    { url = "https://files.pythonhosted.org/packages/31/67/dd617a615705a4d85a10b3dd9aea22cea9d3b3430299c11716adab7821fd/cardonnay-0.4.10-py3-none-any.whl", hash = "sha256:e4bed8b793f02b55a619f595cad791f169ffce52c87fd8d21a47e060cb84c0a1", size = 112566, upload-time = "2026-10-16T15:29:47.679Z" },
 ]
 
 [[package]]
