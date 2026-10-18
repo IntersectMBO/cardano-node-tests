@@ -54,7 +54,7 @@ extra_args=()
 if [ -n "$coverage_json" ] && [ -e "$coverage_json" ]; then
   extra_args+=(--cli-coverage "$coverage_json")
 fi
-if [ -n "${MARKEXPR:-}" ]; then
+if [ -n "${MARKEXPR:-}" ] || [ -n "${DESELECT_FROM_FILE:-}" ]; then
   extra_args+=(--filtered)
 fi
 
@@ -67,6 +67,6 @@ fi
 
 echo "Reporting testrun stats to $stats_url"
 # Time out so a tcache that never answers cannot hold up the testrun.
-curl -s -X PUT --fail-with-body --connect-timeout 10 --max-time 60 \
+curl -sS -X PUT --fail-with-body --connect-timeout 10 --max-time 60 \
   -u "$TCACHE_BASIC_AUTH" "$stats_url" \
   -H "Content-Type: application/json" --data-binary "@$stats_json"

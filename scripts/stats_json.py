@@ -15,6 +15,7 @@ import json
 import math
 import os
 import pathlib as pl
+import re
 import subprocess
 import sys
 import typing as tp
@@ -44,7 +45,7 @@ def _utc_now() -> datetime.datetime:
 
 
 def _local_run_id() -> str:
-    """Build a run id, with no host or user name, for a run that has no CI run number.
+    """Build a run id, with no host or user name, for a run that has no CI run id.
 
     Returns:
         A sortable id, e.g. `local-20260929T120000Z-1a2b3c4d`.
@@ -70,15 +71,18 @@ def _project() -> str:
 
 
 def _scrub(name: str) -> str:
-    """Keep only the characters the workflows keep in a testrun name.
+    """Keep only ASCII letters, digits, `_` and `-` in a testrun name.
+
+    The same set the workflows keep with `${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}`,
+    without depending on the locale.
 
     Args:
         name: The raw name.
 
     Returns:
-        The name with the same scrub as `${CI_TESTRUN_NAME//[!a-zA-Z0-9_-]/}`.
+        The scrubbed name.
     """
-    return "".join(c for c in name if c.isalnum() or c in "_-")
+    return re.sub(r"[^A-Za-z0-9_-]", "", name)
 
 
 def _typed_testrun_name() -> str:
@@ -109,7 +113,7 @@ def _identity(step: str) -> dict:
     return {
         "project": _project(),
         "testrun_name": testrun_name,
-        "run_id": os.environ.get("GITHUB_RUN_NUMBER") or _local_run_id(),
+        "run_id": os.environ.get("GITHUB_RUN_ID") or _local_run_id(),
         "step": step,
         "origin": "ci" if on_ci else "local",
     }
@@ -147,12 +151,11 @@ def _versions() -> dict:
     }
 
 
-def _as_number(value: object, kind: type) -> int | float | None:
+def _as_float(value: object) -> float | None:
     """Return a value only when it really is a finite number.
 
     Args:
         value: The value read from the coverage report.
-        kind: `int` or `float`, the type to return it as.
 
     Returns:
         The number, or None when the value is not one.
@@ -161,7 +164,20 @@ def _as_number(value: object, kind: type) -> int | float | None:
         return None
     if not math.isfinite(value):
         return None
-    return kind(value)
+    return float(value)
+
+
+def _as_int(value: object) -> int | None:
+    """Return a value as an integer only when it really is a finite number.
+
+    Args:
+        value: The value read from the coverage report.
+
+    Returns:
+        The number, or None when the value is not one.
+    """
+    number = _as_float(value)
+    return None if number is None else int(number)
 
 
 def _submits(node: dict) -> int:
@@ -179,7 +195,7 @@ def _submits(node: dict) -> int:
             continue
         submit = child.get("submit") if key == "transaction" else None
         if isinstance(submit, dict):
-            total += _as_number(submit.get("_count_submit"), int) or 0
+            total += _as_int(submit.get("_count_submit")) or 0
         total += _submits(child)
     return total
 
@@ -206,9 +222,9 @@ def _commands(coverage_file: pl.Path | None) -> dict:
     except (OSError, ValueError, TypeError, KeyError, StopIteration, AttributeError):
         return empty
     return {
-        "count": _as_number(count, int),
+        "count": _as_int(count),
         "submits": _submits(covered) if isinstance(covered, dict) else None,
-        "coverage_pct": _as_number(coverage, float),
+        "coverage_pct": _as_float(coverage),
     }
 
 
@@ -295,7 +311,7 @@ def build_document(
 
     Args:
         results_dir: The Allure results directory.
-        exit_code: pytest's own exit code for the run.
+        exit_code: The testrun's exit code.
         step: The step name, for the upgrade path.
         coverage_file: Path to `cli_coverage.json`, or None.
         filtered: True when the run covered only a subset of the tests.
@@ -339,9 +355,7 @@ def get_args() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(description=__doc__.partition("\n")[0])
     parser.add_argument("results_dir", type=pl.Path, help="Allure results directory")
-    parser.add_argument(
-        "-e", "--exit-code", type=int, default=0, help="pytest exit code for the run"
-    )
+    parser.add_argument("-e", "--exit-code", type=int, default=0, help="the testrun's exit code")
     parser.add_argument("-s", "--step", default=DEFAULT_STEP, help="step name, for upgrade testing")
     parser.add_argument(
         "-c", "--cli-coverage", type=pl.Path, default=None, help="path to cli_coverage.json"
