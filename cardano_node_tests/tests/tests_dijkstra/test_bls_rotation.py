@@ -158,7 +158,7 @@ def cluster_short_bls_keyage(
     cluster_manager: cluster_management.ClusterManager,
     short_bls_keyage_start_cluster: pl.Path,
 ) -> clusterlib.ClusterLib:
-    """Return a cluster instance where the BLS keys of the cluster pools expire soon."""
+    """Return a short-key-lifetime cluster with observable committee key state."""
     common.skip_unless_local_fast()
     cluster_obj = cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
@@ -166,6 +166,7 @@ def cluster_short_bls_keyage(
         cleanup=True,
         scriptsdir=short_bls_keyage_start_cluster,
     )
+    leios.get_committee(cluster_obj=cluster_obj, required_fields=("poolId", "key", "voting"))
     return cluster_obj
 
 
@@ -181,6 +182,7 @@ def cluster_leios_singleton(
     everything that can rule the test out is checked before the instance is marked.
     """
     cluster_obj = cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+    leios.get_committee(cluster_obj=cluster_obj, required_fields=("poolId", "key", "voting"))
     leios.skip_if_no_ebs(cluster_obj=cluster_obj)
 
     # A search window has to fit into a single epoch, so that a vote cast in the next
@@ -202,15 +204,13 @@ def cluster_leios_singleton(
 
 
 @pytest.fixture
-def skip_on_absent_committee(cluster: clusterlib.ClusterLib) -> None:
-    """Skip unless the cluster's stake snapshot query reports the Leios committee.
+def require_committee_details(cluster: clusterlib.ClusterLib) -> None:
+    """Require pool membership and structured BLS state before registration or waits.
 
-    An absent field means the query cannot report committee membership, not that the
-    committee is empty. Check the schema before registering pools or waiting for epochs.
+    Try both committee query schemas. Missing capabilities skip through node 11.2.1
+    and fail after that version, rather than being interpreted as an empty committee.
     """
-    snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
-    if "leiosCommittee" not in snapshot:
-        pytest.skip("The stake-snapshot query doesn't report the Leios committee.")
+    leios.get_committee(cluster_obj=cluster, required_fields=("poolId", "key", "voting"))
 
 
 def get_future_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
@@ -535,7 +535,7 @@ def check_seat_voting(
         expected_vkey: The hex encoded BLS key the seat is expected to hold (optional).
         context: Added to the reported message, to say why the pool should be voting.
     """
-    seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+    seat = leios.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
 
     if not seat:
         errors.append(
@@ -574,7 +574,7 @@ def check_seat_keyless(
         epoch: The epoch the seat is checked in, for the reported message.
         errors: Collects the failures, appended to in place.
     """
-    seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+    seat = leios.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
 
     if not seat:
         errors.append(
@@ -659,7 +659,7 @@ class TestBlsKeyRotation:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.usefixtures("skip_on_absent_committee")
+    @pytest.mark.usefixtures("require_committee_details")
     def test_rotate_bls_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -763,7 +763,7 @@ class TestBlsKeyRotation:
 
         # The committee of this epoch was seated before the update, so it still holds
         # the old key
-        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = leios.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == orig_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the original BLS key: {seat}"
@@ -777,7 +777,7 @@ class TestBlsKeyRotation:
         this_epoch = cluster_obj.wait_for_epoch(
             epoch_no=rotate_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = leios.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == new_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the rotated BLS key: {seat}"
@@ -868,7 +868,7 @@ class TestBlsKeyRotation:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.long
-    @pytest.mark.usefixtures("skip_on_absent_committee")
+    @pytest.mark.usefixtures("require_committee_details")
     def test_drop_and_restore_bls_key(
         self,
         cluster: clusterlib.ClusterLib,
@@ -964,7 +964,7 @@ class TestBlsKeyRotation:
         this_epoch = cluster_obj.wait_for_epoch(
             epoch_no=reg_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = bls.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
+        seat = leios.get_committee_seat(cluster_obj=cluster_obj, pool_id=pool_id)
         assert seat, f"The pool holds no Leios committee seat in epoch {this_epoch}"
         assert seat.get("key") is None, (
             f"The keyless pool got a key on the Leios committee of epoch {this_epoch}: {seat}"
@@ -1347,7 +1347,7 @@ class TestBlsKeyRotationVoting:
         this_epoch = cluster.wait_for_epoch(
             epoch_no=rotate_epoch + 1, padding_seconds=5, future_is_ok=False
         )
-        seat = bls.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
+        seat = leios.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == orig_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the original BLS key "
             f"of '{pool_name}': {seat}"
@@ -1365,7 +1365,7 @@ class TestBlsKeyRotationVoting:
         this_epoch = cluster.wait_for_epoch(
             epoch_no=rotate_epoch + bls.BLS_ACTIVATION_EPOCHS, padding_seconds=5
         )
-        seat = bls.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
+        seat = leios.get_committee_seat(cluster_obj=cluster, pool_id=pool_id)
         assert bls.get_bls_pub_key(bls_key_state=seat.get("key")) == new_vkey, (
             f"The Leios committee of epoch {this_epoch} doesn't hold the rotated BLS key "
             f"of '{pool_name}': {seat}"

@@ -164,25 +164,6 @@ def get_registered_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) 
     return helpers.get_pool_param("spsBlsKey", pool_params=pool_params) or {}
 
 
-def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
-    """Return the Leios committee seat of a pool in the current epoch.
-
-    The committee is reported as a whole regardless of the queried pool, so a single
-    pool ID is enough to get it.
-
-    Args:
-        cluster_obj: An instance of `clusterlib.ClusterLib`.
-        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
-
-    Returns:
-        dict: The seat of the pool, or an empty dict when the pool holds no seat.
-    """
-    pool_id_dec = helpers.get_pool_id_hex(pool_id)
-    snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id_dec])
-    committee: list[dict] = snapshot.get("leiosCommittee") or []
-    return next((s for s in committee if s["poolId"] == pool_id_dec), {})
-
-
 def get_max_key_age(*, cluster_obj: clusterlib.ClusterLib) -> int:
     """Return the BLS key lifetime in epochs, as the ledger derives it from genesis.
 

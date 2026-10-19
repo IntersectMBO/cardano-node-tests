@@ -21,6 +21,7 @@ import time
 
 import allure
 import pytest
+import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -71,6 +72,9 @@ def cluster_lock_leios_gov(
     the test out is checked before the instance is marked.
     """
     cluster_obj = cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+    # Size checks also work with opaque seats from the experimental query. Check the
+    # availability before governance setup or marking the instance for respin.
+    leios.get_committee(cluster_obj=cluster_obj)
     leios.skip_if_no_ebs(cluster_obj=cluster_obj)
     # Up to 1 epoch for delayed ratification, 3 epochs for ratification, enactment and the
     # committee rotation, and the log search in the last epoch
@@ -160,6 +164,7 @@ class TestLeiosPParamsGov:
         cluster_lock_leios_gov: governance_utils.GovClusterT,
         pool_user_llg: clusterlib.PoolUser,
         cluster_manager: cluster_management.ClusterManager,
+        subtests: pytest_subtests.SubTests,
     ):
         """Test that a change of the Leios committee size and quorum takes effect.
 
@@ -184,9 +189,20 @@ class TestLeiosPParamsGov:
         * Check that the pools without a seat cast no vote and answered the EB
           announcements with `NotOnCommittee`
         * Check that the seated pool voted, and that a certificate was assembled
+
+        On older branches without pool identities, skip only the membership-query
+        subtest. Retain size checks and compare actual voting logs with the expected
+        top-ranked pool, without treating stake-derived identities as queried data.
         """
         cluster, governance_data = cluster_lock_leios_gov
         temp_template = common.get_test_id(cluster)
+
+        # Gate the identity-dependent check before submitting governance actions. A
+        # skipped subtest must not discard committee-size and quorum coverage.
+        check_pool_ids = False
+        with subtests.test(check="committee_pool_ids"):
+            leios.get_committee(cluster_obj=cluster, required_fields=("poolId",))
+            check_pool_ids = True
 
         state_dir = cluster_nodes.get_cluster_env().state_dir
         pool_ids = {
@@ -316,8 +332,9 @@ class TestLeiosPParamsGov:
             update_proposals=fin_update_proposals,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
-        enact_committee = (
-            cluster.g_query.get_stake_snapshot(all_stake_pools=True).get("leiosCommittee") or []
+        enact_committee = leios.get_committee(cluster_obj=cluster)
+        assert cluster.g_query.get_epoch() == enact_epoch, (
+            "An epoch boundary split the enactment committee check"
         )
         assert len(enact_committee) > 1, (
             f"The Leios committee of the enactment epoch {enact_epoch} holds "
@@ -331,8 +348,8 @@ class TestLeiosPParamsGov:
             epoch_no=enact_epoch + 1, padding_seconds=leios.EPOCH_MARGIN_SEC, future_is_ok=False
         )
 
-        # One query for the committee and for the stake it was selected from, so that an
-        # epoch boundary cannot split the two
+        # The legacy query contains both committee and stake. The experimental query
+        # needs a second call, so check that both still belong to the intended epoch.
         snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
         search_epoch = cluster.g_query.get_epoch()
         assert search_epoch == enact_epoch + 1, (
@@ -342,8 +359,10 @@ class TestLeiosPParamsGov:
             f"Not enough time left in epoch {search_epoch} for the log search"
         )
 
-        committee = snapshot.get("leiosCommittee") or []
-        seated_ids = {s["poolId"] for s in committee}
+        committee = leios.get_committee(cluster_obj=cluster, snapshot=snapshot)
+        assert cluster.g_query.get_epoch() == search_epoch, (
+            "An epoch boundary split the stake and committee queries"
+        )
         assert len(committee) == 1, (
             f"The Leios committee of epoch {search_epoch} holds {len(committee)} seats, "
             f"expected 1: {committee}"
@@ -354,10 +373,13 @@ class TestLeiosPParamsGov:
         # holds a tiny fraction of their stake.
         search_shares = _get_pool_shares(snapshot=snapshot, pool_ids=pool_ids)
         top_pool_name = min(pool_ids, key=lambda n: (-search_shares[n], pool_ids[n]))
-        assert seated_ids == {pool_ids[top_pool_name]}, (
-            f"The Leios committee of epoch {search_epoch} seated {committee}, expected the "
-            f"top ranked pool '{top_pool_name}': {search_shares}"
-        )
+        if check_pool_ids:
+            assert all("poolId" in s for s in committee), "Committee pool identities disappeared"
+            seated_ids = {s["poolId"] for s in committee}
+            assert seated_ids == {pool_ids[top_pool_name]}, (
+                f"The Leios committee of epoch {search_epoch} seated {committee}, expected the "
+                f"top ranked pool '{top_pool_name}': {search_shares}"
+            )
         assert search_shares[top_pool_name] >= quorum, (
             f"The seated pool '{top_pool_name}' holds {search_shares[top_pool_name]} of the "
             f"stake, less than the quorum {quorum}"
