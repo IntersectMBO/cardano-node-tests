@@ -190,8 +190,9 @@ def cluster_small_committee(
 ) -> clusterlib.ClusterLib:
     """Return a cluster instance whose Leios committee has no room for every pool.
 
-    Spinning the instance up means starting a dedicated cluster from custom genesis, so
-    what can rule the test out is checked first, off the startup scripts.
+    Check genesis constraints off the startup scripts before starting the dedicated
+    cluster. Check committee query capabilities as soon as that cluster is available,
+    before waiting for epochs or searching its logs.
     """
     with open(small_committee_start_cluster / "genesis.spec.json", encoding="utf-8") as in_fp:
         genesis_spec = json.load(in_fp)
@@ -213,6 +214,7 @@ def cluster_small_committee(
         cleanup=True,
         scriptsdir=small_committee_start_cluster,
     )
+    leios.get_committee(cluster_obj=cluster_obj, required_fields=("poolId",))
     return cluster_obj
 
 
@@ -224,8 +226,10 @@ def cluster_leios_lock(
 
     The whole instance is locked because the test stops one of the pool nodes, which
     takes a part of the stake out of block production and out of the Leios voting.
+    Require observable pool membership before any waits or node stops.
     """
     cluster_obj = cluster_manager.get(lock_resources=[cluster_management.Resources.CLUSTER])
+    leios.get_committee(cluster_obj=cluster_obj, required_fields=("poolId",))
     leios.skip_if_no_ebs(cluster_obj=cluster_obj)
     return cluster_obj
 
@@ -373,7 +377,10 @@ def _get_voting_share_without(
     total_stake = sum(pools_stake.values())
     assert total_stake, f"The stake snapshot of epoch {epoch} reports no stake: {snapshot}"
 
-    seated_ids = {s["poolId"] for s in snapshot.get("leiosCommittee") or []}
+    committee = leios.get_committee(
+        cluster_obj=cluster_obj, snapshot=snapshot, required_fields=("poolId",)
+    )
+    seated_ids = {s["poolId"] for s in committee}
     assert pool_id in seated_ids, (
         f"The pool '{pool_id}' holds no seat on the Leios committee of epoch {epoch}, so "
         f"stopping it cannot take the committee below the quorum: {sorted(seated_ids)}"
@@ -664,7 +671,9 @@ class TestLeiosCommitteeRank:
         snapshot = cluster.g_query.get_stake_snapshot(all_stake_pools=True)
         search_epoch = cluster.g_query.get_epoch()
 
-        committee = snapshot.get("leiosCommittee") or []
+        committee = leios.get_committee(
+            cluster_obj=cluster, snapshot=snapshot, required_fields=("poolId",)
+        )
         assert len(committee) <= SMALL_COMMITTEE_SIZE, (
             f"The Leios committee of epoch {search_epoch} holds {len(committee)} seats, "
             f"more than the {SMALL_COMMITTEE_SIZE} it is configured for: {committee}"

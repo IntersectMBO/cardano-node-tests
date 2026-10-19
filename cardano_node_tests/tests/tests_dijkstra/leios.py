@@ -1,10 +1,13 @@
-"""Leios trace messages and log search helpers shared by the Leios tests.
+"""Leios committee queries, trace messages and log search helpers.
 
 The Leios activity of a node is visible only in its trace messages, and the messages are
 emitted only in the Dijkstra era and only when there is enough Tx load for a block
 producer to have something to put into an endorser block (EB). Tests therefore search the
 node log files for the messages they expect, over the log content that got appended since
 they started looking.
+
+Committee queries vary between feature branches. Keep their temporary compatibility
+handling here, without adding the experimental query to clusterlib.
 """
 
 import dataclasses
@@ -19,8 +22,10 @@ import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.utils import configuration
+from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
 
@@ -191,6 +196,116 @@ MIN_SEARCH_SEC = 120
 # (`activeSlotsCoeff` 0.05, `slotLength` 1) and gets EBs, while the 10x faster block
 # rate of the `local_fast` variant (and its 4x shorter epoch) drains the mempool.
 MIN_BLOCK_INTERVAL_SEC = 10
+
+
+def skip_unsupported_committee(reason: str) -> tp.NoReturn:
+    """Skip an unsupported committee check, but fail after node 11.2.1.
+
+    Feature branches report different committee schemas under the same version. Detect
+    capabilities from the CLI, using the version only to expire these workarounds.
+
+    Args:
+        reason: The committee capability that the current CLI cannot report.
+    """
+    if VERSIONS.node > version.parse("11.2.1"):
+        pytest.fail(f"{reason} Committee query workarounds expired after node 11.2.1.")
+    pytest.skip(reason)
+
+
+def get_committee(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    snapshot: dict | None = None,
+    required_fields: tuple[str, ...] = (),
+) -> list[dict]:
+    """Read the current Leios committee without interpreting opaque voting keys.
+
+    Prefer the old stake-snapshot schema when present. Otherwise inspect query help
+    before using the experimental leios-committee command. Its opaque seats support
+    counts and weights, but cannot identify pools or expose structured key state.
+
+    Missing capabilities skip the affected check through node 11.2.1 and fail on newer
+    nodes. An advertised command failing, or malformed JSON, is always a failure.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        snapshot: An already queried stake snapshot, to keep legacy committee and stake
+            data in one query. Query all pools when omitted.
+        required_fields: Seat fields needed by the caller, e.g. `poolId`, `key`, `voting`.
+            An empty legacy committee retains its known schema. An empty experimental
+            committee cannot establish support for these fields.
+
+    Returns:
+        The current committee seats, with their original field names and values.
+    """
+    if snapshot is None:
+        snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
+    legacy = "leiosCommittee" in snapshot
+    if legacy:
+        committee = snapshot["leiosCommittee"]
+    else:
+        query_help = cluster_obj.cli(["query", "--help"]).stdout.decode("utf-8")
+        if not re.search(r"(?m)^\s+leios-committee\s", query_help):
+            skip_unsupported_committee(
+                "Neither stake-snapshot nor an available leios-committee query reports "
+                "the Leios committee."
+            )
+        result = json.loads(cluster_obj.g_query.query_cli(["leios-committee"]))
+        committee = result["currentLeiosCommittee"]
+
+    assert isinstance(committee, list) and all(isinstance(s, dict) for s in committee), (
+        f"Unexpected Leios committee format: {committee}"
+    )
+    if (
+        not legacy
+        and committee
+        and any("poolId" not in s for s in committee)
+        and VERSIONS.node > version.parse("11.2.1")
+    ):
+        skip_unsupported_committee("The leios-committee query does not expose pool identities.")
+
+    missing = sorted({field for field in required_fields for s in committee if field not in s})
+    if required_fields and not committee and not legacy:
+        skip_unsupported_committee(
+            "An empty experimental Leios committee cannot establish support for seat fields "
+            f"{required_fields}."
+        )
+    if missing:
+        skip_unsupported_committee(
+            f"The Leios committee query does not expose seat fields {missing}."
+        )
+    if "key" in required_fields and any(
+        s["key"] is not None and not isinstance(s["key"], dict) for s in committee
+    ):
+        skip_unsupported_committee(
+            "The Leios committee query does not expose structured key state."
+        )
+    if "voting" in required_fields and any(not isinstance(s["voting"], bool) for s in committee):
+        skip_unsupported_committee(
+            "The Leios committee query does not expose boolean voting state."
+        )
+    return committee
+
+
+def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> dict:
+    """Return the Leios committee seat of a pool in the current epoch.
+
+    Use either committee query schema, requiring pool identities and structured key
+    state. Unsupported queries skip through node 11.2.1 and fail after that version.
+
+    Args:
+        cluster_obj: An instance of `clusterlib.ClusterLib`.
+        pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
+
+    Returns:
+        dict: The seat of the pool, or an empty dict when the pool holds no seat.
+    """
+    pool_id_dec = helpers.get_pool_id_hex(pool_id)
+    snapshot = cluster_obj.g_query.get_stake_snapshot(stake_pool_ids=[pool_id_dec])
+    committee = get_committee(
+        cluster_obj=cluster_obj, snapshot=snapshot, required_fields=("poolId", "key", "voting")
+    )
+    return next((s for s in committee if s["poolId"] == pool_id_dec), {})
 
 
 def is_committee_seated_in_genesis(*, cluster_obj: clusterlib.ClusterLib) -> bool:
