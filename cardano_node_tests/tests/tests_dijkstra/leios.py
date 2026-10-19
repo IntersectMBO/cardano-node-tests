@@ -224,23 +224,32 @@ def is_committee_seated_in_genesis(*, cluster_obj: clusterlib.ClusterLib) -> boo
 
 
 def get_eb_tx_ref(*, tx_file: pl.Path) -> tuple[str, int]:
-    """Return the reference to a signed tx the way an EB lists it.
+    """Return the EB reference to a valid Dijkstra payment transaction.
 
     An EB doesn't list its txs by tx id (the hash of the tx body), but by the Blake2b-256
-    hash of the whole serialized tx, witnesses included, together with the size of the
-    serialized tx (`forgeLeiosEb` in ouroboros-consensus `LeiosDemoTypes.hs`). The node
-    serializes a tx it got from the mempool into the bytes it was submitted as, so the
-    reference can be computed from the CBOR of the signed tx file.
+    hash and size of the block-format tx (`serializeTxForLeios` in ouroboros-consensus
+    `LeiosDemoTypes.hs`). The signed file holds the three-element mempool format
+    `[body, witnesses, auxiliary_data]`. Block inclusion adds a trailing `is_valid` flag,
+    which is `true` for the payment txs this helper supports. Only the outer array header
+    is replaced and the flag appended, preserving the original bytes of every component.
 
     Args:
-        tx_file: A path to the signed tx file (a text envelope).
+        tx_file: A path to a signed valid Dijkstra payment tx (a text envelope).
 
     Returns:
-        The tx hash as a hex string, and the size of the serialized tx in bytes.
+        The block-format tx hash as a hex string, and its size in bytes.
+
+    Raises:
+        AssertionError: If the file doesn't hold a three-element mempool transaction.
     """
     with open(tx_file, encoding="utf-8") as fp_in:
         tx_cbor = bytes.fromhex(json.load(fp_in)["cborHex"])
-    return hashlib.blake2b(tx_cbor, digest_size=32).hexdigest(), len(tx_cbor)
+    assert tx_cbor[:1] == b"\x83", (
+        f"Expected a three-element Dijkstra mempool transaction in '{tx_file}', "
+        f"got CBOR header {tx_cbor[:1].hex()}"
+    )
+    block_cbor = b"\x84" + tx_cbor[1:] + b"\xf5"
+    return hashlib.blake2b(block_cbor, digest_size=32).hexdigest(), len(block_cbor)
 
 
 def skip_if_no_ebs_in_genesis(*, genesis: dict) -> None:
