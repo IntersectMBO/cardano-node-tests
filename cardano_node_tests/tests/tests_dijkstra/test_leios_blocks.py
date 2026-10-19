@@ -821,11 +821,11 @@ def _parse_pool_eb_lines(
     Args:
         logfile: The pool log file the lines come from, for the reported problems.
         lines: The lines matching any of the EB life cycle regexes.
-        tx_refs: The test txs, as EB tx hash -> serialized tx size.
+        tx_refs: The test txs, as EB tx hash -> block-format tx size.
 
     Returns:
         The parsed lines, and the test txs that an EB lists with a size other than the
-        size of the signed tx.
+        size of the block-format tx.
     """
     parsed = _PoolEbLines()
     problems: list[str] = []
@@ -876,11 +876,11 @@ def _find_certified_ebs(
 
     Args:
         lines_per_pool: The EB life cycle lines found in each pool log.
-        tx_refs: The test txs, as EB tx hash -> serialized tx size.
+        tx_refs: The test txs, as EB tx hash -> block-format tx size.
 
     Returns:
         The certified EBs with test txs in them, and the problems found on the way - a test
-        tx listed with a size other than the size of the signed tx.
+        tx listed with a size other than the size of the block-format tx.
     """
     problems: list[str] = []
     parsed: dict[pl.Path, _PoolEbLines] = {}
@@ -977,14 +977,14 @@ class TestLeiosEbTxs:
         """Check that txs that don't fit into an RB reach the ledger through a certified EB.
 
         The oracle for "the tx came through an EB" are the node logs. An EB lists its txs by
-        the Blake2b-256 hash of the serialized tx, which the test computes from the signed
-        tx file (`leios.get_eb_tx_ref`). The `EB forged` message of the block producer
-        lists the hashes, the `EB announced` message of the same slot gives the EB its
-        hash, and the `EB certified` message of a later block producer names the
-        certified EB. A certifying RB carries no txs of its own, and the ledger applies the
-        txs of the certified EB in its place. The RB is checked to be adopted by its block
-        producer and to become the tip of the chain of another pool, so that it is not an
-        RB that lost a slot battle.
+        the Blake2b-256 hash of the block-format tx, which the test computes from the signed
+        tx file by adding the trailing validity flag (`leios.get_eb_tx_ref`). The block
+        producer's `EB forged` message lists the hashes. The `EB announced` message of the
+        same slot gives the EB its hash. The `EB certified` message of a later block producer
+        names the certified EB. A certifying RB carries no txs of its own; the ledger applies
+        the txs of the certified EB in its place. The RB is checked to be adopted by its block
+        producer and to become the tip of another pool's chain, so that it is not an RB that
+        lost a slot battle.
 
         Rejected oracles: the node-to-client chain sync that would serve the block
         contents has no client in the framework and no `cardano-cli` query; db-sync is
@@ -1053,8 +1053,7 @@ class TestLeiosEbTxs:
 
         certified: list[_CertifiedEb] = []
         txids: dict[str, str] = {}  # EB tx hash -> tx id
-        # A test tx listed in an EB with a size other than the size of the signed tx - the
-        # EB tx hash would then not be the hash of the tx the test submitted
+        # A test tx listed in an EB with a size other than its expected block-format size
         size_problems: list[str] = []
         # Log files that could not be searched. They explain a missing certified EB, so they
         # are reported only together with one.
@@ -1161,8 +1160,8 @@ class TestLeiosEbTxs:
         )
         LOGGER.info(f"Test txs in certified EBs: {certified}")
 
-        # The size of a tx in the EB is the size of the signed tx, so the EB tx hash
-        # is the hash of the very tx the test submitted
+        # The EB must list the expected size of the submitted tx in block format,
+        # including the trailing validity flag absent from the signed file
         assert not size_problems, "\n".join(size_problems)
 
         def _check_utxos() -> None:
