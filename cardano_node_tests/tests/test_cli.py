@@ -635,6 +635,8 @@ class TestAddressBuild:
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("option", ("vkey", "vkey_file", "script_file"))
     @hypothesis.given(key=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
+    @hypothesis.example(key="0")
+    @hypothesis.example(key="00")
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_payment_info(
@@ -685,6 +687,11 @@ class TestAddressBuild:
                 "script value not found" in exc_value  # In cardano-cli >= 10.14.0.0
                 or "Invalid key" in exc_value
                 or "Syntax error in script" in exc_value
+                or (
+                    option == "script_file"
+                    and "Error in $.keyHash: Failed to deserialise" in exc_value
+                    and "Hash PaymentKey" in exc_value
+                )
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
@@ -698,6 +705,8 @@ class TestAddressBuild:
         ),
     )
     @hypothesis.given(key=st.text(alphabet=common.ADDR_ALPHABET, min_size=1))
+    @hypothesis.example(key="0")
+    @hypothesis.example(key="00")
     @common.hypothesis_settings(max_examples=300)
     @pytest.mark.smoke
     def test_invalid_stake_info(
@@ -751,6 +760,11 @@ class TestAddressBuild:
                 or "Invalid key" in exc_value
                 or "Syntax error in script" in exc_value
                 or "invalid address" in exc_value
+                or (
+                    option == "script_file"
+                    and "Error in $.keyHash: Failed to deserialise" in exc_value
+                    and "Hash PaymentKey" in exc_value
+                )
             ), exc_value
 
 
