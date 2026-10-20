@@ -16,10 +16,11 @@ already run::
 Rotating is the same operation as registering - submit a fresh pool registration
 certificate carrying the new key. The ledger treats a registration of an already
 registered pool as an update, so it lands in ``futurePoolParams`` and takes effect at the
-next epoch boundary, which is where ``bksRegisteredIn`` is re-stamped. The committee
-itself is seated once per epoch from the stake snapshot that rotates into the *set*
-position, so a rotated key needs one more boundary before the committee holds it - two
-epoch boundaries in total from the rotation transaction.
+next epoch boundary, which is where ``bksRegisteredIn`` is re-stamped for a changed key.
+Re-registering the same key preserves its original registration epoch and does not
+extend its lifetime. The committee itself is seated once per epoch from the stake snapshot
+that rotates into the *set* position, so a rotated key needs one more boundary before the
+committee holds it - two epoch boundaries in total from the rotation transaction.
 
 An aged-out key does not free the seat: the pool keeps its committee weight, cannot vote
 with it, and the seat is not reallocated. That is what `query stake-snapshot` reports as
@@ -603,7 +604,7 @@ def rotate_bls_key(
     tx_name: str,
     cert_suffix: str,
 ) -> None:
-    """Re-register a pool with a different BLS signing key, leaving everything else as is.
+    """Re-register a pool with the supplied BLS signing key, leaving everything else as is.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -804,16 +805,15 @@ class TestBlsKeyRotation:
         cluster_manager: cluster_management.ClusterManager,
         request: FixtureRequest,
     ):
-        """Renew a BLS key by re-registering the pool with the very same key.
+        """Check that re-registering the same BLS key preserves its registration epoch.
 
-        Re-registration is what restarts the key lifetime clock, and it does so by
-        re-stamping the registration epoch. That works with the key the pool already
-        holds, so an operator can renew without handling a new key.
+        Re-registering a key the pool already holds does not restart its lifetime
+        clock. Only a changed key is stamped with the epoch the update takes effect in.
 
         * Register a new stake pool with a BLS key and delegate owner stake to it
         * Re-register the pool in the next epoch with the same BLS key
-        * Check that after the epoch boundary the registered key is unchanged, but its
-          registration epoch was re-stamped with the epoch the update took effect in
+        * Check that after the epoch boundary both the registered key and its original
+          registration epoch are unchanged
         """
         cluster_obj = cluster
         common.skip_on_long_epochs(cluster_obj=cluster_obj, epochs=2)
@@ -834,36 +834,35 @@ class TestBlsKeyRotation:
             f"{reg_epoch}"
         )
 
-        # Renew in a later epoch, so that the re-stamped registration epoch differs from
-        # the original one
+        # Re-register in a later epoch, so an incorrect timestamp reset is observable
         cluster_obj.wait_for_epoch(epoch_no=reg_epoch + 1, padding_seconds=5)
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster_obj,
             start=5,
             stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster_obj),
         )
-        renew_epoch = cluster_obj.g_query.get_epoch()
+        rereg_epoch = cluster_obj.g_query.get_epoch()
 
         rotate_bls_key(
             cluster_obj=cluster_obj,
             pool_creation_out=pool_creation_out,
             bls_skey_file=get_pool_bls_key_pair(pool_creation_out=pool_creation_out).skey_file,
-            tx_name=f"{temp_template}_renew",
-            cert_suffix="renew",
+            tx_name=f"{temp_template}_rereg",
+            cert_suffix="rereg",
         )
 
-        assert cluster_obj.g_query.get_epoch() == renew_epoch, (
-            "The renewal took longer than expected and would affect other checks"
+        assert cluster_obj.g_query.get_epoch() == rereg_epoch, (
+            "The re-registration took longer than expected and would affect other checks"
         )
 
-        cluster_obj.wait_for_epoch(epoch_no=renew_epoch + 1, padding_seconds=5)
+        cluster_obj.wait_for_epoch(epoch_no=rereg_epoch + 1, padding_seconds=5)
         bls_key = bls.get_registered_bls_key(cluster_obj=cluster_obj, pool_id=pool_id)
         assert bls.get_bls_pub_key(bls_key_state=bls_key) == orig_vkey, (
             f"The registered BLS key changed: {bls_key}"
         )
-        assert bls_key["bksRegisteredIn"] == renew_epoch + 1, (
-            f"The renewed BLS key is stamped with epoch {bls_key['bksRegisteredIn']} instead of "
-            f"{renew_epoch + 1}"
+        assert bls_key["bksRegisteredIn"] == reg_epoch, (
+            f"Re-registering the same BLS key changed its registration epoch from "
+            f"{reg_epoch} to {bls_key['bksRegisteredIn']}"
         )
 
     @allure.link(helpers.get_vcs_link())
