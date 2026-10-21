@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import pathlib as pl
 
 import allure
 import pytest
@@ -14,16 +15,22 @@ from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_conway import conway_common
-from cardano_node_tests.tests.tests_plutus_v3 import test_mint_build as mint_build
+from cardano_node_tests.tests.tests_plutus_v3 import builtins_mint_build as mint_build
 from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import governance_setup
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
 MULTI_INDEX_ARRAY_COST_MODEL_LEN = 355
 
 pytestmark = [
+    # Skip before the fixture locks governance and Plutus resources
+    pytest.mark.skipif(
+        VERSIONS.cluster_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="multiIndexArray requires protocol version 12 or later",
+    ),
     markers.SKIPIF_PLUTUSV3_UNUSABLE,
     markers.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.plutus,
@@ -38,23 +45,29 @@ pytestmark = [
 @pytest.fixture
 def cluster_multi_index_array(
     cluster_manager: cluster_management.ClusterManager,
+    cluster_plutus: clusterlib.ClusterLib,
 ) -> clusterlib.ClusterLib:
     """Enable multiIndexArray costing while locking governance and Plutus resources."""
-    cluster = cluster_manager.get(
-        use_resources=cluster_management.Resources.ALL_POOLS,
-        lock_resources=[
-            cluster_management.Resources.COMMITTEE,
-            cluster_management.Resources.DREPS,
-            cluster_management.Resources.PLUTUS,
-        ],
-    )
+    cluster = cluster_plutus
     pparams = cluster.g_query.get_protocol_params()
     if pparams["protocolVersion"]["major"] < 12:
         pytest.skip("multiIndexArray requires protocol version 12 or later")
     # Fail before governance setup if the CLI cannot decode PV12 scripts.
-    cluster.g_transaction.get_policyid(
-        plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3[0].script_file
-    )
+    try:
+        cluster.g_transaction.get_policyid(
+            plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3[0].script_file
+        )
+    except clusterlib.CLIError as exc:
+        if "MultiIndexArray is not available" in str(exc) or "Failed to decode builtin tag" in str(
+            exc
+        ):
+            msg = (
+                "CLI cannot decode multiIndexArray at PV12. This test requires node/CLI "
+                "built with the batch7 activation from IntersectMBO/plutus#8006 "
+                f"(da649103). Original error: {exc}"
+            )
+            raise clusterlib.CLIError(msg) from exc
+        raise
     if len(pparams["costModels"]["PlutusV3"]) >= MULTI_INDEX_ARRAY_COST_MODEL_LEN:
         return cluster
 
@@ -75,7 +88,7 @@ def cluster_multi_index_array(
         cluster_obj=cluster,
         name_template=name_template,
         governance_data=governance_data,
-        cost_proposal_file=mint_build.DATA_DIR / "cost_models_multi_index_array_v3.json",
+        cost_proposal_file=plutus_common.DATA_DIR / "cost_models_multi_index_array_v3.json",
         pool_user=pool_user,
     )
     assert (
@@ -98,11 +111,13 @@ class TestMultiIndexArray:
         """Mint with valid selections and reject invalid requests while building transactions.
 
         Check ordering, duplicate indices, empty selections, heterogeneous Data, and
-        repeated selections of 1, 64 and 1,024 elements. Reject negative, upper-bound,
+        repeated selections of 1, 64 and 1,024 elements. The Data policy selects
+        Integer, ByteString and homogeneous List Data. Reject negative, upper-bound,
         huge and late invalid indices, an indexed empty array, and 1,025 valid indices.
         Confirm successful mints on chain and compare their costs with db-sync when
         available. Record budgets for all successful policies and check transaction
-        limits and growth with the request size, without assuming linear CPU costing.
+        limits. Check whole-policy budget growth with the request size as a sanity
+        check, including list construction and result validation in the measured costs.
         Reuse the cost-model setup to reject insufficient CPU and memory budgets,
         then confirm a raw transaction with sufficient execution units.
         """
@@ -119,13 +134,18 @@ class TestMultiIndexArray:
             is_cost_model_ok=True,
             is_prot_version_ok=True,
             subtests=subtests,
-            expected_error="multiIndexArray:",
+            expected_error="multiIndexArray: array index out of bounds",
+            expected_errors={
+                "failingMultiIndexArrayOverLimitPolicyScript_V3_110": (
+                    "multiIndexArray: too many indices (maximum is 1024)"
+                ),
+            },
         )
         max_units = cluster.g_query.get_protocol_params()["maxTxExecutionUnits"]
         repeated_costs: dict[str, dict] = {}
         for minted in mints:
             assert minted.tx_output.mint, "Expected a minting transaction"
-            script_name = str(minted.tx_output.mint[0].script_file)
+            script_name = pl.Path(minted.tx_output.mint[0].script_file).stem
             with subtests.test(script=script_name, check="budget"):
                 assert len(minted.plutus_costs) == 1, "Expected one script cost record"
                 units = minted.plutus_costs[0]["executionUnits"]
@@ -143,7 +163,7 @@ class TestMultiIndexArray:
                         redeemer_records=db_record.redeemers, cost_records=minted.plutus_costs
                     )
 
-        with subtests.test(check="budget_growth"):
+        with subtests.test(check="policy_budget_growth"):
             assert len(repeated_costs) == 3, (
                 "Expected budgets for requests of 1, 64 and 1024 indices"
             )
@@ -152,12 +172,13 @@ class TestMultiIndexArray:
                     repeated_costs["1"][resource]
                     < repeated_costs["64"][resource]
                     < repeated_costs["1024"][resource]
-                ), f"Execution {resource} did not grow with the request size: {repeated_costs}"
+                ), f"Policy execution {resource} did not grow with request size: {repeated_costs}"
 
         with subtests.test(check="execution_budget"):
             self._check_execution_budget(
                 cluster_manager=cluster_manager,
                 cluster_multi_index_array=cluster,
+                temp_template=f"{temp_template}_budget",
                 subtests=subtests,
             )
 
@@ -165,18 +186,18 @@ class TestMultiIndexArray:
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_multi_index_array: clusterlib.ClusterLib,
+        temp_template: str,
         subtests: pytest_subtests.SubTests,
     ) -> None:
         """Reject insufficient CPU and memory budgets, then mint with the measured budget.
 
         Evaluate the 1,024-index policy in a minting transaction using the node's cost
-        model. Submit two otherwise valid raw transactions, first with one CPU unit
-        and then with one memory unit, and require budget exhaustion in each case.
+        model. Submit two otherwise valid raw transactions, first with one fewer CPU
+        unit and then with one fewer memory unit, and require exhaustion in each case.
         Check the inputs and collateral remain unspent. Finally submit the same mint
         with the measured execution units and confirm its token on chain and in db-sync.
         """
         cluster = cluster_multi_index_array
-        temp_template = common.get_test_id(cluster)
         pparams = cluster.g_query.get_protocol_params()
         max_units = pparams["maxTxExecutionUnits"]
         payment_addr, issuer_addr = addrs_common.get_payment_addrs(
@@ -203,7 +224,11 @@ class TestMultiIndexArray:
             minting_costs=[minting_cost],
             amount=mint_build.SCRIPT_FUND,
         )[0]
-        script = plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3[-1]
+        script = next(
+            s
+            for s in plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3
+            if "Repeated1024Policy" in s.script_file.stem
+        )
         policyid = cluster.g_transaction.get_policyid(script.script_file)
         token = f"{policyid}.{temp_template.encode().hex()[:64]}"
         token_out = clusterlib.TxOut(address=issuer_addr.address, amount=1, coin=token)
@@ -225,11 +250,18 @@ class TestMultiIndexArray:
         )
         assert len(costs) == 1, "Expected one script cost record"
         units = costs[0]["executionUnits"]
-        fee = costs[0]["lovelaceCost"] + 300_000
+        fee = cluster.g_transaction.calculate_tx_fee(
+            src_address=issuer_addr.address,
+            tx_name=f"{temp_template}_fee",
+            txins=funds.mint_utxos,
+            txouts=txouts,
+            mint=[dataclasses.replace(mint, execution_units=(units["steps"], units["memory"]))],
+            tx_files=tx_files,
+        )
 
         for name, budget in (
-            ("cpu", (1, units["memory"])),
-            ("memory", (units["steps"], 1)),
+            ("cpu", (units["steps"] - 1, units["memory"])),
+            ("memory", (units["steps"], units["memory"] - 1)),
             ("sufficient", (units["steps"], units["memory"])),
         ):
             with subtests.test(budget=name):
