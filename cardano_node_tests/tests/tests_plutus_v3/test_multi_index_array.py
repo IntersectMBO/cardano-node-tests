@@ -88,7 +88,7 @@ def cluster_multi_index_array(
         cluster_obj=cluster,
         name_template=name_template,
         governance_data=governance_data,
-        cost_proposal_file=plutus_common.DATA_DIR / "cost_models_multi_index_array_v3.json",
+        cost_proposal_file=plutus_common.DATA_DIR / "cost_models_list_355_v3.json",
         pool_user=pool_user,
     )
     assert (

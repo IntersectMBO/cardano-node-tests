@@ -61,7 +61,7 @@ The batch7 modules use the common generator, updated to Plutus 1.72 by
 [PR #30](https://github.com/mkoura/plutus-scripts-e2e/pull/30). Keep builtin
 evaluation disabled in the compiler so the tested operation survives optimization.
 
-`cost_models_multi_index_array_v3.json` preserves the existing 350 PlutusV3
+`cost_models_list_355_v3.json` preserves the existing 350 PlutusV3
 parameters from `cost_models_list_332_350_v2_v3.json` and appends the five
 `multiIndexArray` parameters in ledger `V3.ParamName` order: CPU c0/c1/c2
 `326163/12304/2`, memory intercept/slope `4/3`, from Plutus's
