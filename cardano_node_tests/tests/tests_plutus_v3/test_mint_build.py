@@ -178,6 +178,7 @@ class PendingMint(tp.NamedTuple):
     issuer_address: str
     token: str
     token_amount: int
+    plutus_costs: list[dict]
 
 
 def run_scenario(
@@ -190,6 +191,7 @@ def run_scenario(
     outcome: Outcomes,
     is_cost_model_ok: bool,
     is_prot_version_ok: bool,
+    expected_error: str = "",
 ) -> PendingMint | None:
     """Run an e2e test for a Plutus builtin.
 
@@ -197,6 +199,7 @@ def run_scenario(
 
     The minting transaction is submitted without waiting for it to appear on chain, so
     transactions for multiple scripts can be confirmed together (see `confirm_mints`).
+    When `expected_error` is set, an expected evaluation failure must contain that text.
 
     Returns:
         PendingMint | None: The submitted minting transaction, or None when the minting
@@ -231,9 +234,10 @@ def run_scenario(
         *mint_txouts,
     ]
 
-    def _dump_cost() -> None:
-        try:  # noqa: SIM105
-            cluster_obj.g_transaction.calculate_plutus_script_cost(
+    def _dump_cost() -> list[dict]:
+        """Save execution costs, allowing evaluation failures for negative scenarios."""
+        try:
+            return cluster_obj.g_transaction.calculate_plutus_script_cost(
                 src_address=payment_addr.address,
                 tx_name=plutus_v_record.script_file.name,
                 tx_files=tx_files_mint,
@@ -242,9 +246,9 @@ def run_scenario(
                 mint=plutus_mint_data,
             )
         except clusterlib.CLIError:
-            pass
+            return []
 
-    _dump_cost()
+    plutus_costs = _dump_cost()
 
     try:
         tx_output_mint = cluster_obj.g_transaction.build_tx(
@@ -254,6 +258,10 @@ def run_scenario(
             txins=mint_utxos,
             txouts=txouts_mint,
             mint=plutus_mint_data,
+        )
+        assert is_prot_version_ok and is_cost_model_ok and outcome == Outcomes.SUCCESS, (
+            f"Script {plutus_v_record.script_file.name} unexpectedly succeeded: "
+            f"{outcome=}, {is_prot_version_ok=}, {is_cost_model_ok=}"
         )
         tx_signed_mint = cluster_obj.g_transaction.sign_tx(
             tx_body_file=tx_output_mint.out_file,
@@ -277,6 +285,8 @@ def run_scenario(
             "The machine terminated because of an error" in str_excp
             or "Script evaluation error" in str_excp
         ):
+            if expected_error and is_prot_version_ok and is_cost_model_ok:
+                assert expected_error in str_excp, str_excp
             return None
         raise
 
@@ -286,6 +296,7 @@ def run_scenario(
         issuer_address=issuer_addr.address,
         token=token,
         token_amount=token_amount,
+        plutus_costs=plutus_costs,
     )
 
 
@@ -358,13 +369,17 @@ def run_plutusv3_builtins_test(
     is_cost_model_ok: bool,
     is_prot_version_ok: bool,
     subtests: pytest_subtests.SubTests,
-):
+    expected_error: str = "",
+) -> list[PendingMint]:
     """Run minting tests with the tested Plutus Core built-in functions.
 
     The scripts are processed in chunks of `FUND_CHUNK_SIZE` scripts. For each chunk,
     the token issuer is funded in a single transaction, and the minting transactions are
     submitted without waiting, and then confirmed on chain together. This saves waiting
     for blocks for each script separately.
+
+    Returns:
+        list[PendingMint]: Confirmed minting transactions with their execution costs.
     """
     cases = [
         *((s, Outcomes.SUCCESS) for s in success_scripts),
@@ -397,6 +412,7 @@ def run_plutusv3_builtins_test(
         min_amount=total_amount,
     )
 
+    confirmed_mints: list[PendingMint] = []
     for chunk_idx, chunk_start in enumerate(range(0, len(cases), FUND_CHUNK_SIZE)):
         chunk = cases[chunk_start : chunk_start + FUND_CHUNK_SIZE]
         all_issuer_funds = fund_issuer_batch(
@@ -425,6 +441,7 @@ def run_plutusv3_builtins_test(
                     outcome=outcome,
                     is_cost_model_ok=is_cost_model_ok,
                     is_prot_version_ok=is_prot_version_ok,
+                    expected_error=expected_error,
                 )
                 if pending_mint:
                     pending_mints.append((script_stem, pending_mint))
@@ -436,6 +453,9 @@ def run_plutusv3_builtins_test(
         for script_stem, pending_mint in pending_mints:
             with subtests.test(variant=f"{variant}_{script_stem}_minted"):
                 assert pending_mint not in not_minted, "The token was not minted"
+                confirmed_mints.append(pending_mint)
+
+    return confirmed_mints
 
 
 class TestPlutusV3Builtins:
