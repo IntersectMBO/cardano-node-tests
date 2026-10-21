@@ -8,9 +8,6 @@ The guidelines apply to writing new tests and also to larger changes of existing
 
 Organize tests in classes that group related functionality.
 
-For an example of selecting conformance scenarios for Plutus E2E coverage, see
-[multiIndexArray coverage](multi_index_array.md).
-
 ## Code Readability
 
 - Separate logical steps and sections with blank lines, including within a larger section when moving from preparation to an operation or its assertions. Favor readable groups over dense blocks of consecutive statements.
