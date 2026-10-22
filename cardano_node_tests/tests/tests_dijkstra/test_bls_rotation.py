@@ -628,7 +628,7 @@ def rotate_bls_key(
         vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
         cold_key_pair=pool_creation_out.cold_key_pair,
         tx_name=tx_name,
-        bls_signing_key_file=bls_skey_file,
+        bls_skey_file=bls_skey_file,
         deposit=0,  # no additional deposit, the pool is already registered
     )
     node_consistency.check_tx_on_all_nodes(cluster_obj=cluster_obj, tx_raw_output=tx_raw_reg)

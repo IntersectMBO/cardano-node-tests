@@ -163,7 +163,7 @@ class TestBlsKeys:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[owner_stake.vkey_file],
-            bls_signing_key_file=bls_key_pair.skey_file,
+            bls_skey_file=bls_key_pair.skey_file,
         )
 
         # The Dijkstra pool registration certificate has one item more than the Conway one -
@@ -315,7 +315,7 @@ class TestNegativeBlsKeys:
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[owner_stake.vkey_file],
-                bls_signing_key_file=bls_key_pair.vkey_file,
+                bls_skey_file=bls_key_pair.vkey_file,
             )
         exc_value = str(excinfo.value)
         if VERSIONS.cli <= version.parse("11.3.0.0"):
@@ -403,7 +403,7 @@ def gen_pool_registration_with_mismatched_pop(
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_user.stake.vkey_file],
-            bls_signing_key_file=key_pair.skey_file,
+            bls_skey_file=key_pair.skey_file,
         )
 
     own_envelope = clusterlib_utils.load_envelope(envelope_file=certs["own"])

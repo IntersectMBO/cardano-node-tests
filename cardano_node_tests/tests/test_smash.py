@@ -143,9 +143,7 @@ class TestBasicSmash:
             cold_key_pair=pool_rec["cold_key_pair"],
             tx_name=f"{temp_template}_smash_metadata_public",
             reward_account_vkey_file=pool_rec["reward"].vkey_file,
-            bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
-                key_pair=pool_rec.get("bls_key_pair")
-            ),
+            bls_skey_file=clusterlib_utils.get_bls_skey_file(key_pair=pool_rec.get("bls_key_pair")),
             deposit=0,
         )
 
@@ -175,7 +173,7 @@ class TestBasicSmash:
                     cold_key_pair=pool_rec["cold_key_pair"],
                     tx_name=f"{temp_template}_smash_metadata_restore",
                     reward_account_vkey_file=pool_rec["reward"].vkey_file,
-                    bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                    bls_skey_file=clusterlib_utils.get_bls_skey_file(
                         key_pair=pool_rec.get("bls_key_pair")
                     ),
                     deposit=0,
