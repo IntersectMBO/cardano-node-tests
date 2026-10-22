@@ -2085,7 +2085,7 @@ def reregister_cluster_pool(
         cold_vkey_file=pool_rec["cold_key_pair"].vkey_file,
         owner_stake_vkey_files=[pool_rec["stake"].vkey_file],
         reward_account_vkey_file=pool_rec["reward"].vkey_file,
-        bls_signing_key_file=bls_skey_file,
+        bls_skey_file=bls_skey_file,
     )
     tx_files = clusterlib.TxFiles(
         certificate_files=[cert],

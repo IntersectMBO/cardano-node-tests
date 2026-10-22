@@ -142,7 +142,7 @@ def _register_stake_pool_w_build(
     tx_name: str,
     build_method: str,
     reward_account_vkey_file: clusterlib.FileType | None = None,
-    bls_signing_key_file: clusterlib.FileType | None = None,
+    bls_skey_file: clusterlib.FileType | None = None,
     deposit: int | None = None,
     destination_dir: clusterlib.FileType = ".",
 ) -> tuple[pl.Path, clusterlib.TxRawOutput]:
@@ -157,7 +157,7 @@ def _register_stake_pool_w_build(
         cold_key_pair: A `ColdKeyPair` tuple containing the key pair and the counter.
         tx_name: A name of the transaction.
         reward_account_vkey_file: A path to reward account vkey file (optional).
-        bls_signing_key_file: A path to pool BLS signing key file (required in Dijkstra+ eras).
+        bls_skey_file: A path to pool BLS signing key file (required in Dijkstra+ eras).
         deposit: A deposit amount needed by the transaction (optional).
         destination_dir: A path to directory for storing artifacts (optional).
 
@@ -172,7 +172,7 @@ def _register_stake_pool_w_build(
         cold_vkey_file=cold_key_pair.vkey_file,
         owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
         reward_account_vkey_file=reward_account_vkey_file,
-        bls_signing_key_file=bls_signing_key_file,
+        bls_skey_file=bls_skey_file,
         destination_dir=destination_dir,
     )
 
@@ -294,7 +294,7 @@ def _create_stake_pool(
         reward_account_vkey_file=reward_account_key_pair.vkey_file
         if reward_account_key_pair
         else None,
-        bls_signing_key_file=clusterlib_utils.get_bls_skey_file(key_pair=node_bls),
+        bls_skey_file=clusterlib_utils.get_bls_skey_file(key_pair=node_bls),
         destination_dir=destination_dir,
     )
 
@@ -540,7 +540,7 @@ def _create_register_pool_delegate_stake_tx(
         reward_account_vkey_file=reward_account_key_pair.vkey_file
         if reward_account_key_pair
         else None,
-        bls_signing_key_file=clusterlib_utils.get_bls_skey_file(key_pair=node_bls),
+        bls_skey_file=clusterlib_utils.get_bls_skey_file(key_pair=node_bls),
     )
 
     src_address = pool_owners[0].payment.address
@@ -1522,7 +1522,7 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                bls_skey_file=clusterlib_utils.get_bls_skey_file(
                     key_pair=pool_creation_out.bls_key_pair
                 ),
                 deposit=0,
@@ -1535,7 +1535,7 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                bls_skey_file=clusterlib_utils.get_bls_skey_file(
                     key_pair=pool_creation_out.bls_key_pair
                 ),
                 deposit=0,  # no additional deposit, the pool is already registered
@@ -1660,7 +1660,7 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                bls_skey_file=clusterlib_utils.get_bls_skey_file(
                     key_pair=pool_creation_out.bls_key_pair
                 ),
                 deposit=0,
@@ -1673,7 +1673,7 @@ class TestStakePool:
                 vrf_vkey_file=pool_creation_out.vrf_key_pair.vkey_file,
                 cold_key_pair=pool_creation_out.cold_key_pair,
                 tx_name=f"{temp_template}_rereg",
-                bls_signing_key_file=clusterlib_utils.get_bls_skey_file(
+                bls_skey_file=clusterlib_utils.get_bls_skey_file(
                     key_pair=pool_creation_out.bls_key_pair
                 ),
                 deposit=0,  # no additional deposit, the pool is already registered
@@ -1757,7 +1757,7 @@ class TestStakePool:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
         )
@@ -1893,7 +1893,7 @@ class TestStakePool:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_owner.stake.vkey_file],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
         )
@@ -2203,7 +2203,7 @@ class TestNegative:
                 vrf_vkey_file=node_vrf.skey_file,  # skey instead of vkey
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-                bls_signing_key_file=bls_skey_file,
+                bls_skey_file=bls_skey_file,
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
@@ -2236,7 +2236,7 @@ class TestNegative:
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.skey_file,  # skey instead of vkey
                 owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-                bls_signing_key_file=bls_skey_file,
+                bls_skey_file=bls_skey_file,
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
@@ -2269,7 +2269,7 @@ class TestNegative:
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[pool_users[0].stake.skey_file],  # skey instead of vkey
-                bls_signing_key_file=bls_skey_file,
+                bls_skey_file=bls_skey_file,
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
@@ -2338,7 +2338,7 @@ class TestNegative:
             vrf_vkey_file=used_vrf_vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_users_pool1[0].stake.vkey_file],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
         )
@@ -2407,7 +2407,7 @@ class TestNegative:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
         )
@@ -2453,7 +2453,7 @@ class TestNegative:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_users[0].stake.vkey_file],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster, node_name=pool_data.pool_name
             ),
         )
@@ -2813,7 +2813,7 @@ class TestNegative:
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[p.stake.vkey_file for p in pool_users],
-                bls_signing_key_file=bls_skey_file,
+                bls_skey_file=bls_skey_file,
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
@@ -3329,7 +3329,7 @@ class TestCompatibility:
                 vrf_vkey_file=node_vrf.vkey_file,
                 cold_vkey_file=node_cold.vkey_file,
                 owner_stake_vkey_files=[owner_stake.vkey_file],
-                # Missing `bls_signing_key_file`
+                # Missing `bls_skey_file`
             )
         exc_value = str(excinfo.value)
         with common.allow_unstable_error_messages():
@@ -3375,7 +3375,7 @@ class TestCompatibility:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[pool_user.stake.vkey_file],
-            bls_signing_key_file=node_bls.skey_file,
+            bls_skey_file=node_bls.skey_file,
         )
 
         cert_cbor = clusterlib_utils.load_envelope_cbor(envelope_file=pool_reg_cert_file)

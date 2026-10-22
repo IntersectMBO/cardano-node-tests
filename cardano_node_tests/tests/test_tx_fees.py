@@ -271,7 +271,7 @@ class TestExpectedFees:
             vrf_vkey_file=node_vrf.vkey_file,
             cold_vkey_file=node_cold.vkey_file,
             owner_stake_vkey_files=[p.stake.vkey_file for p in pool_owners],
-            bls_signing_key_file=clusterlib_utils.gen_bls_skey_file(
+            bls_skey_file=clusterlib_utils.gen_bls_skey_file(
                 cluster_obj=cluster_obj, node_name=pool_data.pool_name
             ),
         )
