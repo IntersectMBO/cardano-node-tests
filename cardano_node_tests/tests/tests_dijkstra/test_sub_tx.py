@@ -6,6 +6,7 @@ import pathlib as pl
 import allure
 import cbor2
 import pytest
+import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -66,6 +67,201 @@ class TestSubTransactions:
             caching_key=helpers.get_current_line_str(),
             min_amount=50_000_000,
         )
+
+    @pytest.fixture
+    def babel_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> list[clusterlib.AddressRecord]:
+        """Cache user, providers, recipient, and issuer; fund only the issuer."""
+        return addrs_common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=5,
+            fund_idx=[4],
+            caching_key=helpers.get_current_line_str(),
+            min_amount=50_000_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_babel_payment(
+        self,
+        cluster: clusterlib.ClusterLib,
+        babel_addrs: list[clusterlib.AddressRecord],
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Pay a recipient using a token offer and provider-funded ADA and fees.
+
+        * Give the user a token-bearing input but no separate ADA-only input.
+        * Publish a signed child fixing the recipient payment, token change, and
+          provider compensation. The child needs additional ADA, not collateral.
+        * Model a provider declining the offer without any on-chain reservation.
+        * Build a valid wrapper, then submit variants lacking fee funding, using
+          insufficient provider ADA, or claiming excess token compensation.
+          Check node rejection leaves all inputs and outputs unchanged.
+        * Settle the original child without another user signature and verify
+          exact recipient and provider outputs and an ADA-denominated parent fee.
+        """
+        temp_template = common.get_test_id(cluster)
+        user, provider, poor_provider, recipient, issuer = babel_addrs
+        user_ada = 4_000_000
+        payment_amount = 3_000_000
+        output_ada = 2_000_000
+        provider_ada = 10_000_000
+        compensation = 5
+        fee = 1_000_000
+        ada_deficit = payment_amount + 2 * output_ada - user_ada
+
+        # Prepare one multi-asset user UTxO and dedicated ADA inputs for the providers.
+        token = clusterlib_utils.new_tokens(
+            clusterlib.get_rand_str(8).encode().hex(),
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_asset",
+            token_mint_addr=issuer,
+            issuer_addr=issuer,
+            amount=2 * compensation,
+        )[0].token
+        setup_output = cluster.g_transaction.send_tx(
+            src_address=issuer.address,
+            tx_name=f"{temp_template}_setup",
+            txouts=[
+                # Joining these records gives the user's tokens their required ADA.
+                clusterlib.TxOut(address=user.address, amount=user_ada),
+                clusterlib.TxOut(address=user.address, amount=2 * compensation, coin=token),
+                clusterlib.TxOut(address=provider.address, amount=provider_ada),
+                clusterlib.TxOut(address=poor_provider.address, amount=output_ada),
+            ],
+            tx_files=clusterlib.TxFiles(signing_key_files=[issuer.skey_file]),
+        )
+        setup_utxos = cluster.g_query.get_utxo(tx_raw_output=setup_output)
+        user_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=user.address)
+        provider_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=provider.address)
+        poor_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=poor_provider.address)
+
+        user_utxos = cluster.g_query.get_utxo(address=user.address)
+        asset_refs = {
+            (u.utxo_hash, u.utxo_ix) for u in user_utxos if u.coin != clusterlib.DEFAULT_COIN
+        }
+        assert user_inputs and all((u.utxo_hash, u.utxo_ix) in asset_refs for u in user_utxos), (
+            "The user has a separate ADA-only input"
+        )
+
+        # The signed outputs set the complete terms, including the provider's tokens.
+        child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_child.body",
+            txins=user_inputs,
+            txouts=[
+                clusterlib.TxOut(address=recipient.address, amount=payment_amount),
+                clusterlib.TxOut(address=user.address, amount=output_ada),
+                clusterlib.TxOut(address=user.address, amount=compensation, coin=token),
+                clusterlib.TxOut(address=provider.address, amount=output_ada),
+                clusterlib.TxOut(address=provider.address, amount=compensation, coin=token),
+            ],
+        )
+        child_signed = cluster.g_sub_transaction.sign_tx(
+            sub_tx_file=child_output.out_file,
+            tx_name=temp_template,
+            signing_key_files=[user.skey_file],
+        )
+        published_bytes = child_signed.read_bytes()
+        child_cbor = json.loads(published_bytes)["cborHex"]
+        child = cbor2.loads(bytes.fromhex(child_cbor))
+        assert not {2, 13, 16, 17}.intersection(child[0]), (
+            "The user's child contains fee or collateral fields"
+        )
+        child_id = cluster.g_sub_transaction.get_txid(signed_sub_tx_file=child_signed)
+        child_refs = [f"{child_id}#{ix}" for ix in range(child_output.txouts_count)]
+        all_inputs = [*user_inputs, *provider_inputs, *poor_inputs]
+        inputs_before = cluster.g_query.get_utxo(utxo=all_inputs)
+
+        # Declining an uneconomic offer is an off-chain choice, not a ledger action.
+        declined_offer = pl.Path(f"{temp_template}_declined_offer.signed")
+        declined_offer.write_bytes(published_bytes)
+        assert cluster.g_query.get_utxo(utxo=all_inputs) == inputs_before
+        assert not cluster.g_query.get_utxo(txin=child_refs)
+
+        def _build_wrapper(
+            name: str,
+            src: clusterlib.AddressRecord,
+            txins: list[clusterlib.UTXOData],
+            change: int,
+            extra_tokens: int = 0,
+        ) -> tuple[clusterlib.TxRawOutput, pl.Path]:
+            """Wrap the fixed child without balancing away the condition under test."""
+            txouts = [clusterlib.TxOut(address=src.address, amount=change)]
+            if extra_tokens:
+                txouts.append(
+                    clusterlib.TxOut(address=src.address, amount=extra_tokens, coin=token)
+                )
+            tx_output = cluster.g_transaction.build_raw_tx(
+                src_address=src.address,
+                tx_name=f"{temp_template}_{name}",
+                txins=txins,
+                txouts=txouts,
+                tx_files=clusterlib.TxFiles(signing_key_files=[src.skey_file]),
+                fee=fee,
+                sub_transaction_files=[child_signed],
+            )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=tx_output.out_file,
+                signing_key_files=[src.skey_file],
+                tx_name=f"{temp_template}_{name}",
+            )
+            signed_cbor = json.loads(signed.read_text(encoding="utf-8"))["cborHex"]
+            assert child_cbor in signed_cbor, "The provider changed the signed terms"
+            assert cbor2.loads(bytes.fromhex(signed_cbor))[0][2] == fee
+            return tx_output, signed
+
+        # Start with a valid baseline, then isolate each funding or compensation error.
+        change = provider_ada - ada_deficit - fee
+        parent_output, parent_signed = _build_wrapper("valid", provider, provider_inputs, change)
+        for name, src, txins, invalid_change, extra_tokens in (
+            ("missing_fee_funding", provider, provider_inputs, change + fee, 0),
+            ("insufficient_provider_ada", poor_provider, poor_inputs, output_ada, 0),
+            ("excess_token_compensation", provider, provider_inputs, change, 1),
+        ):
+            with subtests.test(scenario=name):
+                invalid_output, invalid_signed = _build_wrapper(
+                    name, src, txins, invalid_change, extra_tokens
+                )
+                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedUTxO"):
+                    cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+
+                assert cluster.g_query.get_utxo(utxo=all_inputs) == inputs_before
+                assert not cluster.g_query.get_utxo(txin=child_refs)
+                assert not cluster.g_query.get_utxo(tx_raw_output=invalid_output)
+
+        # A willing provider can still settle the unchanged offer and pay the fee in ADA.
+        cluster.g_transaction.submit_tx(tx_file=parent_signed, txins=provider_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*user_inputs, *provider_inputs])
+        assert cluster.g_query.get_utxo(utxo=poor_inputs) == poor_inputs
+
+        child_utxos = cluster.g_query.get_utxo(txin=child_refs)
+        assert sorted((u.address, u.amount, u.coin) for u in child_utxos) == sorted(
+            (t.address, t.amount, t.coin) for t in child_output.txouts
+        ), "The recipient, user change, or provider compensation differs from the signed terms"
+
+        parent_utxos = cluster.g_query.get_utxo(tx_raw_output=parent_output)
+        assert [(u.address, u.amount, u.coin) for u in parent_utxos] == [
+            (provider.address, change, clusterlib.DEFAULT_COIN)
+        ], "Provider change does not account for the child's ADA deficit and parent fee"
+        assert (
+            user_ada + provider_ada
+            == sum(
+                u.amount for u in [*child_utxos, *parent_utxos] if u.coin == clusterlib.DEFAULT_COIN
+            )
+            + fee
+        )
+        assert child_signed.read_bytes() == published_bytes
+
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=parent_output)
+        # Child outputs are checked through the node; only the parent has a db-sync helper.
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=parent_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
