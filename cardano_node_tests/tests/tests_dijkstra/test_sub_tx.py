@@ -86,6 +86,219 @@ class TestSubTransactions:
             min_amount=50_000_000,
         )
 
+    @pytest.fixture
+    def clearing_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> list[clusterlib.AddressRecord]:
+        """Cache three traders, aggregator fee/liquidity addresses, and a funded issuer."""
+        return addrs_common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=6,
+            fund_idx=[5],
+            caching_key=helpers.get_current_line_str(),
+            min_amount=100_000_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("needs_liquidity", (False, True), ids=("cycle", "liquidity"))
+    def test_multi_party_clearing(
+        self,
+        cluster: clusterlib.ClusterLib,
+        clearing_addrs: list[clusterlib.AddressRecord],
+        needs_liquidity: bool,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Clear three independent offers atomically, optionally using aggregator liquidity.
+
+        * Prepare offers exchanging A for B, B for C, and C for A. Each participant
+          signs only its own child and publishes it for independent assembly.
+        * In the liquidity variant, Alice offers one extra A and demands one extra B;
+          the aggregator supplies that B and receives the extra A in parent change.
+        * Build the complete valid batch, then omit each offer in turn and remove
+          required liquidity. Check node rejection leaves every input unspent and
+          creates no parent or child outputs.
+        * Settle the complete batch and check all signed participant outputs,
+          aggregator change and compensation, spent inputs, and unused liquidity.
+        """
+        temp_template = common.get_test_id(cluster)
+        alice, bob, carol, aggregator, liquidity_addr, issuer = clearing_addrs
+        participants = (alice, bob, carol)
+        names = ("alice", "bob", "carol")
+        participant_ada = 3_000_000
+        aggregator_ada = 20_000_000
+        liquidity_ada = 3_000_000
+        trade_amount = 10
+        alice_amount = trade_amount + int(needs_liquidity)
+        fee = 1_000_000
+
+        # Prepare all assets and spending inputs on the ledger before publishing offers.
+        tokens = clusterlib_utils.new_tokens(
+            *[clusterlib.get_rand_str(8).encode().hex() for _ in participants],
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_assets",
+            token_mint_addr=issuer,
+            issuer_addr=issuer,
+            amount=trade_amount + 1,
+        )
+        asset_a, asset_b, asset_c = [t.token for t in tokens]
+        setup_txouts = [
+            clusterlib.TxOut(address=aggregator.address, amount=aggregator_ada),
+            clusterlib.TxOut(address=liquidity_addr.address, amount=liquidity_ada),
+            clusterlib.TxOut(address=liquidity_addr.address, amount=1, coin=asset_b),
+        ]
+        for participant, asset, amount in zip(
+            participants,
+            (asset_a, asset_b, asset_c),
+            (alice_amount, trade_amount, trade_amount),
+            strict=True,
+        ):
+            # Join each ADA/token pair into a single participant UTxO.
+            setup_txouts.extend(
+                [
+                    clusterlib.TxOut(address=participant.address, amount=participant_ada),
+                    clusterlib.TxOut(address=participant.address, amount=amount, coin=asset),
+                ]
+            )
+        setup_output = cluster.g_transaction.send_tx(
+            src_address=issuer.address,
+            tx_name=f"{temp_template}_setup",
+            txouts=setup_txouts,
+            tx_files=clusterlib.TxFiles(signing_key_files=[issuer.skey_file]),
+        )
+        setup_utxos = cluster.g_query.get_utxo(tx_raw_output=setup_output)
+        fee_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=aggregator.address)
+        liquidity_inputs = clusterlib.filter_utxos(
+            utxos=setup_utxos, address=liquidity_addr.address
+        )
+
+        # Each trader fixes its own payout and signs without seeing the surrounding batch.
+        offers: list[clusterlib.SubTxRawOutput] = []
+        published_offers: list[pl.Path] = []
+        published_bytes: list[bytes] = []
+        offer_ids: list[str] = []
+        for name, participant, wanted_asset, amount in zip(
+            names,
+            participants,
+            (asset_b, asset_c, asset_a),
+            (alice_amount, trade_amount, trade_amount),
+            strict=True,
+        ):
+            offer = cluster.g_sub_transaction.build_raw_tx_bare(
+                out_file=f"{temp_template}_{name}_offer.body",
+                txins=clusterlib.filter_utxos(utxos=setup_utxos, address=participant.address),
+                txouts=[
+                    clusterlib.TxOut(address=participant.address, amount=participant_ada),
+                    clusterlib.TxOut(address=participant.address, amount=amount, coin=wanted_asset),
+                ],
+            )
+            signed_offer = cluster.g_sub_transaction.sign_tx(
+                sub_tx_file=offer.out_file,
+                tx_name=f"{temp_template}_{name}_published",
+                signing_key_files=[participant.skey_file],
+            )
+            offers.append(offer)
+            published_offers.append(signed_offer)
+            published_bytes.append(signed_offer.read_bytes())
+            offer_ids.append(cluster.g_sub_transaction.get_txid(signed_sub_tx_file=signed_offer))
+
+        def _assemble(
+            name: str, selected: list[int], include_liquidity: bool
+        ) -> tuple[clusterlib.TxRawOutput, pl.Path]:
+            """Assemble published offers using only aggregator-controlled signing keys."""
+            txins = [*fee_inputs, *(liquidity_inputs if include_liquidity else [])]
+            txouts = [
+                clusterlib.TxOut(
+                    address=aggregator.address,
+                    amount=clusterlib.calculate_utxos_balance(txins) - fee,
+                )
+            ]
+            if needs_liquidity:
+                txouts.append(clusterlib.TxOut(address=aggregator.address, amount=1, coin=asset_a))
+            parent_output = cluster.g_transaction.build_raw_tx(
+                src_address=aggregator.address,
+                tx_name=f"{temp_template}_{name}",
+                txins=txins,
+                txouts=txouts,
+                fee=fee,
+                sub_transaction_files=[published_offers[ix] for ix in selected],
+            )
+            parent_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=parent_output.out_file,
+                signing_key_files=[
+                    aggregator.skey_file,
+                    *([liquidity_addr.skey_file] if include_liquidity else []),
+                ],
+                tx_name=f"{temp_template}_{name}",
+            )
+            parent_cbor = json.loads(parent_signed.read_text(encoding="utf-8"))["cborHex"]
+            for ix in selected:
+                assert json.loads(published_bytes[ix])["cborHex"] in parent_cbor, (
+                    "Assembly changed a participant's signed offer"
+                )
+            return parent_output, parent_signed
+
+        # Establish the full funded baseline before constructing incomplete batches.
+        parent_output, parent_signed = _assemble("complete", [0, 1, 2], needs_liquidity)
+        all_inputs = [u for offer in offers for u in offer.txins] + fee_inputs + liquidity_inputs
+        inputs_before = cluster.g_query.get_utxo(utxo=all_inputs)
+        child_refs = [
+            f"{txid}#{ix}"
+            for txid, offer in zip(offer_ids, offers, strict=True)
+            for ix in range(offer.txouts_count)
+        ]
+
+        # Missing offers leave asset deficits that parent ADA change cannot cover.
+        invalid_batches = [
+            (f"omit_{name}", [ix for ix in range(3) if ix != omitted], needs_liquidity)
+            for omitted, name in enumerate(names)
+        ]
+        if needs_liquidity:
+            invalid_batches.append(("missing_liquidity", [0, 1, 2], False))
+        for name, selected, include_liquidity in invalid_batches:
+            with subtests.test(scenario=name):
+                invalid_output, invalid_signed = _assemble(name, selected, include_liquidity)
+                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedUTxO"):
+                    cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+
+                assert cluster.g_query.get_utxo(utxo=all_inputs) == inputs_before
+                assert not cluster.g_query.get_utxo(txin=child_refs)
+                assert not cluster.g_query.get_utxo(tx_raw_output=invalid_output)
+
+        # Settle all three offers atomically and verify every participant's fixed payout.
+        cluster.g_transaction.submit_tx(tx_file=parent_signed, txins=parent_output.txins)
+        assert not cluster.g_query.get_utxo(
+            utxo=[u for offer in offers for u in offer.txins] + parent_output.txins
+        ), "Some inputs of the complete clearing batch remain unspent"
+        for txid, offer, published, original in zip(
+            offer_ids, offers, published_offers, published_bytes, strict=True
+        ):
+            utxos = cluster.g_query.get_utxo(
+                txin=[f"{txid}#{ix}" for ix in range(offer.txouts_count)]
+            )
+            assert sorted((u.address, u.amount, u.coin) for u in utxos) == sorted(
+                (t.address, t.amount, t.coin) for t in offer.txouts
+            ), "A participant did not receive its independently signed payout"
+            assert published.read_bytes() == original
+
+        # The aggregator pays the ADA fee and, when needed, exchanges one B for one A.
+        parent_utxos = cluster.g_query.get_utxo(tx_raw_output=parent_output)
+        assert sorted((u.address, u.amount, u.coin) for u in parent_utxos) == sorted(
+            (t.address, t.amount, t.coin) for t in parent_output.txouts
+        ), "Aggregator change or liquidity compensation is incorrect"
+        if not needs_liquidity:
+            assert cluster.g_query.get_utxo(utxo=liquidity_inputs) == liquidity_inputs
+
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=parent_output)
+        # Child payouts are checked through the node; only the parent has a db-sync helper.
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=parent_output)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
     @pytest.mark.smoke
