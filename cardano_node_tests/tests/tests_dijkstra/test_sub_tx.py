@@ -1,6 +1,7 @@
 """Tests for Dijkstra transactions with embedded sub-transactions."""
 
 import json
+import pathlib as pl
 
 import allure
 import cbor2
@@ -49,6 +50,245 @@ class TestSubTransactions:
             caching_key=helpers.get_current_line_str(),
             min_amount=10_000_000,
         )
+
+    @pytest.fixture
+    def swap_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> list[clusterlib.AddressRecord]:
+        """Cache funded Alice, Bob, Carol, and token issuer addresses."""
+        return addrs_common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=4,
+            caching_key=helpers.get_current_line_str(),
+            min_amount=50_000_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("winner", ("bob", "carol"))
+    @pytest.mark.parametrize("counterparty_child", (False, True), ids=("parent", "children"))
+    def test_open_swap(
+        self,
+        cluster: clusterlib.ClusterLib,
+        swap_addrs: list[clusterlib.AddressRecord],
+        winner: str,
+        counterparty_child: bool,
+    ):
+        """Settle a published offer with either of two independent counterparties.
+
+        * Prepare Alice's 12 ADA input and five tokens each for Bob and Carol.
+        * Alice signs and publishes an unguarded offer returning 2 ADA and demanding
+          five tokens. Neither counterparty needs another signature from Alice.
+        * Bob and Carol independently assemble wrappers using the published file,
+          supplying tokens in the parent or in a complementary signed child.
+        * Confirm one wrapper and check exact signed outputs and batch conservation.
+        * Submit the competing wrapper and check rejection due to Alice's spent
+          input, unchanged counterparty inputs, and no additional outputs.
+        """
+        temp_template = common.get_test_id(cluster)
+        alice, bob, carol, issuer = swap_addrs
+        swap_amount = 10_000_000
+        output_ada = 2_000_000
+        counterparty_ada = 20_000_000
+        token_amount = 5
+        fee = 1_000_000
+
+        # Mint a fresh asset and prepare distinct pre-batch inputs for all participants.
+        token = clusterlib_utils.new_tokens(
+            clusterlib.get_rand_str(8).encode().hex(),
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_asset",
+            token_mint_addr=issuer,
+            issuer_addr=issuer,
+            amount=2 * token_amount,
+        )[0].token
+
+        # Join each counterparty's ADA and token records into one multi-asset UTxO.
+        setup_output = cluster.g_transaction.send_tx(
+            src_address=issuer.address,
+            tx_name=f"{temp_template}_setup",
+            txouts=[
+                clusterlib.TxOut(address=alice.address, amount=swap_amount + output_ada),
+                *[
+                    txout
+                    for addr in (bob, carol)
+                    for txout in (
+                        clusterlib.TxOut(address=addr.address, amount=counterparty_ada),
+                        clusterlib.TxOut(address=addr.address, amount=token_amount, coin=token),
+                    )
+                ],
+            ],
+            tx_files=clusterlib.TxFiles(signing_key_files=[issuer.skey_file]),
+        )
+        setup_utxos = cluster.g_query.get_utxo(tx_raw_output=setup_output)
+        alice_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=alice.address)
+
+        # Publish Alice's fixed terms once, without any counterparty key or guard.
+        # Her ADA and token records likewise form a single multi-asset output.
+        offer_output = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_offer.body",
+            txins=alice_inputs,
+            txouts=[
+                clusterlib.TxOut(address=alice.address, amount=output_ada),
+                clusterlib.TxOut(address=alice.address, amount=token_amount, coin=token),
+            ],
+        )
+        offer_signed = cluster.g_sub_transaction.sign_tx(
+            sub_tx_file=offer_output.out_file,
+            tx_name=f"{temp_template}_offer",
+            signing_key_files=[alice.skey_file],
+        )
+        published_offer = pl.Path(f"{temp_template}_published_offer.signed")
+        published_bytes = offer_signed.read_bytes()
+        published_offer.write_bytes(published_bytes)
+        offer_cbor = json.loads(published_bytes)["cborHex"]
+        offer_id = cluster.g_sub_transaction.get_txid(signed_sub_tx_file=published_offer)
+
+        # Each assembler sees only the published offer, not Alice's signing key.
+        def _assemble(
+            counterparty: clusterlib.AddressRecord,
+            name: str,
+        ) -> tuple[clusterlib.TxRawOutput, pl.Path, clusterlib.SubTxRawOutput | None]:
+            """Supply the missing tokens and claim the offered ADA independently."""
+            name_template = f"{temp_template}_{name}"
+            token_inputs = clusterlib.filter_utxos(utxos=setup_utxos, address=counterparty.address)
+            child_output = None
+            child_files = [published_offer]
+
+            if counterparty_child:
+                # The second child supplies tokens and receives Alice's 10 ADA.
+                child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+                    out_file=f"{name_template}_child.body",
+                    txins=token_inputs,
+                    txouts=[
+                        clusterlib.TxOut(
+                            address=counterparty.address,
+                            amount=counterparty_ada + swap_amount,
+                        )
+                    ],
+                )
+                child_files.append(
+                    cluster.g_sub_transaction.sign_tx(
+                        sub_tx_file=child_output.out_file,
+                        tx_name=f"{name_template}_child",
+                        signing_key_files=[counterparty.skey_file],
+                    )
+                )
+                # Cached addresses may hold assets from previous swaps. Use only
+                # ADA-only UTxOs for the separate parent fee, preserving those assets.
+                address_utxos = cluster.g_query.get_utxo(address=counterparty.address)
+                asset_refs = {
+                    (u.utxo_hash, u.utxo_ix)
+                    for u in address_utxos
+                    if u.coin != clusterlib.DEFAULT_COIN
+                }
+                parent_inputs = [
+                    u for u in address_utxos if (u.utxo_hash, u.utxo_ix) not in asset_refs
+                ]
+                assert parent_inputs, "No ADA-only inputs available for the parent fee"
+                parent_amount = clusterlib.calculate_utxos_balance(parent_inputs) - fee
+            else:
+                # The parent itself supplies tokens and claims the ADA, less its fee.
+                parent_inputs = token_inputs
+                parent_amount = counterparty_ada + swap_amount - fee
+
+            # File-only assembly avoids balancing or modifying the published offer.
+            parent_output = cluster.g_transaction.build_raw_tx(
+                src_address=counterparty.address,
+                tx_name=name_template,
+                txins=parent_inputs,
+                txouts=[clusterlib.TxOut(address=counterparty.address, amount=parent_amount)],
+                tx_files=clusterlib.TxFiles(signing_key_files=[counterparty.skey_file]),
+                fee=fee,
+                sub_transaction_files=child_files,
+            )
+            parent_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=parent_output.out_file,
+                signing_key_files=[counterparty.skey_file],
+                tx_name=name_template,
+            )
+            assert offer_cbor in json.loads(parent_signed.read_text(encoding="utf-8"))["cborHex"], (
+                "The wrapper changed Alice's published offer"
+            )
+            return parent_output, parent_signed, child_output
+
+        wrappers = {"bob": _assemble(bob, "bob"), "carol": _assemble(carol, "carol")}
+        winning_output, winning_signed, winning_child = wrappers[winner]
+        losing_output, losing_signed, losing_child = wrappers["carol" if winner == "bob" else "bob"]
+
+        # The offer and counterparty contribution balance only as a complete swap.
+        winning_components: list[clusterlib.SubTxRawOutput | clusterlib.TxRawOutput] = [
+            offer_output,
+            winning_output,
+        ]
+        if winning_child:
+            winning_components.append(winning_child)
+        for coin in (clusterlib.DEFAULT_COIN, token):
+            input_amount = clusterlib.calculate_utxos_balance(
+                [u for component in winning_components for u in component.txins], coin=coin
+            )
+            output_amount = sum(
+                t.amount
+                for component in winning_components
+                for t in component.txouts
+                if t.coin == coin
+            )
+            assert input_amount == output_amount + (fee if coin == clusterlib.DEFAULT_COIN else 0)
+
+        losing_inputs = [*losing_output.txins, *(losing_child.txins if losing_child else [])]
+        losing_before = cluster.g_query.get_utxo(utxo=losing_inputs)
+        assert losing_before, "The competing wrapper has no unspent counterparty inputs"
+
+        # Either assembler can settle first without asking Alice to sign its wrapper.
+        cluster.g_transaction.submit_tx(tx_file=winning_signed, txins=winning_output.txins)
+        assert not cluster.g_query.get_utxo(
+            utxo=[u for component in winning_components for u in component.txins]
+        ), "Some inputs of the successful swap remain unspent"
+
+        def _check_outputs(
+            txid: str, component: clusterlib.TxRawOutput | clusterlib.SubTxRawOutput
+        ) -> None:
+            """Check every output under its originating transaction ID."""
+            utxos = cluster.g_query.get_utxo(
+                txin=[f"{txid}#{ix}" for ix in range(component.txouts_count)]
+            )
+            assert sorted((u.address, u.amount, u.coin) for u in utxos) == sorted(
+                (t.address, t.amount, t.coin) for t in component.txouts
+            ), "Confirmed swap outputs differ from the signed terms"
+
+        _check_outputs(offer_id, offer_output)
+        _check_outputs(
+            cluster.g_transaction.get_txid(tx_body_file=winning_output.out_file), winning_output
+        )
+        if winning_child:
+            _check_outputs(
+                cluster.g_sub_transaction.get_txid(sub_tx_file=winning_child.out_file),
+                winning_child,
+            )
+
+        # A stale wrapper must fail atomically, leaving its counterparty's inputs untouched.
+        with pytest.raises(clusterlib.CLIError, match="BadInputsUTxO"):
+            cluster.g_transaction.submit_tx_bare(tx_file=losing_signed)
+
+        assert cluster.g_query.get_utxo(utxo=losing_inputs) == losing_before
+        assert not cluster.g_query.get_utxo(tx_raw_output=losing_output)
+        if losing_child:
+            losing_child_id = cluster.g_sub_transaction.get_txid(sub_tx_file=losing_child.out_file)
+            assert not cluster.g_query.get_utxo(
+                txin=[f"{losing_child_id}#{ix}" for ix in range(losing_child.txouts_count)]
+            )
+        _check_outputs(offer_id, offer_output)
+        assert published_offer.read_bytes() == published_bytes
+
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=winning_output)
+        # Only the parent has an established representation in the db-sync helpers.
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=winning_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
