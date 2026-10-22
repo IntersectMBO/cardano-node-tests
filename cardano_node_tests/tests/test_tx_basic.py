@@ -378,6 +378,10 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=tx_signed), "Signing changed the transaction ID"
+
         submit_utils.submit_tx(
             submit_method=submit_method,
             cluster_obj=cluster,
@@ -447,6 +451,12 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_raw_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=out_file_signed), (
+            "Signing changed the transaction ID"
+        )
+
         submit_utils.submit_tx(
             submit_method=submit_method,
             cluster_obj=cluster,
@@ -507,6 +517,12 @@ class TestBasicTransactions:
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
+        )
+
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_raw_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=out_file_signed), (
+            "Signing changed the transaction ID"
         )
 
         cluster.g_transaction.submit_tx(
@@ -576,6 +592,12 @@ class TestBasicTransactions:
             tx_body_file=tx_raw_output.out_file,
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
+        )
+
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_raw_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=out_file_signed), (
+            "Signing changed the transaction ID"
         )
 
         cluster.g_transaction.submit_tx(
@@ -767,6 +789,10 @@ class TestBasicTransactions:
             tx_name=temp_template,
         )
 
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_raw_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=tx_signed), "Signing changed the transaction ID"
+
         # It should be possible to submit a transaction with extra signing key
         submit_utils.submit_tx(
             submit_method=submit_method,
@@ -836,6 +862,10 @@ class TestBasicTransactions:
             signing_key_files=tx_files.signing_key_files,
             tx_name=temp_template,
         )
+
+        assert cluster.g_transaction.get_txid(
+            tx_body_file=tx_raw_output.out_file
+        ) == cluster.g_transaction.get_txid(tx_file=tx_signed), "Signing changed the transaction ID"
 
         # It should be possible to submit a transaction with duplicate signing key
         submit_utils.submit_tx(
