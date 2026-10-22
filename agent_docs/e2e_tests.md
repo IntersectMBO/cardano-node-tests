@@ -8,6 +8,13 @@ The guidelines apply to writing new tests and also to larger changes of existing
 
 Organize tests in classes that group related functionality.
 
+## Code Readability
+
+- Separate logical steps and sections with blank lines, including within a larger section when moving from preparation to an operation or its assertions. Favor readable groups over dense blocks of consecutive statements.
+- Add brief comments before the main operations or sections of a multi-step test, such as setup, transaction construction and signing, submission, and state verification. Describe the purpose or expected behavior rather than narrating every statement.
+- Keep each section comment with the code it introduces, with a blank line before the comment to separate it from the preceding step. Add comments for non-obvious protocol details or assertion assumptions where needed; avoid redundant line-by-line commentary.
+- Use descriptive test docstrings. Do not include internal test-plan scenario IDs as if they were official identifiers.
+
 ## Resource Management
 
 Tests run in parallel on shared cluster instances. Every test must declare the shared resources it changes or depends on - also when it only reads them (e.g. queries or delegates to a cluster pool). The plain `cluster` fixture declares none. Before writing a test, open `agent_docs/resource_management.md` and follow the instructions.
