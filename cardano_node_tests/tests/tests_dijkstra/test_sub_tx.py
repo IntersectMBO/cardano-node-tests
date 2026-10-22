@@ -50,7 +50,9 @@ class TestSubTransactions:
             num=3,
             fund_idx=[0, 1],
             caching_key=helpers.get_current_line_str(),
-            min_amount=10_000_000,
+            # Explicit top-ups avoid the default funding of three times min_amount.
+            amount=6_000_000,
+            min_amount=5_000_000,
         )
 
     @pytest.fixture
@@ -59,14 +61,16 @@ class TestSubTransactions:
         cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
-        """Cache funded Alice, Bob, Carol, and token issuer addresses."""
+        """Cache traders and issuer; fund only counterparties and issuer as needed."""
         return addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             num=4,
+            fund_idx=[1, 2, 3],
             caching_key=helpers.get_current_line_str(),
-            min_amount=50_000_000,
+            amount=20_000_000,
+            min_amount=18_000_000,
         )
 
     @pytest.fixture
@@ -83,7 +87,8 @@ class TestSubTransactions:
             num=5,
             fund_idx=[4],
             caching_key=helpers.get_current_line_str(),
-            min_amount=50_000_000,
+            amount=15_000_000,
+            min_amount=13_000_000,
         )
 
     @pytest.fixture
@@ -100,7 +105,8 @@ class TestSubTransactions:
             num=6,
             fund_idx=[5],
             caching_key=helpers.get_current_line_str(),
-            min_amount=100_000_000,
+            amount=15_000_000,
+            min_amount=13_000_000,
         )
 
     @allure.link(helpers.get_vcs_link())
@@ -131,12 +137,12 @@ class TestSubTransactions:
         alice, bob, carol, aggregator, liquidity_addr, issuer = clearing_addrs
         participants = (alice, bob, carol)
         names = ("alice", "bob", "carol")
-        participant_ada = 3_000_000
-        aggregator_ada = 20_000_000
-        liquidity_ada = 3_000_000
+        participant_lovelace = 2_000_000
+        aggregator_lovelace = 3_000_000
+        liquidity_lovelace = 2_000_000
         trade_amount = 10
         alice_amount = trade_amount + int(needs_liquidity)
-        fee = 1_000_000
+        fee = 500_000
 
         # Prepare all assets and spending inputs on the ledger before publishing offers.
         tokens = clusterlib_utils.new_tokens(
@@ -149,8 +155,8 @@ class TestSubTransactions:
         )
         asset_a, asset_b, asset_c = [t.token for t in tokens]
         setup_txouts = [
-            clusterlib.TxOut(address=aggregator.address, amount=aggregator_ada),
-            clusterlib.TxOut(address=liquidity_addr.address, amount=liquidity_ada),
+            clusterlib.TxOut(address=aggregator.address, amount=aggregator_lovelace),
+            clusterlib.TxOut(address=liquidity_addr.address, amount=liquidity_lovelace),
             clusterlib.TxOut(address=liquidity_addr.address, amount=1, coin=asset_b),
         ]
         for participant, asset, amount in zip(
@@ -162,7 +168,7 @@ class TestSubTransactions:
             # Join each ADA/token pair into a single participant UTxO.
             setup_txouts.extend(
                 [
-                    clusterlib.TxOut(address=participant.address, amount=participant_ada),
+                    clusterlib.TxOut(address=participant.address, amount=participant_lovelace),
                     clusterlib.TxOut(address=participant.address, amount=amount, coin=asset),
                 ]
             )
@@ -194,7 +200,7 @@ class TestSubTransactions:
                 out_file=f"{temp_template}_{name}_offer.body",
                 txins=clusterlib.filter_utxos(utxos=setup_utxos, address=participant.address),
                 txouts=[
-                    clusterlib.TxOut(address=participant.address, amount=participant_ada),
+                    clusterlib.TxOut(address=participant.address, amount=participant_lovelace),
                     clusterlib.TxOut(address=participant.address, amount=amount, coin=wanted_asset),
                 ],
             )
@@ -325,7 +331,7 @@ class TestSubTransactions:
         """
         temp_template = common.get_test_id(cluster)
         user, sponsor, recipient, issuer = swap_addrs
-        fee = 1_000_000
+        fee = 500_000
 
         # Mint two tokens, one for each independently checked child output.
         token = clusterlib_utils.new_tokens(
@@ -365,20 +371,20 @@ class TestSubTransactions:
 
         child_txouts = []
         for addr in (user, recipient):
-            ada_output = dataclasses.replace(output_template, address=addr.address)
+            lovelace_output = dataclasses.replace(output_template, address=addr.address)
             # Matching attributes join the ADA and token records into one UTxO.
-            asset_output = dataclasses.replace(ada_output, amount=1, coin=token)
+            asset_output = dataclasses.replace(lovelace_output, amount=1, coin=token)
             minimum = cluster.g_transaction.calculate_min_req_utxo(
-                txouts=[ada_output, asset_output]
+                txouts=[lovelace_output, asset_output]
             ).value
-            ada_output = dataclasses.replace(ada_output, amount=minimum)
+            lovelace_output = dataclasses.replace(lovelace_output, amount=minimum)
             assert (
                 cluster.g_transaction.calculate_min_req_utxo(
-                    txouts=[ada_output, asset_output]
+                    txouts=[lovelace_output, asset_output]
                 ).value
                 == minimum
             ), "Minimum ADA changed after setting the output amount"
-            child_txouts.extend([ada_output, asset_output])
+            child_txouts.extend([lovelace_output, asset_output])
 
         # The input funds only one plain asset-bearing UTxO, not both child outputs.
         source_txouts = [
@@ -401,11 +407,11 @@ class TestSubTransactions:
             (u.utxo_hash, u.utxo_ix) for u in sponsor_utxos if u.coin != clusterlib.DEFAULT_COIN
         }
         sponsor_inputs = [u for u in sponsor_utxos if (u.utxo_hash, u.utxo_ix) not in asset_refs]
-        child_ada = sum(t.amount for t in child_txouts if t.coin == clusterlib.DEFAULT_COIN)
-        deficit = child_ada - clusterlib.calculate_utxos_balance(user_inputs)
+        child_lovelace = sum(t.amount for t in child_txouts if t.coin == clusterlib.DEFAULT_COIN)
+        deficit = child_lovelace - clusterlib.calculate_utxos_balance(user_inputs)
         assert deficit > 0, "The child does not need ADA sponsorship"
         sponsor_change = clusterlib.calculate_utxos_balance(sponsor_inputs) - deficit - fee
-        assert sponsor_change > child_ada, "Not enough surplus ADA for the negative control"
+        assert sponsor_change >= 2_000_000, "Not enough surplus ADA for the negative control"
         inputs_before = cluster.g_query.get_utxo(utxo=[*user_inputs, *sponsor_inputs])
 
         def _build_batch(
@@ -529,13 +535,13 @@ class TestSubTransactions:
         """
         temp_template = common.get_test_id(cluster)
         user, provider, poor_provider, recipient, issuer = babel_addrs
-        user_ada = 4_000_000
+        user_lovelace = 4_000_000
         payment_amount = 3_000_000
-        output_ada = 2_000_000
-        provider_ada = 10_000_000
+        output_lovelace = 2_000_000
+        provider_lovelace = 6_000_000
         compensation = 5
-        fee = 1_000_000
-        ada_deficit = payment_amount + 2 * output_ada - user_ada
+        fee = 500_000
+        lovelace_deficit = payment_amount + 2 * output_lovelace - user_lovelace
 
         # Prepare one multi-asset user UTxO and dedicated ADA inputs for the providers.
         token = clusterlib_utils.new_tokens(
@@ -551,10 +557,10 @@ class TestSubTransactions:
             tx_name=f"{temp_template}_setup",
             txouts=[
                 # Joining these records gives the user's tokens their required ADA.
-                clusterlib.TxOut(address=user.address, amount=user_ada),
+                clusterlib.TxOut(address=user.address, amount=user_lovelace),
                 clusterlib.TxOut(address=user.address, amount=2 * compensation, coin=token),
-                clusterlib.TxOut(address=provider.address, amount=provider_ada),
-                clusterlib.TxOut(address=poor_provider.address, amount=output_ada),
+                clusterlib.TxOut(address=provider.address, amount=provider_lovelace),
+                clusterlib.TxOut(address=poor_provider.address, amount=output_lovelace),
             ],
             tx_files=clusterlib.TxFiles(signing_key_files=[issuer.skey_file]),
         )
@@ -577,9 +583,9 @@ class TestSubTransactions:
             txins=user_inputs,
             txouts=[
                 clusterlib.TxOut(address=recipient.address, amount=payment_amount),
-                clusterlib.TxOut(address=user.address, amount=output_ada),
+                clusterlib.TxOut(address=user.address, amount=output_lovelace),
                 clusterlib.TxOut(address=user.address, amount=compensation, coin=token),
-                clusterlib.TxOut(address=provider.address, amount=output_ada),
+                clusterlib.TxOut(address=provider.address, amount=output_lovelace),
                 clusterlib.TxOut(address=provider.address, amount=compensation, coin=token),
             ],
         )
@@ -638,11 +644,11 @@ class TestSubTransactions:
             return tx_output, signed
 
         # Start with a valid baseline, then isolate each funding or compensation error.
-        change = provider_ada - ada_deficit - fee
+        change = provider_lovelace - lovelace_deficit - fee
         parent_output, parent_signed = _build_wrapper("valid", provider, provider_inputs, change)
         for name, src, txins, invalid_change, extra_tokens in (
             ("missing_fee_funding", provider, provider_inputs, change + fee, 0),
-            ("insufficient_provider_ada", poor_provider, poor_inputs, output_ada, 0),
+            ("insufficient_provider_ada", poor_provider, poor_inputs, output_lovelace, 0),
             ("excess_token_compensation", provider, provider_inputs, change, 1),
         ):
             with subtests.test(scenario=name):
@@ -671,7 +677,7 @@ class TestSubTransactions:
             (provider.address, change, clusterlib.DEFAULT_COIN)
         ], "Provider change does not account for the child's ADA deficit and parent fee"
         assert (
-            user_ada + provider_ada
+            user_lovelace + provider_lovelace
             == sum(
                 u.amount for u in [*child_utxos, *parent_utxos] if u.coin == clusterlib.DEFAULT_COIN
             )
@@ -710,10 +716,10 @@ class TestSubTransactions:
         temp_template = common.get_test_id(cluster)
         alice, bob, carol, issuer = swap_addrs
         swap_amount = 10_000_000
-        output_ada = 2_000_000
-        counterparty_ada = 20_000_000
+        output_lovelace = 2_000_000
+        counterparty_lovelace = 2_000_000
         token_amount = 5
-        fee = 1_000_000
+        fee = 500_000
 
         # Mint a fresh asset and prepare distinct pre-batch inputs for all participants.
         token = clusterlib_utils.new_tokens(
@@ -730,12 +736,12 @@ class TestSubTransactions:
             src_address=issuer.address,
             tx_name=f"{temp_template}_setup",
             txouts=[
-                clusterlib.TxOut(address=alice.address, amount=swap_amount + output_ada),
+                clusterlib.TxOut(address=alice.address, amount=swap_amount + output_lovelace),
                 *[
                     txout
                     for addr in (bob, carol)
                     for txout in (
-                        clusterlib.TxOut(address=addr.address, amount=counterparty_ada),
+                        clusterlib.TxOut(address=addr.address, amount=counterparty_lovelace),
                         clusterlib.TxOut(address=addr.address, amount=token_amount, coin=token),
                     )
                 ],
@@ -751,7 +757,7 @@ class TestSubTransactions:
             out_file=f"{temp_template}_offer.body",
             txins=alice_inputs,
             txouts=[
-                clusterlib.TxOut(address=alice.address, amount=output_ada),
+                clusterlib.TxOut(address=alice.address, amount=output_lovelace),
                 clusterlib.TxOut(address=alice.address, amount=token_amount, coin=token),
             ],
         )
@@ -785,7 +791,7 @@ class TestSubTransactions:
                     txouts=[
                         clusterlib.TxOut(
                             address=counterparty.address,
-                            amount=counterparty_ada + swap_amount,
+                            amount=counterparty_lovelace + swap_amount,
                         )
                     ],
                 )
@@ -812,7 +818,7 @@ class TestSubTransactions:
             else:
                 # The parent itself supplies tokens and claims the ADA, less its fee.
                 parent_inputs = token_inputs
-                parent_amount = counterparty_ada + swap_amount - fee
+                parent_amount = counterparty_lovelace + swap_amount - fee
 
             # File-only assembly avoids balancing or modifying the published offer.
             parent_output = cluster.g_transaction.build_raw_tx(
@@ -928,7 +934,7 @@ class TestSubTransactions:
         temp_template = common.get_test_id(cluster)
         sponsor, alice, recipient = payment_addrs
         payment_amount = 2_000_000
-        fee = 1_000_000
+        fee = 500_000
 
         # Build Alice's balanced payment and sign it independently of the sponsor.
         child_data = clusterlib.collect_data_for_build(
@@ -1104,7 +1110,7 @@ class TestSubTransactions:
             tx_name=temp_template,
             txouts=top_txouts,
             tx_files=tx_files,
-            fee=1_000_000,
+            fee=500_000,
             sub_transactions=[
                 clusterlib.SignedSubTx(out_file=sub_tx_signed, tx_raw_output=sub_tx_output)
             ],
