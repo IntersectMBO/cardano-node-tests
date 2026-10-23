@@ -47,6 +47,7 @@ Options:
                                     literal, not shell-expanded. Repeatable;
                                     later files override earlier ones. Leading
                                     NAME=value command arguments override files.
+                                    A leading ~/ in PATH expands to HOME.
   --nixos-container[=VERSION]       Force use of a NixOS container (/nix
                                     pre-installed inside it, host /nix not
                                     required).  VERSION defaults to 'latest'.
