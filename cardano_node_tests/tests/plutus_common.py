@@ -650,6 +650,42 @@ OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
 )
 
 
+# ------ Batch 7: multiIndexArray (PV12) ------ #
+SCRIPTS_V3_BATCH7_110_DIR = SCRIPTS_V3_DIR / "batch7" / "1.1.0"
+SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH7_110_DIR
+        / f"succeedingMultiIndexArray{name}Script_V3_110.plutus",
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for name in (
+        "Policy",
+        "DataPolicy",
+        "Repeated1Policy",
+        "Repeated64Policy",
+        "Repeated1024Policy",
+    )
+)
+FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3 = tuple(
+    PlutusScriptData(
+        script_file=SCRIPTS_V3_BATCH7_110_DIR
+        / f"failingMultiIndexArray{name}PolicyScript_V3_110.plutus",
+        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+        execution_cost=UNDETERMINED_COST,
+    )
+    for name in (
+        "Negative",
+        "UpperBound",
+        "Empty",
+        "LateInvalid",
+        "HugePositive",
+        "HugeNegative",
+        "OverLimit",
+    )
+)
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
     script_file: clusterlib.FileType
