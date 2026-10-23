@@ -3,9 +3,17 @@
 
 # Call CALLBACK NAME VALUE for each entry, without evaluating file contents.
 # Accept comments for compatibility with load-gh-env.sh's existing env files.
+# Expand a leading ~/ in the file path, including when passed via --env-file=.
 parse_gh_env_file() {
   local env_file="$1" callback="$2"
   local line name value delimiter value_line closed
+  if [[ "$env_file" == \~/* ]]; then
+    if [ -z "${HOME:-}" ]; then
+      echo "Error: HOME must be set to expand ~/ in environment file paths." >&2
+      return 2
+    fi
+    env_file="$HOME/${env_file:2}"
+  fi
   if [ ! -f "$env_file" ] || [ ! -r "$env_file" ]; then
     echo "Error: environment file '$env_file' is not a readable file." >&2
     return 2
