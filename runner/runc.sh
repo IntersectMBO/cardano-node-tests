@@ -11,12 +11,17 @@
 
 set -Eeuo pipefail
 
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=runner/gh-env.sh
+source "$script_dir/gh-env.sh"
+
 default_mint_version="22.3"
 
 container_type=""     # empty = auto-detect
 container_version="latest"
 mint_version="$default_mint_version"
 extra_mounts=()
+container_env=()
 
 usage() {
   local script_name
@@ -36,6 +41,12 @@ variable expansion, wrap the command explicitly, e.g.
 
 Options:
   -h, --help                        Show this help message and exit.
+  --env-file=PATH                   Load container environment variables from a
+                                    GitHub Actions environment file (NAME=value
+                                    or multiline NAME<<DELIMITER). Values are
+                                    literal, not shell-expanded. Repeatable;
+                                    later files override earlier ones. Leading
+                                    NAME=value command arguments override files.
   --nixos-container[=VERSION]       Force use of a NixOS container (/nix
                                     pre-installed inside it, host /nix not
                                     required).  VERSION defaults to 'latest'.
@@ -61,6 +72,7 @@ Examples:
   $script_name NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
   $script_name --nixos-container NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
   $script_name --ubuntu-container=24.04 NODE_REV="10.7.0" UTXO_BACKEND=disk ./runner/regression.sh
+  $script_name --env-file=tests.env ./runner/regression.sh
 USAGE
 }
 
@@ -72,9 +84,23 @@ require_value() {
   fi
 }
 
+# Append explicit -e assignments so values also apply to the entrypoint.
+add_container_env() {
+  container_env+=("-e" "$1=$2")
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help)            usage; exit 0 ;;
+    --env-file)
+      if [ $# -lt 2 ] || [ -z "$2" ]; then
+        echo "Error: --env-file requires a file path." >&2
+        exit 2
+      fi
+      parse_gh_env_file "$2" add_container_env
+      shift 2
+      ;;
+    --env-file=*) require_value "$1"; parse_gh_env_file "${1#*=}" add_container_env; shift ;;
     --nixos-container)    container_type="nixos";  container_version="latest"; shift ;;
     --nixos-container=*)  require_value "$1"; container_type="nixos";  container_version="${1#*=}"; shift ;;
     --ubuntu-container)   container_type="ubuntu"; container_version="latest"; shift ;;
@@ -129,7 +155,6 @@ else
   exit 1
 fi
 
-script_dir="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$script_dir/.." && pwd)"
 readonly REPO_DIR
 
@@ -386,6 +411,7 @@ $container_manager run \
   "${nix_mounts[@]}" \
   -v "$REPO_DIR":"$REPO_DIR" \
   "${extra_mounts[@]}" \
+  "${container_env[@]}" \
   -e REPO_DIR="$REPO_DIR" \
   "$tag" \
   "$@"
