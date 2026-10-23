@@ -49,6 +49,12 @@ Run a specific test:
 ./runner/runc.sh -- TEST_THREADS=0 CLUSTERS_COUNT=1 PYTEST_ARGS="-k test_minting_one_token" ./runner/regression.sh
 ```
 
+Run the upgrade test suite with an environment file:
+
+```sh
+./runner/runc.sh --env-file=runner/env_nightly_upgrade -- CI_BYRON_CLUSTER=false ./runner/node_upgrade.sh
+```
+
 A specific Linux distro can be selected (Ubuntu, Debian, Linux Mint, or NixOS):
 
 ```sh
