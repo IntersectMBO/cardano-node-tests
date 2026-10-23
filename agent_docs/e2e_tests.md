@@ -15,6 +15,10 @@ Organize tests in classes that group related functionality.
 - Keep each section comment with the code it introduces, with a blank line before the comment to separate it from the preceding step. Add comments for non-obvious protocol details or assertion assumptions where needed; avoid redundant line-by-line commentary.
 - Use descriptive test docstrings. Do not include internal test-plan scenario IDs as if they were official identifiers.
 
+## Artifact Naming
+
+`temp_template` is often used as the base of artifact file names. Ensure every generated artifact has a unique file name so that later operations do not overwrite earlier artifacts. When creating files in a loop, include the iteration index or another unique suffix in the name passed to the helper, e.g. `name_template=f"{temp_template}_{i}"`. Use distinct suffixes for separate operations that generate the same kind of artifact, even outside loops.
+
 ## Resource Management
 
 Tests run in parallel on shared cluster instances. Every test must declare the shared resources it changes or depends on - also when it only reads them (e.g. queries or delegates to a cluster pool). The plain `cluster` fixture declares none. Before writing a test, open `agent_docs/resource_management.md` and follow the instructions.
@@ -81,6 +85,7 @@ When writing a new E2E test, or making larger changes to an existing one, ensure
 - [ ] Type hints are included for all parameters
 - [ ] Every shared resource the test changes or depends on is locked or used (see `agent_docs/resource_management.md`)
 - [ ] `common.get_test_id(cluster)` is used for unique naming
+- [ ] Artifact file names derived from `temp_template` are unique, including within loops
 - [ ] Appropriate pytest markers are set (see Pytest Markers above)
 - [ ] Tests that wait for epochs call `common.skip_on_long_epochs` (see Epoch Waits above)
 - [ ] Node restarts on local testnets restart all nodes (see Node Restarts above)
