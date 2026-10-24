@@ -182,19 +182,20 @@ You can fine-tune test runs using these environment variables:
 
 ### Additional for `regression.sh`
 
-| Variable            | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `CARDANO_CLI_REV`   | `cardano-cli` version.                                   |
-| `CI_BYRON_CLUSTER`  | Run cluster from Byron ➝ Conway (slow start).            |
-| `DBSYNC_REV`        | `cardano-db-sync` version.                               |
-| `NODE_REV`          | `cardano-node` version (default: `master`).              |
-| `TX_CENTRIFUGE_REV` | `tx-centrifuge` version (default: `bench/leios-11.0.1`). |
-| `TX_FIREHOSE_REV`   | `tx-firehose` version (default: `leios-prototype`).      |
-| `PYTEST_ARGS`       | Extra options passed to pytest.                          |
-| `TEST_THREADS`      | Number of pytest workers (default: `20`).                |
-| `TIME_DRIFT_POOL`   | Pool (1-3) for libfaketime clock skew; unset = off.      |
-| `TIME_DRIFT_SPEC`   | libfaketime `FAKETIME` string, e.g. `+0 x1.008`.         |
-| `LIBFAKETIME_PATH`  | Override path to `libfaketimeMT.so.1`.                   |
+| Variable              | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `CARDANO_CLI_REV`     | `cardano-cli` version.                                   |
+| `CI_BYRON_CLUSTER`    | Run cluster from Byron ➝ Conway (slow start).            |
+| `DBSYNC_REV`          | `cardano-db-sync` version.                               |
+| `ENABLE_TCACHE_STATS` | Upload testrun stats to the tcache (default: `false`).   |
+| `NODE_REV`            | `cardano-node` version (default: `master`).              |
+| `TX_CENTRIFUGE_REV`   | `tx-centrifuge` version (default: `bench/leios-11.0.1`). |
+| `TX_FIREHOSE_REV`     | `tx-firehose` version (default: `leios-prototype`).      |
+| `PYTEST_ARGS`         | Extra options passed to pytest.                          |
+| `TEST_THREADS`        | Number of pytest workers (default: `20`).                |
+| `TIME_DRIFT_POOL`     | Pool (1-3) for libfaketime clock skew; unset = off.      |
+| `TIME_DRIFT_SPEC`     | libfaketime `FAKETIME` string, e.g. `+0 x1.008`.         |
+| `LIBFAKETIME_PATH`    | Override path to `libfaketimeMT.so.1`.                   |
 
 ### 💡 Usage Examples
 
