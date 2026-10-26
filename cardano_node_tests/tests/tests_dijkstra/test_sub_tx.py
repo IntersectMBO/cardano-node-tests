@@ -1,9 +1,11 @@
 """Tests for Dijkstra transactions with embedded sub-transactions."""
 
+import concurrent.futures
 import dataclasses
 import io
 import json
 import pathlib as pl
+import threading
 
 import allure
 import cbor2
@@ -109,6 +111,186 @@ class TestSubTransactions:
             amount=15_000_000,
             min_amount=13_000_000,
         )
+
+    @pytest.fixture
+    def replay_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> list[clusterlib.AddressRecord]:
+        """Cache a user, three independently funded assemblers, and a recipient."""
+        return addrs_common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=5,
+            fund_idx=[0, 1, 2, 3],
+            caching_key=helpers.get_current_line_str(),
+            amount=3_000_000,
+            min_amount=2_500_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_replay_competing_wrappers(
+        self,
+        cluster: clusterlib.ClusterLib,
+        replay_addrs: list[clusterlib.AddressRecord],
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Settle a raced child payment once and reject replay through any wrapper.
+
+        * Publish one independently signed child payment and build two parents
+          with distinct assembler keys and disjoint parent spending inputs.
+        * Race their submissions to the same node and confirm exactly one parent.
+        * Check the child payment and winning parent change, consumed inputs, and
+          untouched funding inputs of the losing and third assemblers.
+        * Build a fresh third parent around the unchanged, now-spent child.
+        * Retry both raced parents and submit the third. Check spent-input errors,
+          unchanged test-owned UTxOs, and no losing or third-parent outputs.
+
+        This payment-only batch has no certificate or governance effects.
+        """
+        temp_template = common.get_test_id(cluster)
+        user, first, second, third, recipient = replay_addrs
+        fee = 500_000
+        payment_lovelace = 2_000_000
+
+        # Sign once before any assembler builds a wrapper around the published child.
+        child_data = clusterlib.collect_data_for_build(
+            clusterlib_obj=cluster,
+            src_address=user.address,
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=payment_lovelace)],
+        )
+        child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_child.body",
+            txins=child_data.txins,
+            txouts=child_data.txouts,
+        )
+        child_signed = cluster.g_sub_transaction.sign_tx(
+            sub_tx_file=child_output.out_file,
+            tx_name=f"{temp_template}_published",
+            signing_key_files=[user.skey_file],
+        )
+        child_bytes = child_signed.read_bytes()
+        child_cbor = json.loads(child_bytes)["cborHex"]
+        child_id = cluster.g_sub_transaction.get_txid(signed_sub_tx_file=child_signed)
+        child_refs = [f"{child_id}#{ix}" for ix in range(child_output.txouts_count)]
+        assemblers = (first, second, third)
+        funding_inputs = [cluster.g_query.get_utxo(address=a.address) for a in assemblers]
+        assert all(funding_inputs), "An assembler has no funding inputs"
+        input_refs = [{(u.utxo_hash, u.utxo_ix) for u in txins} for txins in funding_inputs]
+        assert all(
+            not input_refs[ix].intersection(input_refs[other])
+            for ix in range(3)
+            for other in range(ix + 1, 3)
+        ), "Parent funding inputs overlap"
+
+        def _build_wrapper(name: str, assembler_ix: int) -> tuple[clusterlib.TxRawOutput, pl.Path]:
+            """Independently fund and sign a parent without re-signing its child."""
+            assembler = assemblers[assembler_ix]
+            txins = funding_inputs[assembler_ix]
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=assembler.address,
+                tx_name=f"{temp_template}_{name}",
+                txins=txins,
+                txouts=[
+                    clusterlib.TxOut(
+                        address=assembler.address,
+                        amount=clusterlib.calculate_utxos_balance(txins) - fee,
+                    )
+                ],
+                fee=fee,
+                sub_transaction_files=[child_signed],
+            )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=output.out_file,
+                signing_key_files=[assembler.skey_file],
+                tx_name=f"{temp_template}_{name}",
+            )
+            assert child_cbor in json.loads(signed.read_text(encoding="utf-8"))["cborHex"], (
+                "The assembler changed the published child"
+            )
+            return output, signed
+
+        # The barrier launches both CLI submissions without waiting for either to finish.
+        wrappers = [_build_wrapper("first", 0), _build_wrapper("second", 1)]
+        start = threading.Barrier(2)
+
+        def _submit(signed: pl.Path) -> str:
+            """Submit at the race barrier and return any node rejection for inspection."""
+            start.wait(timeout=10)
+            try:
+                cluster.g_transaction.submit_tx_bare(tx_file=signed)
+            except clusterlib.CLIError as exc:
+                return str(exc)
+            return ""
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(_submit, signed) for _, signed in wrappers]
+            errors = [future.result() for future in futures]
+
+        assert any(not error for error in errors), f"Neither raced parent was admitted: {errors}"
+        for error in errors:
+            assert not error or helpers.is_inputs_spent_err(error), error
+
+        # Admission alone is not confirmation. Wait for the shared child's inputs to be spent.
+        clusterlib_utils.check_txins_spent(cluster_obj=cluster, txins=child_output.txins)
+        confirmed_outputs = [
+            cluster.g_query.get_utxo(tx_raw_output=output) for output, _ in wrappers
+        ]
+        winners = [ix for ix, utxos in enumerate(confirmed_outputs) if utxos]
+        assert len(winners) == 1, "The race did not confirm exactly one parent"
+        winner = winners[0]
+        loser = 1 - winner
+        winning_output, _ = wrappers[winner]
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=winning_output)
+
+        child_utxos = cluster.g_query.get_utxo(txin=child_refs)
+        assert sorted((u.address, u.amount, u.coin) for u in child_utxos) == sorted(
+            (t.address, t.amount, t.coin) for t in child_output.txouts
+        ), "The child payment or change is missing or incorrect"
+        assert [(u.address, u.amount, u.coin) for u in confirmed_outputs[winner]] == [
+            (
+                assemblers[winner].address,
+                clusterlib.calculate_utxos_balance(funding_inputs[winner]) - fee,
+                clusterlib.DEFAULT_COIN,
+            )
+        ], "The winning assembler did not pay exactly the parent fee"
+        assert not cluster.g_query.get_utxo(utxo=funding_inputs[winner])
+        unused_inputs = [*funding_inputs[loser], *funding_inputs[2]]
+        unused_before = cluster.g_query.get_utxo(utxo=unused_inputs)
+        assert sorted(unused_before) == sorted(unused_inputs), (
+            "The race consumed an unused assembler's funding inputs"
+        )
+
+        # Build a fresh wrapper after confirmation, using a still-unspent third funding input.
+        third_output, third_signed = _build_wrapper("third_after_confirmation", 2)
+        owned_addresses = [a.address for a in replay_addrs]
+        state_after_settlement = cluster.g_query.get_utxo(address=owned_addresses)
+        retries = [
+            ("winning_parent_all_inputs_spent", wrappers[winner][0], wrappers[winner][1]),
+            ("losing_parent_input_unspent", wrappers[loser][0], wrappers[loser][1]),
+            ("fresh_third_parent", third_output, third_signed),
+        ]
+
+        # Replays must neither charge an unused assembler nor duplicate the child's outputs.
+        for name, output, signed in retries:
+            with subtests.test(scenario=name):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                assert helpers.is_inputs_spent_err(str(excinfo.value)), str(excinfo.value)
+
+                assert cluster.g_query.get_utxo(address=owned_addresses) == state_after_settlement
+                assert cluster.g_query.get_utxo(utxo=unused_inputs) == unused_before
+                assert cluster.g_query.get_utxo(txin=child_refs) == child_utxos
+                if name != "winning_parent_all_inputs_spent":
+                    assert not cluster.g_query.get_utxo(tx_raw_output=output)
+
+        assert child_signed.read_bytes() == child_bytes
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=winning_output)
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
