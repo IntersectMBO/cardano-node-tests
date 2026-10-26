@@ -151,3 +151,27 @@ def replace_witnesses(
     changed = encoded[:start] + cbor2.dumps(witnesses) + encoded[end:]
     out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
     return out_file
+
+
+def append_body_field(*, tx_file: pl.Path, out_file: pl.Path, key: int, value: tp.Any) -> pl.Path:
+    """Append an absent field before signing without re-encoding embedded children."""
+    envelope = json.loads(tx_file.read_text(encoding="utf-8"))
+    encoded = bytes.fromhex(envelope["cborHex"])
+    decoded = cbor2.loads(encoded)
+    assert key not in decoded[0] and not decoded[1].get(0)
+    stream = io.BytesIO(encoded)
+    assert stream.read(1) == b"\x83"
+    cbor2.CBORDecoder(stream).decode()
+    body_end = stream.tell()
+    assert 0xA0 <= encoded[1] < 0xB7
+    changed = (
+        b"\x83"
+        + bytes([encoded[1] + 1])
+        + encoded[2:body_end]
+        + cbor2.dumps(key)
+        + cbor2.dumps(value)
+        + encoded[body_end:]
+    )
+    assert cbor2.loads(changed)[0] == {**decoded[0], key: cbor2.loads(cbor2.dumps(value))}
+    out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
+    return out_file
