@@ -24,6 +24,8 @@ def build_child(
     txouts: list[clusterlib.TxOut],
     signing_keys: list[pl.Path],
     reference_inputs: list[clusterlib.UTXOData] | None = None,
+    tx_files: clusterlib.TxFiles | None = None,
+    treasury_donation: int | None = None,
 ) -> SignedChild:
     """Build and independently sign an explicitly balanced or unbalanced child."""
     output = cluster.g_sub_transaction.build_raw_tx_bare(
@@ -31,6 +33,8 @@ def build_child(
         txins=txins,
         txouts=txouts,
         readonly_reference_txins=reference_inputs or [],
+        tx_files=tx_files,
+        treasury_donation=treasury_donation,
     )
     signed = cluster.g_sub_transaction.sign_tx(
         sub_tx_file=output.out_file, tx_name=name, signing_key_files=signing_keys
