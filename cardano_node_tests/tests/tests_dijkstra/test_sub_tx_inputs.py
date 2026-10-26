@@ -132,3 +132,130 @@ class TestSubTransactionInputs:
         ]
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("use", ("spend", "reference"))
+    @pytest.mark.parametrize("placement", ("sibling", "reversed_siblings", "parent"))
+    def test_no_output_chaining(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        use: str,
+        placement: str,
+    ):
+        """Reject spending or referencing a new child output within the same batch.
+
+        Predict an output before assembly and use it in a sibling in either
+        order, or in the parent. Check original-input rejection without effects.
+        Confirm the producer separately, then use that exact output reference
+        in a later ordinary transaction as a spend or read-only reference.
+        """
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, recipient = payment_addrs
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in payment_addrs[:3]]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+
+        # Predict the producing child's output without putting it on chain.
+        producer = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_producer",
+            txins=inputs[0],
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=balances_lovelace[0])],
+            signing_keys=[first.skey_file],
+        )
+        predicted = clusterlib.UTXOData(
+            utxo_hash=producer.txid,
+            utxo_ix=0,
+            amount=balances_lovelace[0],
+            address=recipient.address,
+        )
+        is_spend = use == "spend"
+        children = [producer]
+        parent_inputs = list(inputs[2])
+        parent_lovelace = balances_lovelace[2]
+        parent_keys = [sponsor.skey_file]
+        parent_references = []
+
+        # Fund each consumer independently; the sole fault is the unavailable input.
+        if placement == "parent":
+            if is_spend:
+                parent_inputs.append(predicted)
+                parent_lovelace += predicted.amount
+                parent_keys.append(recipient.skey_file)
+            else:
+                parent_references = [predicted]
+        else:
+            consumer = sub_tx_utils.build_child(
+                cluster=cluster,
+                name=f"{temp_template}_consumer",
+                txins=[predicted] if is_spend else inputs[1],
+                txouts=[
+                    clusterlib.TxOut(
+                        address=second.address,
+                        amount=predicted.amount if is_spend else balances_lovelace[1],
+                    )
+                ],
+                reference_inputs=[] if is_spend else [predicted],
+                signing_keys=[recipient.skey_file] if is_spend else [second.skey_file],
+            )
+            children.append(consumer)
+            if placement == "reversed_siblings":
+                children.reverse()
+
+        rejected_output, rejected_signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_chained",
+            sponsor=sponsor,
+            txins=parent_inputs,
+            txouts=[clusterlib.TxOut(address=sponsor.address, amount=parent_lovelace - 500_000)],
+            children=children,
+            reference_inputs=parent_references,
+            signing_keys=parent_keys,
+        )
+        with pytest.raises(clusterlib.CLIError, match="BadInputsUTxO"):
+            cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+
+        assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+        assert not cluster.g_query.get_utxo(tx_raw_output=rejected_output)
+        assert not cluster.g_query.get_utxo(txin=[f"{c.txid}#0" for c in children])
+
+        # The producer alone settles with exactly the originally predicted child identity.
+        output, signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_produce_first",
+            sponsor=sponsor,
+            txins=inputs[2],
+            txouts=[
+                clusterlib.TxOut(address=sponsor.address, amount=balances_lovelace[2] - 500_000)
+            ],
+            children=[producer],
+        )
+        cluster.g_transaction.submit_tx(tx_file=signed, txins=inputs[2])
+        sub_tx_utils.check_child_outputs(cluster=cluster, child=producer)
+        created = cluster.g_query.get_utxo(txin=f"{producer.txid}#0")
+        assert created == [predicted]
+        assert not cluster.g_query.get_utxo(utxo=inputs[0])
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+        # A later ordinary transaction can now spend or reference the identical output.
+        control_owner = recipient if is_spend else second
+        control_inputs = created if is_spend else inputs[1]
+        control = cluster.g_transaction.send_tx(
+            src_address=control_owner.address,
+            tx_name=f"{temp_template}_later_{use}",
+            txins=control_inputs,
+            readonly_reference_txins=[] if is_spend else created,
+            tx_files=clusterlib.TxFiles(signing_key_files=[control_owner.skey_file]),
+        )
+        assert not cluster.g_query.get_utxo(utxo=control_inputs)
+        assert bool(cluster.g_query.get_utxo(utxo=created)) is not is_spend
+        assert (
+            clusterlib.calculate_utxos_balance(cluster.g_query.get_utxo(tx_raw_output=control))
+            == clusterlib.calculate_utxos_balance(control_inputs) - control.fee
+        )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=control)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=control)
