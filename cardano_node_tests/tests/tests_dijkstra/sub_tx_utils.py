@@ -29,6 +29,8 @@ def build_child(
     reference_inputs: list[clusterlib.UTXOData] | None = None,
     tx_files: clusterlib.TxFiles | None = None,
     treasury_donation: int | None = None,
+    invalid_before: int | None = None,
+    invalid_hereafter: int | None = None,
 ) -> SignedChild:
     """Build and independently sign an explicitly balanced or unbalanced child."""
     output = cluster.g_sub_transaction.build_raw_tx_bare(
@@ -38,6 +40,8 @@ def build_child(
         readonly_reference_txins=reference_inputs or [],
         tx_files=tx_files,
         treasury_donation=treasury_donation,
+        invalid_before=invalid_before,
+        invalid_hereafter=invalid_hereafter,
     )
     signed = cluster.g_sub_transaction.sign_tx(
         sub_tx_file=output.out_file, tx_name=name, signing_key_files=signing_keys
@@ -61,6 +65,8 @@ def build_parent(
     reference_inputs: list[clusterlib.UTXOData] | None = None,
     signing_keys: list[pl.Path] | None = None,
     collateral_inputs: list[clusterlib.UTXOData] | None = None,
+    invalid_before: int | None = None,
+    invalid_hereafter: int | None = None,
 ) -> tuple[clusterlib.TxRawOutput, pl.Path]:
     """Assemble file-only children without automatically repairing batch balance."""
     output = cluster.g_transaction.build_raw_tx(
@@ -71,6 +77,8 @@ def build_parent(
         readonly_reference_txins=reference_inputs or [],
         fee=fee_lovelace,
         collateral_txins=collateral_inputs or [],
+        invalid_before=invalid_before,
+        invalid_hereafter=invalid_hereafter,
         sub_transaction_files=[c.signed_file for c in children],
     )
     signed = cluster.g_transaction.sign_tx(
