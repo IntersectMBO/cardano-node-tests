@@ -35,10 +35,6 @@ pytestmark = [
     markers.SKIPIF_BUILD_UNUSABLE,
     pytest.mark.plutus,
     pytest.mark.team_plutus,
-    pytest.mark.long,
-    pytest.mark.order(5),
-    pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy),
-    pytest.mark.dbsync,
 ]
 
 
@@ -102,6 +98,10 @@ class TestMultiIndexArray:
     """Exercise multiIndexArray through complete PlutusV3 minting transactions."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.order(5)
+    @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
+    @pytest.mark.long
+    @pytest.mark.dbsync
     def test_multi_index_array(
         self,
         cluster_manager: cluster_management.ClusterManager,
