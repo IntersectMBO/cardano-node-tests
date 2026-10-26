@@ -1,9 +1,11 @@
 """Small assembly helpers for independently authorized payment children."""
 
 import dataclasses
+import io
 import json
 import pathlib as pl
 
+import cbor2
 from cardano_clusterlib import clusterlib
 
 
@@ -87,3 +89,43 @@ def check_child_outputs(*, cluster: clusterlib.ClusterLib, child: SignedChild) -
     assert sorted((u.address, u.amount, u.coin) for u in actual) == sorted(
         (o.address, o.amount, o.coin) for o in child.output.txouts
     )
+
+
+def remove_output_datum_hash(*, tx_file: pl.Path, out_file: pl.Path) -> pl.Path:
+    """Remove the first output's hash before signing, preserving all other CBOR bytes.
+
+    Retain the CLI-generated datum witness and integrity hash to exercise its
+    supplemental scope. Never rewrite an embedded signed child or accept an
+    already key-witnessed transaction as input to this mutation.
+    """
+    envelope = json.loads(tx_file.read_text(encoding="utf-8"))
+    encoded = bytes.fromhex(envelope["cborHex"])
+    transaction = cbor2.loads(encoded)
+    assert encoded[0] == 0x83 and not transaction[1].get(0)
+    stream = io.BytesIO(encoded)
+    stream.read(1)
+    map_header = stream.read(1)[0]
+    assert 0xA0 <= map_header < 0xB8, "Expected a small definite body map"
+    decoder = cbor2.CBORDecoder(stream)
+    start = end = 0
+    outputs = transaction[0][1]
+    for _ in range(map_header - 0xA0):
+        key = decoder.decode()
+        value_start = stream.tell()
+        value = decoder.decode()
+        if key == 1:
+            start, end = value_start, stream.tell()
+            outputs = value
+    assert start and end
+    if isinstance(outputs[0], list):
+        assert len(outputs[0]) == 3
+        outputs[0] = outputs[0][:2]
+    else:
+        assert outputs[0][2][0] == 0
+        del outputs[0][2]
+    changed = encoded[:start] + cbor2.dumps(outputs) + encoded[end:]
+    decoded = cbor2.loads(changed)
+    assert decoded[1:] == transaction[1:]
+    assert {k for k in transaction[0] if transaction[0][k] != decoded[0][k]} == {1}
+    out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
+    return out_file

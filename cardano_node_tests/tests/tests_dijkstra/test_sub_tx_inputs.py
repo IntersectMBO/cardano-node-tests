@@ -1,4 +1,7 @@
-"""Spending conflicts, original UTxO references, and child output availability."""
+"""Spending conflicts, original UTxO references, and supplemental datum scope."""
+
+import dataclasses
+import pathlib as pl
 
 import allure
 import pytest
@@ -132,6 +135,207 @@ class TestSubTransactionInputs:
         ]
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+class TestSubTransactionSupplementalDatums:
+    """Check non-legacy supplemental datum scope without executing Plutus."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize(
+        "scope", ("parent_child_output", "parent_child_reference", "sibling_only", "unrelated")
+    )
+    def test_supplemental_datum_scope(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        scope: str,
+    ):
+        """Allow the parent's child-related datums but reject sibling-only or unrelated data.
+
+        Generate a datum witness/integrity hash through the CLI, then remove its
+        supplying output's hash before signing. Only another child output or
+        reference input relates to the datum, or no output does. Confirm allowed
+        parent supply; reject other scopes without effects and settle a control
+        without the extraneous witness. No legacy script executes in these cases.
+        """
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, _ = payment_addrs
+        reference_inputs = []
+
+        # A reference datum must belong to an output that already exists before the batch.
+        if scope == "parent_child_reference":
+            setup = cluster.g_transaction.send_tx(
+                src_address=first.address,
+                tx_name=f"{temp_template}_reference",
+                txins=cluster.g_query.get_utxo(address=first.address),
+                txouts=[
+                    clusterlib.TxOut(address=first.address, amount=1_500_000, datum_hash_value="42")
+                ],
+                tx_files=clusterlib.TxFiles(signing_key_files=[first.skey_file]),
+            )
+            reference_inputs = [
+                u for u in cluster.g_query.get_utxo(tx_raw_output=setup) if u.datum_hash
+            ]
+            assert len(reference_inputs) == 1
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in payment_addrs[:3]]
+        inputs[0] = [u for u in inputs[0] if u not in reference_inputs]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+
+        target = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_target",
+            txins=inputs[0],
+            txouts=[
+                clusterlib.TxOut(
+                    address=first.address,
+                    amount=balances_lovelace[0],
+                    datum_hash_value="42"
+                    if scope in ("parent_child_output", "sibling_only")
+                    else "",
+                )
+            ],
+            reference_inputs=reference_inputs,
+            signing_keys=[first.skey_file],
+        )
+        supplier_txouts = [
+            clusterlib.TxOut(
+                address=second.address,
+                amount=balances_lovelace[1],
+                datum_embed_value="42" if scope == "sibling_only" else "",
+            )
+        ]
+        supplier = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_supplier_seed",
+            txins=inputs[1],
+            txouts=supplier_txouts,
+            signing_keys=[] if scope == "sibling_only" else [second.skey_file],
+        )
+        if scope == "sibling_only":
+            # Keep the datum but remove its only local justification before authorizing the body.
+            mutated = sub_tx_utils.remove_output_datum_hash(
+                tx_file=supplier.output.out_file,
+                out_file=pl.Path(f"{temp_template}_supplier.body"),
+            )
+            signed = cluster.g_sub_transaction.sign_tx(
+                sub_tx_file=mutated,
+                tx_name=f"{temp_template}_supplier",
+                signing_key_files=[second.skey_file],
+            )
+            supplier = dataclasses.replace(
+                supplier,
+                signed_file=signed,
+                txid=cluster.g_sub_transaction.get_txid(signed_sub_tx_file=signed),
+                output=dataclasses.replace(
+                    supplier.output,
+                    out_file=mutated,
+                    txouts=[clusterlib.TxOut(address=second.address, amount=balances_lovelace[1])],
+                ),
+            )
+
+        # Removing only the parent's own hash preserves every signed child's exact bytes.
+        output = cluster.g_transaction.build_raw_tx(
+            src_address=sponsor.address,
+            tx_name=f"{temp_template}_parent_seed",
+            txins=inputs[2],
+            txouts=[
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=balances_lovelace[2] - 500_000,
+                    datum_embed_value="" if scope == "sibling_only" else "42",
+                )
+            ],
+            fee=500_000,
+            sub_transaction_files=[target.signed_file, supplier.signed_file],
+        )
+        seed_output = output
+        parent_file = output.out_file
+        if scope != "sibling_only":
+            parent_file = sub_tx_utils.remove_output_datum_hash(
+                tx_file=parent_file, out_file=pl.Path(f"{temp_template}_parent.body")
+            )
+            output = dataclasses.replace(
+                output,
+                out_file=parent_file,
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=balances_lovelace[2] - 500_000)
+                ],
+            )
+        signed_parent = cluster.g_transaction.sign_tx(
+            tx_body_file=parent_file,
+            tx_name=f"{temp_template}_parent",
+            signing_key_files=[sponsor.skey_file],
+        )
+        if scope in ("sibling_only", "unrelated"):
+            with pytest.raises(clusterlib.CLIError, match="NotAllowedSupplementalDatums"):
+                cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+
+            assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+            assert not cluster.g_query.get_utxo(tx_raw_output=output)
+            assert not cluster.g_query.get_utxo(txin=[f"{target.txid}#0", f"{supplier.txid}#0"])
+
+            # Removing the extraneous witness, not changing target scope, restores validity.
+            supplier = sub_tx_utils.build_child(
+                cluster=cluster,
+                name=f"{temp_template}_control_supplier",
+                txins=inputs[1],
+                txouts=[clusterlib.TxOut(address=second.address, amount=balances_lovelace[1])],
+                signing_keys=[second.skey_file],
+            )
+            output, signed_parent = sub_tx_utils.build_parent(
+                cluster=cluster,
+                name=f"{temp_template}_control",
+                sponsor=sponsor,
+                txins=inputs[2],
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=balances_lovelace[2] - 500_000)
+                ],
+                children=[target, supplier],
+            )
+
+        missing_expanded_scope = False
+        try:
+            cluster.g_transaction.submit_tx(tx_file=signed_parent, txins=inputs[2])
+        except clusterlib.CLIError as exc:
+            if scope not in (
+                "parent_child_output",
+                "parent_child_reference",
+            ) or "NotAllowedSupplementalDatums" not in str(exc):
+                raise
+
+            assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+            assert not cluster.g_query.get_utxo(tx_raw_output=output)
+            assert not cluster.g_query.get_utxo(txin=[f"{target.txid}#0", f"{supplier.txid}#0"])
+            missing_expanded_scope = True
+
+            # Prove the original CLI datum/integrity bytes work when related to the parent.
+            output = seed_output
+            signed_parent = cluster.g_transaction.sign_tx(
+                tx_body_file=output.out_file,
+                tx_name=f"{temp_template}_own_output_control",
+                signing_key_files=[sponsor.skey_file],
+            )
+            cluster.g_transaction.submit_tx(tx_file=signed_parent, txins=inputs[2])
+        for child in (target, supplier):
+            sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        assert not cluster.g_query.get_utxo(utxo=[u for group in inputs for u in group])
+        if reference_inputs:
+            assert cluster.g_query.get_utxo(utxo=reference_inputs) == reference_inputs
+        assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+            balances_lovelace[2] - 500_000
+        ]
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+        if missing_expanded_scope:
+            pytest.xfail("Parent child-related datum allowance needs ledger fix 846a63f764")
+
+
+class TestSubTransactionReferences:
+    """Distinguish original UTxO references from unavailable new child outputs."""
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.testnets
