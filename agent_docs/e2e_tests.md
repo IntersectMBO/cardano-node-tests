@@ -37,6 +37,8 @@ When test results (transactions, registrations, governance actions) can be verif
 
 ## Pytest Markers
 
+Place test-specific markers directly on individual tests, not at module or class level. A marker is test-specific if it may not apply to future tests added to the same class or module. For example, `plutus` can apply to all tests in `tests_plutus_v3/`, but `long`, `smoke`, and `order` cannot be assumed to apply to every future test. Applying these markers directly to tests from the start avoids having to remember to review and reorganize inherited markers whenever a new test is added.
+
 Mark tests based on where they can run and how long they take:
 
 - `@pytest.mark.testnets` - add when the test can run on public testnets like Preview. The test cannot depend on crossing an epoch boundary - waiting for the next epoch would take too long there.
