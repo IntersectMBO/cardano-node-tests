@@ -433,3 +433,171 @@ class TestSubTransactionScriptSupply:
             ]
             node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+class TestSubTransactionLegacyMode:
+    """Keep legacy parent balance and context restrictions separate from child features."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.plutus
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("plutus_version", ("v1", "v2", "v3"))
+    def test_legacy_parent_balance(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        plutus_version: str,
+    ):
+        """Enforce legacy parent balance even when the complete batch balances.
+
+        Execute a passing older script in the parent. Reject a balanced batch
+        that transfers parent ADA into a child's imbalance. Then confirm two
+        complementary children whose net imbalance is zero and whose inline
+        datum output remains isolated from the parent's legacy script context.
+        For V1, reject that same newer output feature directly in the parent.
+        """
+        temp_template = common.get_test_id(cluster)
+        owner, sponsor, sibling_owner, recipient, collateral = payment_addrs
+        script_file = plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=f"{temp_template}_script", payment_script_file=script_file
+        )
+
+        # A hashed datum works with all three older context versions.
+        funding = cluster.g_transaction.send_tx(
+            src_address=owner.address,
+            tx_name=f"{temp_template}_lock",
+            txins=cluster.g_query.get_utxo(address=owner.address),
+            txouts=[
+                clusterlib.TxOut(address=script_address, amount=1_500_000, datum_hash_value="42")
+            ],
+            tx_files=clusterlib.TxFiles(signing_key_files=[owner.skey_file]),
+        )
+        script_inputs = clusterlib.filter_utxos(
+            cluster.g_query.get_utxo(tx_raw_output=funding), address=script_address
+        )
+        owner_inputs = cluster.g_query.get_utxo(address=owner.address)
+        sibling_inputs = cluster.g_query.get_utxo(address=sibling_owner.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        collateral_inputs = cluster.g_query.get_utxo(address=collateral.address)
+        owner_lovelace = clusterlib.calculate_utxos_balance(owner_inputs)
+        sibling_lovelace = clusterlib.calculate_utxos_balance(sibling_inputs)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        script_input = clusterlib.ScriptTxIn(
+            txins=script_inputs,
+            script_file=script_file,
+            datum_value="42",
+            redeemer_value="0",
+            execution_units=(1_000_000, 10_000),
+        )
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+        first_child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_first",
+            txins=owner_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=owner.address, amount=owner_lovelace + 1_000_000, inline_datum_value="7"
+                )
+            ],
+            signing_keys=[owner.skey_file],
+        )
+
+        for balanced_children in (False, True):
+            name = f"{temp_template}_{'balanced' if balanced_children else 'parent_imbalance'}"
+            second_child = sub_tx_utils.build_child(
+                cluster=cluster,
+                name=f"{name}_second",
+                txins=sibling_inputs,
+                txouts=[
+                    clusterlib.TxOut(
+                        address=sibling_owner.address,
+                        amount=sibling_lovelace - (1_000_000 if balanced_children else 0),
+                    )
+                ],
+                signing_keys=[sibling_owner.skey_file],
+            )
+            # Both batches balance globally. Only the control balances its parent independently.
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_parent",
+                txins=sponsor_inputs,
+                txouts=[
+                    clusterlib.TxOut(address=recipient.address, amount=1_500_000),
+                    clusterlib.TxOut(
+                        address=sponsor.address,
+                        amount=sponsor_lovelace - 500_000 - (0 if balanced_children else 1_000_000),
+                    ),
+                ],
+                script_txins=[script_input],
+                collateral_txins=collateral_inputs,
+                sub_transaction_files=[first_child.signed_file, second_child.signed_file],
+                fee=500_000,
+            )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=output.out_file,
+                tx_name=f"{name}_parent",
+                signing_key_files=[sponsor.skey_file, collateral.skey_file],
+            )
+            if not balanced_children:
+                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedInLegacyMode"):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+
+                assert (
+                    cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+                )
+                assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(
+                    txin=[f"{first_child.txid}#0", f"{second_child.txid}#0"]
+                )
+                continue
+
+            if plutus_version == "v1":
+                # V1 cannot translate a parent inline datum, unlike a child-only inline datum.
+                unsupported = cluster.g_transaction.build_raw_tx(
+                    src_address=sponsor.address,
+                    tx_name=f"{name}_parent_inline",
+                    txins=sponsor_inputs,
+                    txouts=[
+                        clusterlib.TxOut(address=recipient.address, amount=1_500_000),
+                        clusterlib.TxOut(
+                            address=sponsor.address,
+                            amount=sponsor_lovelace - 500_000,
+                            inline_datum_value="7",
+                        ),
+                    ],
+                    script_txins=[script_input],
+                    collateral_txins=collateral_inputs,
+                    sub_transaction_files=[first_child.signed_file, second_child.signed_file],
+                    fee=500_000,
+                )
+                unsupported_signed = cluster.g_transaction.sign_tx(
+                    tx_body_file=unsupported.out_file,
+                    tx_name=f"{name}_parent_inline",
+                    signing_key_files=[sponsor.skey_file, collateral.skey_file],
+                )
+                with pytest.raises(clusterlib.CLIError, match="InlineDatumsNotSupported"):
+                    cluster.g_transaction.submit_tx_bare(tx_file=unsupported_signed)
+
+                assert (
+                    cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+                )
+                assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
+                assert not cluster.g_query.get_utxo(tx_raw_output=unsupported)
+
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+            assert not cluster.g_query.get_utxo(
+                utxo=[*script_inputs, *owner_inputs, *sibling_inputs, *sponsor_inputs]
+            )
+            assert cluster.g_query.get_utxo(utxo=collateral_inputs) == collateral_inputs
+            for child in (first_child, second_child):
+                sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+            assert cluster.g_query.get_utxo(txin=f"{first_child.txid}#0")[0].inline_datum
+            assert sorted(
+                (u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)
+            ) == sorted((o.address, o.amount) for o in output.txouts)
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
