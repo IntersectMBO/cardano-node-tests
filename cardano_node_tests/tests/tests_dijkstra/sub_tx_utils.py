@@ -31,6 +31,8 @@ def build_child(
     treasury_donation: int | None = None,
     invalid_before: int | None = None,
     invalid_hereafter: int | None = None,
+    direct_deposits: list[clusterlib.TxOut] | None = None,
+    withdrawals: list[clusterlib.TxOut] | None = None,
 ) -> SignedChild:
     """Build and independently sign an explicitly balanced or unbalanced child."""
     output = cluster.g_sub_transaction.build_raw_tx_bare(
@@ -42,6 +44,8 @@ def build_child(
         treasury_donation=treasury_donation,
         invalid_before=invalid_before,
         invalid_hereafter=invalid_hereafter,
+        direct_deposits=direct_deposits or [],
+        withdrawals=withdrawals or [],
     )
     signed = cluster.g_sub_transaction.sign_tx(
         sub_tx_file=output.out_file, tx_name=name, signing_key_files=signing_keys

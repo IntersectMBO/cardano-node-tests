@@ -1,5 +1,7 @@
 """Complete-batch value conservation and atomic state transitions."""
 
+import typing as tp
+
 import allure
 import pytest
 import pytest_subtests
@@ -82,6 +84,62 @@ def stake_address(
                 name=f"{common.get_test_id(cluster_treasury)}_stake"
             )
         return cache.value
+
+
+@pytest.fixture
+def registered_account(
+    cluster_treasury: clusterlib.ClusterLib,
+    atomicity_addrs: list[clusterlib.AddressRecord],
+    stake_address: clusterlib.AddressRecord,
+) -> tp.Generator[clusterlib.AddressRecord]:
+    """Register a test-owned account, then drain it and refund its recorded deposit."""
+    cluster = cluster_treasury
+    sponsor = atomicity_addrs[2]
+    name = f"{common.get_test_id(cluster)}_account"
+    assert not cluster.g_query.get_stake_addr_info(stake_address.address)
+    deposit_lovelace = cluster.g_query.get_address_deposit()
+    register = cluster.g_stake_address.gen_stake_addr_registration_cert(
+        addr_name=name,
+        stake_vkey_file=stake_address.vkey_file,
+        deposit_amt=deposit_lovelace,
+    )
+    cluster.g_transaction.send_tx(
+        src_address=sponsor.address,
+        tx_name=f"{name}_register",
+        tx_files=clusterlib.TxFiles(
+            certificate_files=[register],
+            signing_key_files=[sponsor.skey_file, stake_address.skey_file],
+        ),
+        deposit=deposit_lovelace,
+    )
+    try:
+        yield stake_address
+    finally:
+        account = cluster.g_query.get_stake_addr_info(stake_address.address)
+        if account:
+            deregister = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+                addr_name=f"{name}_cleanup",
+                stake_vkey_file=stake_address.vkey_file,
+                deposit_amt=account.registration_deposit,
+            )
+            cluster.g_transaction.send_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_cleanup",
+                txins=cluster.g_query.get_utxo(address=sponsor.address),
+                tx_files=clusterlib.TxFiles(
+                    certificate_files=[deregister],
+                    signing_key_files=[sponsor.skey_file, stake_address.skey_file],
+                ),
+                withdrawals=[
+                    clusterlib.TxOut(
+                        address=stake_address.address, amount=account.reward_account_balance
+                    )
+                ]
+                if account.reward_account_balance
+                else [],
+                deposit=-account.registration_deposit,
+            )
+            assert not cluster.g_query.get_stake_addr_info(stake_address.address)
 
 
 class TestSubTransactionConservation:
@@ -465,5 +523,154 @@ class TestSubTransactionCertificates:
             assert [
                 (u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)
             ] == [(sponsor.address, parent_lovelace)]
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+class TestSubTransactionAccounts:
+    """Account operations must respect original reward balances across the batch."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_original_balance_withdrawals(
+        self,
+        cluster_treasury: clusterlib.ClusterLib,
+        atomicity_addrs: list[clusterlib.AddressRecord],
+        registered_account: clusterlib.AddressRecord,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Bound aggregate withdrawals by the original balance, not earlier deposits.
+
+        Fund a registered, nondelegated account through a confirmed direct
+        deposit. Reject individual and aggregate over-withdrawals, including a
+        withdrawal covered only by an earlier same-batch deposit. Split an exact
+        original-balance withdrawal across two children while depositing again;
+        verify exact outputs, the residual account balance, and no failed effects.
+        """
+        cluster = cluster_treasury
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, _, _ = atomicity_addrs
+        account_address = registered_account.address
+        assert cluster.g_query.get_stake_addr_info(account_address).reward_account_balance == 0
+
+        # Establish a real pre-batch reward balance without waiting for pool rewards.
+        first_inputs = cluster.g_query.get_utxo(address=first.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        funded_child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_initial_deposit",
+            txins=first_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=first.address,
+                    amount=clusterlib.calculate_utxos_balance(first_inputs) - 1_000_000,
+                )
+            ],
+            direct_deposits=[clusterlib.TxOut(address=account_address, amount=1_000_000)],
+            signing_keys=[first.skey_file],
+        )
+        setup, setup_signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_fund_account",
+            sponsor=sponsor,
+            txins=sponsor_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=clusterlib.calculate_utxos_balance(sponsor_inputs) - 500_000,
+                )
+            ],
+            children=[funded_child],
+        )
+        cluster.g_transaction.submit_tx(tx_file=setup_signed, txins=sponsor_inputs)
+        sub_tx_utils.check_child_outputs(cluster=cluster, child=funded_child)
+        assert (
+            cluster.g_query.get_stake_addr_info(account_address).reward_account_balance == 1_000_000
+        )
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=setup)
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in atomicity_addrs[:3]]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        before = cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs])
+
+        for name, first_withdrawal_lovelace, second_withdrawal_lovelace, deposit_lovelace in (
+            ("individual_excess", 0, 1_000_001, 0),
+            ("aggregate_excess", 500_001, 500_001, 0),
+            ("earlier_deposit", 0, 1_500_000, 1_000_000),
+            ("split_exact", 200_000, 800_000, 500_000),
+        ):
+            children = []
+            for ix, (owner, withdrawal_lovelace) in enumerate(
+                ((first, first_withdrawal_lovelace), (second, second_withdrawal_lovelace))
+            ):
+                child_deposit_lovelace = deposit_lovelace if ix == 0 else 0
+                child = sub_tx_utils.build_child(
+                    cluster=cluster,
+                    name=f"{temp_template}_{name}_child_{ix}",
+                    txins=inputs[ix],
+                    txouts=[
+                        clusterlib.TxOut(
+                            address=owner.address,
+                            amount=balances_lovelace[ix]
+                            + withdrawal_lovelace
+                            - child_deposit_lovelace,
+                        )
+                    ],
+                    withdrawals=[
+                        clusterlib.TxOut(address=account_address, amount=withdrawal_lovelace)
+                    ]
+                    if withdrawal_lovelace
+                    else [],
+                    direct_deposits=[
+                        clusterlib.TxOut(address=account_address, amount=child_deposit_lovelace)
+                    ]
+                    if child_deposit_lovelace
+                    else [],
+                    signing_keys=[owner.skey_file, registered_account.skey_file],
+                )
+                children.append(child)
+            output, signed = sub_tx_utils.build_parent(
+                cluster=cluster,
+                name=f"{temp_template}_{name}_parent",
+                sponsor=sponsor,
+                txins=inputs[2],
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=balances_lovelace[2] - 500_000)
+                ],
+                children=children,
+            )
+            if name != "split_exact":
+                with (
+                    subtests.test(withdrawals=name),
+                    pytest.raises(
+                        clusterlib.CLIError, match="WithdrawalAmountsExceedingOriginalBalance"
+                    ),
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+
+                assert (
+                    cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
+                )
+                assert (
+                    cluster.g_query.get_stake_addr_info(account_address).reward_account_balance
+                    == 1_000_000
+                )
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=[f"{c.txid}#0" for c in children])
+                continue
+
+            # Both partial child withdrawals add up to exactly the original one-ADA balance.
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=inputs[2])
+            assert (
+                cluster.g_query.get_stake_addr_info(account_address).reward_account_balance
+                == 500_000
+            )
+            assert not cluster.g_query.get_utxo(utxo=[u for group in inputs for u in group])
+            for child in children:
+                sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+            assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+                balances_lovelace[2] - 500_000
+            ]
             node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
