@@ -342,3 +342,128 @@ class TestSubTransactionAtomicity:
                         deposit=-registered.registration_deposit,
                     )
                     assert not cluster.g_query.get_stake_addr_info(stake_address.address)
+
+
+class TestSubTransactionCertificates:
+    """Thread registration state and deposit refunds through ordered components."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("refund_level", ("sibling", "parent"))
+    def test_ordered_registration_refund(
+        self,
+        cluster_treasury: clusterlib.ClusterLib,
+        atomicity_addrs: list[clusterlib.AddressRecord],
+        stake_address: clusterlib.AddressRecord,
+        refund_level: str,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Register before deregistering across children or child-to-parent processing.
+
+        Reject reversed siblings and a duplicate deregistration without effects.
+        Then register in one child and refund the exact same declared deposit
+        in a later sibling or parent. Check exact outputs, no lasting stake
+        registration, and preservation of unused inputs and collateral.
+        """
+        cluster = cluster_treasury
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, _, _ = atomicity_addrs
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in atomicity_addrs[:4]]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        deposit_lovelace = cluster.g_query.get_address_deposit()
+        assert not cluster.g_query.get_stake_addr_info(stake_address.address)
+
+        # Both certificates commit to the same deposit, paid only once in this batch.
+        register = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_register",
+            stake_vkey_file=stake_address.vkey_file,
+            deposit_amt=deposit_lovelace,
+        )
+        deregister = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_deregister",
+            stake_vkey_file=stake_address.vkey_file,
+            deposit_amt=deposit_lovelace,
+        )
+        registering_child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_registering",
+            txins=inputs[0],
+            txouts=[
+                clusterlib.TxOut(
+                    address=first.address, amount=balances_lovelace[0] - deposit_lovelace
+                )
+            ],
+            tx_files=clusterlib.TxFiles(certificate_files=[register]),
+            signing_keys=[first.skey_file, stake_address.skey_file],
+        )
+        refunding_child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_refunding",
+            txins=inputs[1],
+            txouts=[
+                clusterlib.TxOut(
+                    address=second.address, amount=balances_lovelace[1] + deposit_lovelace
+                )
+            ],
+            tx_files=clusterlib.TxFiles(certificate_files=[deregister]),
+            signing_keys=[second.skey_file, stake_address.skey_file],
+        )
+        before = cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs])
+
+        for scenario in ("reversed", "double_deregistration", "authorized"):
+            children = [registering_child, refunding_child]
+            if scenario == "reversed":
+                children.reverse()
+            parent_refund = scenario == "double_deregistration" or (
+                scenario == "authorized" and refund_level == "parent"
+            )
+            if scenario == "authorized" and refund_level == "parent":
+                children = [registering_child]
+            parent_lovelace = balances_lovelace[2] - 500_000
+            if parent_refund:
+                parent_lovelace += deposit_lovelace
+            output, signed = sub_tx_utils.build_parent(
+                cluster=cluster,
+                name=f"{temp_template}_{scenario}",
+                sponsor=sponsor,
+                txins=inputs[2],
+                txouts=[clusterlib.TxOut(address=sponsor.address, amount=parent_lovelace)],
+                tx_files=clusterlib.TxFiles(
+                    certificate_files=[deregister] if parent_refund else []
+                ),
+                signing_keys=[sponsor.skey_file, stake_address.skey_file],
+                children=children,
+            )
+            if scenario != "authorized":
+                with (
+                    subtests.test(scenario=scenario),
+                    pytest.raises(clusterlib.CLIError, match="StakeKeyNotRegisteredDELEG"),
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+
+                assert (
+                    cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
+                )
+                assert not cluster.g_query.get_stake_addr_info(stake_address.address)
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=[f"{c.txid}#0" for c in children])
+                continue
+
+            # Children run in order and before the parent, including deposit/refund accounting.
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=inputs[2])
+            assert not cluster.g_query.get_stake_addr_info(stake_address.address)
+            assert not cluster.g_query.get_utxo(utxo=[*inputs[0], *inputs[2]])
+            if refund_level == "sibling":
+                assert not cluster.g_query.get_utxo(utxo=inputs[1])
+            else:
+                assert cluster.g_query.get_utxo(utxo=inputs[1]) == inputs[1]
+            assert cluster.g_query.get_utxo(utxo=inputs[3]) == inputs[3]
+            for child in children:
+                sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+            assert [
+                (u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)
+            ] == [(sponsor.address, parent_lovelace)]
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)

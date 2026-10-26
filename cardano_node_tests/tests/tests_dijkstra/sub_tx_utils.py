@@ -67,11 +67,13 @@ def build_parent(
     collateral_inputs: list[clusterlib.UTXOData] | None = None,
     invalid_before: int | None = None,
     invalid_hereafter: int | None = None,
+    tx_files: clusterlib.TxFiles | None = None,
 ) -> tuple[clusterlib.TxRawOutput, pl.Path]:
     """Assemble file-only children without automatically repairing batch balance."""
     output = cluster.g_transaction.build_raw_tx(
         src_address=sponsor.address,
         tx_name=name,
+        tx_files=tx_files,
         txins=txins,
         txouts=txouts,
         readonly_reference_txins=reference_inputs or [],
