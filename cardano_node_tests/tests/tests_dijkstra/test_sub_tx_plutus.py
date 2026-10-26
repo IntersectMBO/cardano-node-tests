@@ -328,3 +328,162 @@ class TestSubTransactionPhaseOne:
             assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
             assert not cluster.g_query.get_utxo(tx_raw_output=output)
             assert not cluster.g_query.get_utxo(txin=[f"{script_id}#0", f"{missing_child.txid}#0"])
+
+
+class TestSubTransactionDatums:
+    """Keep required spending datums local despite batch-wide script supply."""
+
+    @allure.link(helpers.get_vcs_link())
+    @markers.SKIPIF_PLUTUSV4_UNUSABLE
+    @pytest.mark.plutus
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("spender_level", ("child", "parent"))
+    def test_required_datum_scope(
+        self,
+        cluster_plutus: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        subtests: pytest_subtests.SubTests,
+        spender_level: str,
+    ):
+        """Reject remote-only spending datums, then settle with the local datum.
+
+        Lock an output with a datum hash. Supply its datum only in another
+        component, attached to that component's output so it is not unrelated
+        supplemental data. Exercise child spending with parent/sibling supply
+        and parent spending with child supply. Missing required local data must
+        leave all owned inputs and collateral unchanged. The local control
+        confirms the same hash-locked input and exact child/parent payments.
+        """
+        cluster = cluster_plutus
+        temp_template = common.get_test_id(cluster)
+        user, sponsor, collateral, recipient = payment_addrs
+        script_file = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V4
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=f"{temp_template}_script", payment_script_file=script_file
+        )
+
+        # The spent output really has a hash, not an inline datum.
+        funding = cluster.g_transaction.send_tx(
+            src_address=user.address,
+            tx_name=f"{temp_template}_lock",
+            txouts=[
+                clusterlib.TxOut(address=script_address, amount=2_000_000, datum_hash_value="42")
+            ],
+            tx_files=clusterlib.TxFiles(signing_key_files=[user.skey_file]),
+        )
+        script_inputs = clusterlib.filter_utxos(
+            cluster.g_query.get_utxo(tx_raw_output=funding), address=script_address
+        )
+        assert len(script_inputs) == 1 and script_inputs[0].datum_hash
+        assert not script_inputs[0].inline_datum
+        user_inputs = cluster.g_query.get_utxo(address=user.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        collateral_inputs = cluster.g_query.get_utxo(address=collateral.address)
+        user_lovelace = clusterlib.calculate_utxos_balance(user_inputs)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        addresses = [a.address for a in payment_addrs]
+        before = cluster.g_query.get_utxo(address=addresses)
+        locations = (
+            ("parent", "sibling", "local") if spender_level == "child" else ("child", "local")
+        )
+
+        for location in locations:
+            name = f"{temp_template}_{location}"
+
+            # Inline witness mode omits datum bytes deliberately, without changing the
+            # hash-locked UTxO. This is only a raw-builder device for the negative cases.
+            script_input = clusterlib.ScriptTxIn(
+                txins=script_inputs,
+                script_file=script_file,
+                datum_value="42" if location == "local" else "",
+                inline_datum_present=location != "local",
+                redeemer_value="0",
+                execution_units=(1_000_000, 10_000),
+            )
+            supplier = sub_tx_utils.build_child(
+                cluster=cluster,
+                name=f"{name}_supplier",
+                txins=user_inputs,
+                txouts=[
+                    clusterlib.TxOut(
+                        address=user.address,
+                        amount=user_lovelace,
+                        datum_embed_value="42" if location in ("sibling", "child") else "",
+                    )
+                ],
+                signing_keys=[user.skey_file],
+            )
+            children = [supplier.signed_file]
+            child_ids = [supplier.txid]
+            script_child = None
+            if spender_level == "child":
+                script_child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+                    out_file=f"{name}_spender.body",
+                    txouts=[clusterlib.TxOut(address=recipient.address, amount=2_000_000)],
+                    script_txins=[script_input],
+                )
+                signed = cluster.g_sub_transaction.sign_tx(
+                    sub_tx_file=script_child_output.out_file, tx_name=f"{name}_spender"
+                )
+                script_child = sub_tx_utils.SignedChild(
+                    output=script_child_output,
+                    signed_file=signed,
+                    txid=cluster.g_sub_transaction.get_txid(signed_sub_tx_file=signed),
+                )
+                children.insert(0, signed)
+                child_ids.append(script_child.txid)
+
+            # The parent/sibling datum is also related to an output at its own level.
+            parent_txouts = [
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=sponsor_lovelace - 500_000,
+                    datum_embed_value="42" if location == "parent" else "",
+                )
+            ]
+            if spender_level == "parent":
+                parent_txouts.append(clusterlib.TxOut(address=recipient.address, amount=2_000_000))
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_parent",
+                txins=sponsor_inputs,
+                txouts=parent_txouts,
+                script_txins=[script_input] if spender_level == "parent" else [],
+                collateral_txins=collateral_inputs,
+                sub_transaction_files=children,
+                fee=500_000,
+            )
+            signed_parent = cluster.g_transaction.sign_tx(
+                tx_body_file=output.out_file,
+                tx_name=f"{name}_parent",
+                signing_key_files=[sponsor.skey_file, collateral.skey_file],
+            )
+            if location != "local":
+                with (
+                    subtests.test(datum_location=location),
+                    pytest.raises(clusterlib.CLIError, match="MissingRequiredDatums"),
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+
+                assert cluster.g_query.get_utxo(address=addresses) == before
+                assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=[f"{txid}#0" for txid in child_ids])
+                continue
+
+            # The same action succeeds once the required datum is local to its spender.
+            cluster.g_transaction.submit_tx(tx_file=signed_parent, txins=sponsor_inputs)
+            assert not cluster.g_query.get_utxo(
+                utxo=[*script_inputs, *user_inputs, *sponsor_inputs]
+            )
+            assert cluster.g_query.get_utxo(utxo=collateral_inputs) == collateral_inputs
+            sub_tx_utils.check_child_outputs(cluster=cluster, child=supplier)
+            if script_child:
+                sub_tx_utils.check_child_outputs(cluster=cluster, child=script_child)
+            assert sorted(
+                (u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)
+            ) == sorted((o.address, o.amount) for o in parent_txouts)
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
