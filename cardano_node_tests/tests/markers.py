@@ -98,6 +98,11 @@ SKIPIF_PLUTUSV3_UNUSABLE = pytest.mark.skipif(
     reason=_PLUTUSV3_SKIP_REASON,
 )
 
+SKIPIF_PLUTUSV4_UNUSABLE = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+    reason="Plutus V4 is available only in Dijkstra+ eras",
+)
+
 SKIPIF_ON_TESTNET = pytest.mark.skipif(
     not cluster_nodes.get_cluster_type().is_local,
     reason="not supposed to run on long-running testnet",

@@ -18,6 +18,7 @@ PLUTUS_DIR = DATA_DIR / "plutus"
 SCRIPTS_V1_DIR = PLUTUS_DIR / "v1"
 SCRIPTS_V2_DIR = PLUTUS_DIR / "v2"
 SCRIPTS_V3_DIR = PLUTUS_DIR / "v3"
+SCRIPTS_V4_DIR = PLUTUS_DIR / "v4"
 SCRIPTS_V3_BATCH6_100_DIR = SCRIPTS_V3_DIR / "batch6" / "1.0.0"
 SCRIPTS_V3_BATCH6_110_DIR = SCRIPTS_V3_DIR / "batch6" / "1.1.0"
 
@@ -39,6 +40,8 @@ BYTE_STRING_ROUNDTRIP = SCRIPTS_V2_DIR / "byteStringToIntegerRoundtripPolicyV2.p
 
 ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
 ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
+
+ALWAYS_SUCCEEDS_PLUTUS_V4 = SCRIPTS_V4_DIR / "always-succeeds.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
@@ -114,6 +117,8 @@ SECP256K1_SCHNORR_LOOP_COST = ExecutionCost(
 
 ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_cost=81)
 ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
+
+ALWAYS_SUCCEEDS_V4_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 
 MINTING_COST = ExecutionCost(per_time=195_825_449, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
@@ -196,6 +201,11 @@ ALWAYS_SUCCEEDS = {
         script_file=ALWAYS_SUCCEEDS_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=ALWAYS_SUCCEEDS_V3_COST,
+    ),
+    "v4": PlutusScriptData(
+        script_file=ALWAYS_SUCCEEDS_PLUTUS_V4,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
+        execution_cost=ALWAYS_SUCCEEDS_V4_COST,
     ),
 }
 
