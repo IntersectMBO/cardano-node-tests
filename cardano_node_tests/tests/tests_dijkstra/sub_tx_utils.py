@@ -4,6 +4,7 @@ import dataclasses
 import io
 import json
 import pathlib as pl
+import typing as tp
 
 import cbor2
 from cardano_clusterlib import clusterlib
@@ -59,6 +60,7 @@ def build_parent(
     fee_lovelace: int = 500_000,
     reference_inputs: list[clusterlib.UTXOData] | None = None,
     signing_keys: list[pl.Path] | None = None,
+    collateral_inputs: list[clusterlib.UTXOData] | None = None,
 ) -> tuple[clusterlib.TxRawOutput, pl.Path]:
     """Assemble file-only children without automatically repairing batch balance."""
     output = cluster.g_transaction.build_raw_tx(
@@ -68,6 +70,7 @@ def build_parent(
         txouts=txouts,
         readonly_reference_txins=reference_inputs or [],
         fee=fee_lovelace,
+        collateral_txins=collateral_inputs or [],
         sub_transaction_files=[c.signed_file for c in children],
     )
     signed = cluster.g_transaction.sign_tx(
@@ -127,5 +130,24 @@ def remove_output_datum_hash(*, tx_file: pl.Path, out_file: pl.Path) -> pl.Path:
     decoded = cbor2.loads(changed)
     assert decoded[1:] == transaction[1:]
     assert {k for k in transaction[0] if transaction[0][k] != decoded[0][k]} == {1}
+    out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
+    return out_file
+
+
+def replace_witnesses(
+    *, tx_file: pl.Path, out_file: pl.Path, witnesses: dict[int, tp.Any]
+) -> pl.Path:
+    """Change unsigned witness supply without re-encoding any transaction body."""
+    envelope = json.loads(tx_file.read_text(encoding="utf-8"))
+    encoded = bytes.fromhex(envelope["cborHex"])
+    stream = io.BytesIO(encoded)
+    assert stream.read(1) == b"\x83"
+    decoder = cbor2.CBORDecoder(stream)
+    decoder.decode()
+    start = stream.tell()
+    original_witnesses = decoder.decode()
+    end = stream.tell()
+    assert not original_witnesses.get(0) and not witnesses.get(0)
+    changed = encoded[:start] + cbor2.dumps(witnesses) + encoded[end:]
     out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
     return out_file

@@ -1,0 +1,286 @@
+"""Batch-wide native/V4 script supply with transaction-local authorization."""
+
+import dataclasses
+import json
+import pathlib as pl
+
+import allure
+import cbor2
+import pytest
+from cardano_clusterlib import clusterlib
+
+from cardano_node_tests.cluster_management import cluster_management
+from cardano_node_tests.tests import addrs_common
+from cardano_node_tests.tests import common
+from cardano_node_tests.tests import plutus_common
+from cardano_node_tests.tests.tests_dijkstra import sub_tx_utils
+from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import dbsync_utils
+from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils import node_consistency
+from cardano_node_tests.utils.versions import VERSIONS
+
+pytestmark = pytest.mark.skipif(
+    VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+    reason="Sub-transactions are available only in Dijkstra+ eras",
+)
+
+
+@pytest.fixture
+def cluster(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Protect V4 execution parameters for the shared script-supply matrix."""
+    return cluster_manager.get(use_resources=[cluster_management.Resources.PLUTUS])
+
+
+@pytest.fixture
+def payment_addrs(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+) -> list[clusterlib.AddressRecord]:
+    """Cache script owner, sponsor, sibling owner, recipient and collateral owner."""
+    if not clusterlib_utils.cli_has("dijkstra sub-transaction"):
+        pytest.skip("The CLI does not support sub-transactions")
+    return addrs_common.get_payment_addrs(
+        name_template=common.get_test_id(cluster),
+        cluster_manager=cluster_manager,
+        cluster_obj=cluster,
+        num=5,
+        fund_idx=[0, 1, 2, 4],
+        amount=5_000_000,
+        min_amount=4_000_000,
+        caching_key=helpers.get_current_line_str(),
+    )
+
+
+@pytest.fixture
+def native_script(
+    cluster_manager: cluster_management.ClusterManager,
+    cluster: clusterlib.ClusterLib,
+    payment_addrs: list[clusterlib.AddressRecord],
+) -> pl.Path:
+    """Cache a native signature script controlled by the first participant."""
+    cache: cluster_management.FixtureCache[pl.Path | None]
+    with cluster_manager.cache_fixture() as cache:
+        if cache.value is None:
+            script_file = pl.Path(f"{common.get_test_id(cluster)}_native.script")
+            key_hash = cluster.g_address.get_payment_vkey_hash(
+                payment_vkey_file=payment_addrs[0].vkey_file
+            )
+            script_file.write_text(
+                json.dumps({"type": "sig", "keyHash": key_hash}), encoding="utf-8"
+            )
+            cache.value = script_file
+        return cache.value
+
+
+class TestSubTransactionScriptSupply:
+    """Share script bytes without sharing native key authorization."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize(
+        "script_kind", ("native", pytest.param("v4", marks=pytest.mark.plutus))
+    )
+    @pytest.mark.parametrize(
+        "supply", ("parent", "sibling", "reference", "missing", "unused", "parent_key")
+    )
+    def test_script_supply(  # noqa: C901
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        native_script: pl.Path,
+        supply: str,
+        script_kind: str,
+    ):
+        """Resolve child native/V4 script bytes batch-wide while keeping keys local.
+
+        Supply bytes in the parent, sibling, or a parent reference input. Reject
+        missing script bytes, an extraneous script, or native authorization
+        supplied only by the parent. Check rejection has no effects and settle
+        a correctly witnessed control. Confirm exact child and parent outputs.
+        """
+        is_plutus = script_kind == "v4"
+        if is_plutus and supply == "parent_key":
+            pytest.skip("The context-independent V4 script does not require a key witness")
+        temp_template = common.get_test_id(cluster)
+        owner, sponsor, sibling_owner, recipient, collateral = payment_addrs
+        script_file = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V4 if is_plutus else native_script
+        script_witness_key = 8 if is_plutus else 1
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=f"{temp_template}_script", payment_script_file=script_file
+        )
+        funding_txouts = [
+            clusterlib.TxOut(
+                address=script_address,
+                amount=2_000_000,
+                inline_datum_value="42" if is_plutus else "",
+            )
+        ]
+        if supply == "reference":
+            funding_txouts.append(
+                clusterlib.TxOut(
+                    address=recipient.address, amount=1_500_000, reference_script_file=script_file
+                )
+            )
+        funding = cluster.g_transaction.send_tx(
+            src_address=owner.address,
+            tx_name=f"{temp_template}_lock",
+            txins=cluster.g_query.get_utxo(address=owner.address),
+            txouts=funding_txouts,
+            tx_files=clusterlib.TxFiles(signing_key_files=[owner.skey_file]),
+        )
+        funded = cluster.g_query.get_utxo(tx_raw_output=funding)
+        script_inputs = clusterlib.filter_utxos(funded, address=script_address)
+        reference_inputs = [u for u in funded if u.reference_script]
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        sibling_inputs = cluster.g_query.get_utxo(address=sibling_owner.address)
+        collateral_inputs = (
+            cluster.g_query.get_utxo(address=collateral.address) if is_plutus else []
+        )
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        sibling_lovelace = clusterlib.calculate_utxos_balance(sibling_inputs)
+        addresses = [a.address for a in payment_addrs]
+        before = cluster.g_query.get_utxo(address=addresses)
+
+        # Build the spending body once; moving script bytes preserves its integrity data.
+        script_output = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_spender_seed.body",
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=2_000_000)],
+            script_txins=[
+                clusterlib.ScriptTxIn(
+                    txins=script_inputs,
+                    script_file=script_file,
+                    inline_datum_present=is_plutus,
+                    redeemer_value="0" if is_plutus else "",
+                    execution_units=(1_000_000, 10_000) if is_plutus else None,
+                )
+            ],
+        )
+        seed = cbor2.loads(bytes.fromhex(json.loads(script_output.out_file.read_text())["cborHex"]))
+        assert script_witness_key in seed[1]
+        script_witnesses = {script_witness_key: seed[1][script_witness_key]}
+        stripped = sub_tx_utils.replace_witnesses(
+            tx_file=script_output.out_file,
+            out_file=pl.Path(f"{temp_template}_spender.body"),
+            witnesses={k: v for k, v in seed[1].items() if k != script_witness_key},
+        )
+        spender_signed = cluster.g_sub_transaction.sign_tx(
+            sub_tx_file=stripped,
+            tx_name=f"{temp_template}_spender",
+            signing_key_files=[] if supply == "parent_key" else [owner.skey_file],
+        )
+        spender = sub_tx_utils.SignedChild(
+            output=script_output,
+            signed_file=spender_signed,
+            txid=cluster.g_sub_transaction.get_txid(signed_sub_tx_file=spender_signed),
+        )
+        sibling_output = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_sibling_seed.body",
+            txins=sibling_inputs,
+            txouts=[clusterlib.TxOut(address=sibling_owner.address, amount=sibling_lovelace)],
+        )
+        sibling_file = sibling_output.out_file
+        if supply == "sibling":
+            sibling_file = sub_tx_utils.replace_witnesses(
+                tx_file=sibling_file,
+                out_file=pl.Path(f"{temp_template}_sibling.body"),
+                witnesses=script_witnesses,
+            )
+        sibling_signed = cluster.g_sub_transaction.sign_tx(
+            sub_tx_file=sibling_file,
+            tx_name=f"{temp_template}_sibling",
+            signing_key_files=[sibling_owner.skey_file],
+        )
+        sibling = sub_tx_utils.SignedChild(
+            output=sibling_output,
+            signed_file=sibling_signed,
+            txid=cluster.g_sub_transaction.get_txid(signed_sub_tx_file=sibling_signed),
+        )
+
+        output = cluster.g_transaction.build_raw_tx(
+            src_address=sponsor.address,
+            tx_name=f"{temp_template}_parent_seed",
+            txins=sponsor_inputs,
+            txouts=[clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)],
+            readonly_reference_txins=reference_inputs,
+            collateral_txins=collateral_inputs,
+            sub_transaction_files=[spender_signed, sibling_signed],
+            fee=500_000,
+        )
+        parent_file = output.out_file
+        if supply in ("parent", "unused", "parent_key"):
+            witnesses = dict(script_witnesses)
+            if supply == "unused":
+                # This second signature script is not required by any component.
+                extra_hash = cluster.g_address.get_payment_vkey_hash(
+                    payment_vkey_file=sponsor.vkey_file
+                )
+                witnesses[1] = [*witnesses.get(1, []), [0, bytes.fromhex(extra_hash)]]
+            parent_file = sub_tx_utils.replace_witnesses(
+                tx_file=parent_file,
+                out_file=pl.Path(f"{temp_template}_parent.body"),
+                witnesses=witnesses,
+            )
+            output = dataclasses.replace(output, out_file=parent_file)
+        parent_keys = (
+            [sponsor.skey_file, collateral.skey_file] if is_plutus else [sponsor.skey_file]
+        )
+        if supply == "parent_key":
+            parent_keys.append(owner.skey_file)
+        signed_parent = cluster.g_transaction.sign_tx(
+            tx_body_file=parent_file,
+            tx_name=f"{temp_template}_parent",
+            signing_key_files=parent_keys,
+        )
+
+        if supply in ("missing", "unused", "parent_key"):
+            expected = {
+                "missing": "MissingScriptWitnessesUTXOW",
+                "unused": "ExtraneousScriptWitnessesUTXOW",
+                "parent_key": "ScriptWitnessNotValidatingUTXOW",
+            }[supply]
+            with pytest.raises(clusterlib.CLIError, match=expected):
+                cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+
+            assert cluster.g_query.get_utxo(address=addresses) == before
+            assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
+            assert not cluster.g_query.get_utxo(tx_raw_output=output)
+            assert not cluster.g_query.get_utxo(txin=[f"{spender.txid}#0", f"{sibling.txid}#0"])
+
+            # Restore local script bytes and key authorization without changing spending terms.
+            restored = cluster.g_sub_transaction.sign_tx(
+                sub_tx_file=script_output.out_file,
+                tx_name=f"{temp_template}_restored",
+                signing_key_files=[owner.skey_file],
+            )
+            spender = dataclasses.replace(spender, signed_file=restored)
+            output, signed_parent = sub_tx_utils.build_parent(
+                cluster=cluster,
+                name=f"{temp_template}_control",
+                sponsor=sponsor,
+                txins=sponsor_inputs,
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)
+                ],
+                children=[spender, sibling],
+                collateral_inputs=collateral_inputs,
+                signing_keys=parent_keys,
+            )
+
+        cluster.g_transaction.submit_tx(tx_file=signed_parent, txins=sponsor_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*script_inputs, *sponsor_inputs, *sibling_inputs])
+        if reference_inputs:
+            assert cluster.g_query.get_utxo(utxo=reference_inputs) == reference_inputs
+        if collateral_inputs:
+            assert cluster.g_query.get_utxo(utxo=collateral_inputs) == collateral_inputs
+        for child in (spender, sibling):
+            sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+            sponsor_lovelace - 500_000
+        ]
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
