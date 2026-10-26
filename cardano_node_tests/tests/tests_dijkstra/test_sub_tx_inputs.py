@@ -259,3 +259,80 @@ class TestSubTransactionInputs:
         )
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=control)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=control)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize(
+        "placement", ("siblings", "reversed_siblings", "parent_reference", "child_reference")
+    )
+    def test_original_utxo_references(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        placement: str,
+    ):
+        """Reference an existing input even when another component spends it.
+
+        Exercise both sibling orders and each parent/child direction. In the
+        sibling cases the parent also references the same consumed input.
+        Confirm exact child and parent outputs, exclusive spending, and any
+        unused owner inputs. No intra-batch output is used as a reference.
+        """
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, recipient = payment_addrs
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in payment_addrs[:3]]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        child_references = inputs[2] if placement == "child_reference" else []
+
+        # The spending child is authorized locally; references need no owner signature.
+        spender = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_spender",
+            txins=inputs[0],
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=balances_lovelace[0])],
+            reference_inputs=child_references,
+            signing_keys=[first.skey_file],
+        )
+        children = [spender]
+        consumed = [*inputs[0], *inputs[2]]
+        if placement in ("siblings", "reversed_siblings"):
+            reader = sub_tx_utils.build_child(
+                cluster=cluster,
+                name=f"{temp_template}_reader",
+                txins=inputs[1],
+                txouts=[clusterlib.TxOut(address=second.address, amount=balances_lovelace[1])],
+                reference_inputs=inputs[0],
+                signing_keys=[second.skey_file],
+            )
+            children.append(reader)
+            consumed.extend(inputs[1])
+            if placement == "reversed_siblings":
+                children.reverse()
+
+        # A parent lookup must still find an input consumed by an earlier child.
+        output, signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_batch",
+            sponsor=sponsor,
+            txins=inputs[2],
+            txouts=[
+                clusterlib.TxOut(address=sponsor.address, amount=balances_lovelace[2] - 500_000)
+            ],
+            children=children,
+            reference_inputs=[] if placement == "child_reference" else inputs[0],
+        )
+        cluster.g_transaction.submit_tx(tx_file=signed, txins=inputs[2])
+
+        # References do not double-spend the original UTxO or create extra outputs.
+        assert not cluster.g_query.get_utxo(utxo=consumed)
+        for child in children:
+            sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        if len(children) == 1:
+            assert cluster.g_query.get_utxo(utxo=inputs[1]) == inputs[1]
+        assert [(u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+            (sponsor.address, balances_lovelace[2] - 500_000)
+        ]
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
