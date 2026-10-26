@@ -3,10 +3,12 @@
 import dataclasses
 import json
 import pathlib as pl
+import typing as tp
 
 import allure
 import cbor2
 import pytest
+import pytest_subtests
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.cluster_management import cluster_management
@@ -284,3 +286,150 @@ class TestSubTransactionScriptSupply:
         ]
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.plutus
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_shared_script_separate_executions(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Execute one shared V4 program separately for each child's local budget.
+
+        Spend two distinct script inputs with distinct local redeemers, supplying
+        the script bytes once in the parent. Give either child a zero budget;
+        the other child's successful execution cannot substitute for it. Reject
+        each case without effects, then settle with both local budgets funded.
+        The context-independent program does not verify business predicates.
+        """
+        temp_template = common.get_test_id(cluster)
+        owner, sponsor, _, recipient, collateral = payment_addrs
+        script_file = plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V4
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=f"{temp_template}_script", payment_script_file=script_file
+        )
+
+        # Distinct original outputs are essential; joining would create one double-spend.
+        funding = cluster.g_transaction.send_tx(
+            src_address=owner.address,
+            tx_name=f"{temp_template}_lock",
+            txins=cluster.g_query.get_utxo(address=owner.address),
+            txouts=[
+                clusterlib.TxOut(
+                    address=script_address, amount=1_500_000, inline_datum_value=str(ix)
+                )
+                for ix in range(2)
+            ],
+            join_txouts=False,
+            tx_files=clusterlib.TxFiles(signing_key_files=[owner.skey_file]),
+        )
+        script_inputs = clusterlib.filter_utxos(
+            cluster.g_query.get_utxo(tx_raw_output=funding), address=script_address
+        )
+        assert len(script_inputs) == 2
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        collateral_inputs = cluster.g_query.get_utxo(address=collateral.address)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        addresses = [a.address for a in payment_addrs]
+        before = cluster.g_query.get_utxo(address=addresses)
+
+        for failing_index in (0, 1, -1):
+            name = f"{temp_template}_budget_{failing_index}"
+            children = []
+            shared_witnesses: dict[int, tp.Any] = {}
+            for ix, txin in enumerate(script_inputs):
+                # Each child retains its own redeemer and integrity hash after script removal.
+                child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+                    out_file=f"{name}_child_{ix}_seed.body",
+                    txouts=[clusterlib.TxOut(address=recipient.address, amount=1_500_000)],
+                    script_txins=[
+                        clusterlib.ScriptTxIn(
+                            txins=[txin],
+                            script_file=script_file,
+                            inline_datum_present=True,
+                            redeemer_value=str(ix + 10),
+                            execution_units=(0, 0) if ix == failing_index else (1_000_000, 10_000),
+                        )
+                    ],
+                )
+                encoded = bytes.fromhex(json.loads(child_output.out_file.read_text())["cborHex"])
+                witnesses = cbor2.loads(encoded)[1]
+                if shared_witnesses:
+                    assert shared_witnesses[8] == witnesses[8]
+                shared_witnesses = {8: witnesses.pop(8)}
+                stripped = sub_tx_utils.replace_witnesses(
+                    tx_file=child_output.out_file,
+                    out_file=pl.Path(f"{name}_child_{ix}.body"),
+                    witnesses=witnesses,
+                )
+                signed = cluster.g_sub_transaction.sign_tx(
+                    sub_tx_file=stripped, tx_name=f"{name}_child_{ix}"
+                )
+                children.append(
+                    sub_tx_utils.SignedChild(
+                        output=child_output,
+                        signed_file=signed,
+                        txid=cluster.g_sub_transaction.get_txid(signed_sub_tx_file=signed),
+                    )
+                )
+
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_parent_seed",
+                txins=sponsor_inputs,
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)
+                ],
+                collateral_txins=collateral_inputs,
+                sub_transaction_files=[c.signed_file for c in children],
+                fee=500_000,
+            )
+            parent_file = sub_tx_utils.replace_witnesses(
+                tx_file=output.out_file,
+                out_file=pl.Path(f"{name}_parent.body"),
+                witnesses=shared_witnesses,
+            )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=parent_file,
+                tx_name=f"{name}_parent",
+                signing_key_files=[sponsor.skey_file, collateral.skey_file],
+            )
+            encoded_parent = bytes.fromhex(json.loads(signed.read_text())["cborHex"])
+            assert len(cbor2.loads(encoded_parent)[1][8]) == 1
+            for child in children:
+                assert (
+                    bytes.fromhex(json.loads(child.signed_file.read_text())["cborHex"])
+                    in encoded_parent
+                )
+            output = dataclasses.replace(output, out_file=parent_file)
+
+            if failing_index >= 0:
+                with (
+                    subtests.test(failing_child=failing_index),
+                    pytest.raises(clusterlib.CLIError, match="ValidationTagMismatch") as excinfo,
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+
+                assert "The PlutusV4 script failed" in str(excinfo.value)
+                assert "budget" in str(excinfo.value).lower()
+                assert cluster.g_query.get_utxo(address=addresses) == before
+                assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=[f"{c.txid}#0" for c in children])
+                continue
+
+            # Funding both local budgets settles both actions with one copy of the program.
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+            assert not cluster.g_query.get_utxo(utxo=[*script_inputs, *sponsor_inputs])
+            assert cluster.g_query.get_utxo(utxo=collateral_inputs) == collateral_inputs
+            for child in children:
+                sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+            assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+                sponsor_lovelace - 500_000
+            ]
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
