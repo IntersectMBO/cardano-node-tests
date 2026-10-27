@@ -42,3 +42,6 @@ jobs:
       upgrade_prot_ver: ${{ inputs.upgrade_prot_ver }}
       byron_cluster: ${{ inputs.byron_cluster }}
       env-path: runner/env_upgrade
+    secrets:
+      TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+      TCACHE_URL: ${{ secrets.TCACHE_URL }}
