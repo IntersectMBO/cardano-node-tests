@@ -601,3 +601,157 @@ class TestSubTransactionLegacyMode:
             ) == sorted((o.address, o.amount) for o in output.txouts)
             node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+class TestSubTransactionConfirmedOutputs:
+    """Use confirmed parent/child outputs and stored older scripts normally."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.plutus
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_confirmed_output_usability(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+    ):
+        """Spend parent/child outputs and execute a V3 script stored by a child.
+
+        Confirm a normal-mode batch whose child creates a key output carrying
+        an inline datum and V3 reference script. A parent-to-child imbalance
+        proves storing old script bytes does not activate legacy balance rules.
+        In a later ordinary transaction, use the parent's output for fees and
+        the child's predicted output as the reference source for a V3 spend.
+        Finally spend the child key output itself. Check exact original output
+        references, stored datum/script, consumed inputs, and untouched collateral.
+        """
+        temp_template = common.get_test_id(cluster)
+        owner, sponsor, child_owner, recipient, collateral = payment_addrs
+        script_file = plutus_common.ALWAYS_SUCCEEDS["v3"].script_file
+        script_address = cluster.g_address.gen_payment_addr(
+            addr_name=f"{temp_template}_script", payment_script_file=script_file
+        )
+
+        # Prepare a script input before the batch, but do not supply a reference script yet.
+        funding = cluster.g_transaction.send_tx(
+            src_address=owner.address,
+            tx_name=f"{temp_template}_lock",
+            txouts=[
+                clusterlib.TxOut(address=script_address, amount=1_500_000, inline_datum_value="42")
+            ],
+            tx_files=clusterlib.TxFiles(signing_key_files=[owner.skey_file]),
+        )
+        script_inputs = clusterlib.filter_utxos(
+            cluster.g_query.get_utxo(tx_raw_output=funding), address=script_address
+        )
+        child_inputs = cluster.g_query.get_utxo(address=child_owner.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        collateral_inputs = cluster.g_query.get_utxo(address=collateral.address)
+        child_lovelace = clusterlib.calculate_utxos_balance(child_inputs)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        contribution_lovelace = 500_000
+
+        # Store V3 bytes without executing any old script in the normal-mode batch.
+        child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_child",
+            txins=child_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=recipient.address,
+                    amount=child_lovelace + contribution_lovelace,
+                    inline_datum_value="7",
+                    reference_script_file=script_file,
+                )
+            ],
+            signing_keys=[child_owner.skey_file],
+        )
+        output, signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_batch",
+            sponsor=sponsor,
+            txins=sponsor_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=sponsor_lovelace - contribution_lovelace - 500_000,
+                )
+            ],
+            children=[child],
+        )
+        cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+        sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        reference_inputs = cluster.g_query.get_utxo(txin=f"{child.txid}#0")
+        assert len(reference_inputs) == 1
+        reference = reference_inputs[0]
+        assert reference.inline_datum == {"int": 7}
+        assert reference.reference_script
+        clusterlib_utils.check_reference_script_policyid(
+            name_template=f"{temp_template}_stored_script",
+            cluster_obj=cluster,
+            script_file=script_file,
+            script_data=reference.reference_script["script"],
+        )
+        parent_inputs = cluster.g_query.get_utxo(tx_raw_output=output)
+        assert [(u.address, u.amount) for u in parent_inputs] == [
+            (sponsor.address, sponsor_lovelace - contribution_lovelace - output.fee)
+        ]
+        assert not cluster.g_query.get_utxo(utxo=[*child_inputs, *sponsor_inputs])
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+        # The confirmed child reference now supplies V3 execution in an ordinary parent.
+        spend = cluster.g_transaction.build_raw_tx(
+            src_address=sponsor.address,
+            tx_name=f"{temp_template}_reference_spend",
+            txins=parent_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=clusterlib.calculate_utxos_balance(parent_inputs) + 1_500_000 - 500_000,
+                )
+            ],
+            script_txins=[
+                clusterlib.ScriptTxIn(
+                    txins=script_inputs,
+                    reference_txin=reference,
+                    reference_type=clusterlib.ScriptTypes.PLUTUS_V3,
+                    inline_datum_present=True,
+                    redeemer_value="0",
+                    execution_units=(1_000_000, 10_000),
+                )
+            ],
+            collateral_txins=collateral_inputs,
+            fee=500_000,
+        )
+        spend_signed = cluster.g_transaction.sign_tx(
+            tx_body_file=spend.out_file,
+            tx_name=f"{temp_template}_reference_spend",
+            signing_key_files=[sponsor.skey_file, collateral.skey_file],
+        )
+        cluster.g_transaction.submit_tx(tx_file=spend_signed, txins=parent_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*parent_inputs, *script_inputs])
+        assert cluster.g_query.get_utxo(utxo=reference_inputs) == reference_inputs
+        assert cluster.g_query.get_utxo(utxo=collateral_inputs) == collateral_inputs
+        assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=spend)] == [
+            clusterlib.calculate_utxos_balance(parent_inputs) + 1_500_000 - spend.fee
+        ]
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=spend)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=spend)
+
+        # Output attachments do not stop an ordinary key spend of the child output itself.
+        child_spend = cluster.g_transaction.send_tx(
+            src_address=recipient.address,
+            tx_name=f"{temp_template}_child_spend",
+            txins=reference_inputs,
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=1_500_000)],
+            tx_files=clusterlib.TxFiles(signing_key_files=[recipient.skey_file]),
+        )
+        assert not cluster.g_query.get_utxo(utxo=reference_inputs)
+        assert (
+            clusterlib.calculate_utxos_balance(cluster.g_query.get_utxo(tx_raw_output=child_spend))
+            == child_lovelace + contribution_lovelace - child_spend.fee
+        )
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=child_spend)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=child_spend)
