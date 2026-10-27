@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV4",
+    "description": "Context-independent alwaysFailsPolicyScriptV3 program under V4",
+    "cborHex": "565501010025968a4d1326335738920103505435008001"
+}
