@@ -1,5 +1,8 @@
-"""Complete-batch value conservation and atomic state transitions."""
+"""Batch value conservation, minimum-ADA outputs, and atomic state transitions."""
 
+import dataclasses
+import json
+import pathlib as pl
 import typing as tp
 
 import allure
@@ -674,3 +677,232 @@ class TestSubTransactionAccounts:
             ]
             node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
             dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+@pytest.mark.usefixtures("require_sub_cli")
+class TestSubTransactionMinUtxo:
+    """Sponsor minimum-ADA outputs without relaxing per-output requirements."""
+
+    @pytest.fixture
+    def min_utxo_addrs(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster: clusterlib.ClusterLib,
+    ) -> list[clusterlib.AddressRecord]:
+        """Cache user, sponsor, recipient and issuer; fund the latter three as needed."""
+        return addrs_common.get_payment_addrs(
+            name_template=common.get_test_id(cluster),
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            num=4,
+            fund_idx=[1, 2, 3],
+            caching_key=helpers.get_current_line_str(),
+            amount=20_000_000,
+            min_amount=18_000_000,
+        )
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("output_kind", ("assets", "inline_datum", "reference_script"))
+    def test_min_utxo_sponsorship(
+        self,
+        cluster: clusterlib.ClusterLib,
+        min_utxo_addrs: list[clusterlib.AddressRecord],
+        output_kind: str,
+    ):
+        """Sponsor child outputs at their minimum ADA without changing signed terms.
+
+        * Prepare one token-bearing input and two asset-bearing child outputs,
+          optionally carrying a large inline datum or native reference script.
+        * Calculate each output's minimum ADA using current protocol parameters.
+          The child cannot fund both outputs; the sponsor covers the deficit and fee.
+        * Build a valid baseline, then reduce one child output by one lovelace and
+          add that lovelace to parent change, preserving complete-batch balance.
+        * Check node rejection leaves all inputs unspent and creates no outputs,
+          despite sufficient ADA elsewhere in the batch.
+        * Submit the original signed child and verify exact-minimum outputs,
+          attached data/scripts, and the sponsor's exact contribution.
+        """
+        temp_template = common.get_test_id(cluster)
+        user, sponsor, recipient, issuer = min_utxo_addrs
+        fee = 500_000
+
+        # Mint two tokens, one for each independently checked child output.
+        token = clusterlib_utils.new_tokens(
+            clusterlib.get_rand_str(8).encode().hex(),
+            cluster_obj=cluster,
+            temp_template=f"{temp_template}_asset",
+            token_mint_addr=issuer,
+            issuer_addr=issuer,
+            amount=2,
+        )[0].token
+
+        # Size the actual output contents, not an estimate based only on asset count.
+        output_template = clusterlib.TxOut(address=user.address, amount=2_000_000)
+        datum = {"bytes": "ab" * 512}
+        script = {
+            "type": "all",
+            "scripts": [
+                {
+                    "type": "sig",
+                    "keyHash": cluster.g_address.get_payment_vkey_hash(
+                        payment_vkey_file=issuer.vkey_file
+                    ),
+                }
+            ]
+            * 32,
+        }
+        if output_kind == "inline_datum":
+            datum_file = pl.Path(f"{temp_template}_datum.json")
+            datum_file.write_text(json.dumps(datum), encoding="utf-8")
+            output_template = dataclasses.replace(output_template, inline_datum_file=datum_file)
+        elif output_kind == "reference_script":
+            script_file = pl.Path(f"{temp_template}_reference.script")
+            script_file.write_text(json.dumps(script), encoding="utf-8")
+            output_template = dataclasses.replace(
+                output_template, reference_script_file=script_file
+            )
+
+        child_txouts = []
+        for addr in (user, recipient):
+            lovelace_output = dataclasses.replace(output_template, address=addr.address)
+            # Matching attributes join the ADA and token records into one UTxO.
+            asset_output = dataclasses.replace(lovelace_output, amount=1, coin=token)
+            minimum = cluster.g_transaction.calculate_min_req_utxo(
+                txouts=[lovelace_output, asset_output]
+            ).value
+            lovelace_output = dataclasses.replace(lovelace_output, amount=minimum)
+            assert (
+                cluster.g_transaction.calculate_min_req_utxo(
+                    txouts=[lovelace_output, asset_output]
+                ).value
+                == minimum
+            ), "Minimum ADA changed after setting the output amount"
+            child_txouts.extend([lovelace_output, asset_output])
+
+        # The input funds only one plain asset-bearing UTxO, not both child outputs.
+        source_txouts = [
+            clusterlib.TxOut(address=user.address, amount=2_000_000),
+            clusterlib.TxOut(address=user.address, amount=2, coin=token),
+        ]
+        source_minimum = cluster.g_transaction.calculate_min_req_utxo(txouts=source_txouts).value
+        source_txouts[0] = dataclasses.replace(source_txouts[0], amount=source_minimum)
+        setup_output = cluster.g_transaction.send_tx(
+            src_address=issuer.address,
+            tx_name=f"{temp_template}_setup",
+            txouts=source_txouts,
+            tx_files=clusterlib.TxFiles(signing_key_files=[issuer.skey_file]),
+        )
+        user_inputs = clusterlib.filter_utxos(
+            utxos=cluster.g_query.get_utxo(tx_raw_output=setup_output), address=user.address
+        )
+        sponsor_utxos = cluster.g_query.get_utxo(address=sponsor.address)
+        asset_refs = {
+            (u.utxo_hash, u.utxo_ix) for u in sponsor_utxos if u.coin != clusterlib.DEFAULT_COIN
+        }
+        sponsor_inputs = [u for u in sponsor_utxos if (u.utxo_hash, u.utxo_ix) not in asset_refs]
+        child_lovelace = sum(t.amount for t in child_txouts if t.coin == clusterlib.DEFAULT_COIN)
+        deficit = child_lovelace - clusterlib.calculate_utxos_balance(user_inputs)
+        assert deficit > 0, "The child does not need ADA sponsorship"
+        sponsor_change = clusterlib.calculate_utxos_balance(sponsor_inputs) - deficit - fee
+        assert sponsor_change >= 2_000_000, "Not enough surplus ADA for the negative control"
+        inputs_before = cluster.g_query.get_utxo(utxo=[*user_inputs, *sponsor_inputs])
+
+        def _build_batch(
+            name: str, txouts: list[clusterlib.TxOut], change: int
+        ) -> tuple[clusterlib.SubTxRawOutput, pl.Path, clusterlib.TxRawOutput, pl.Path]:
+            """Sign fixed child outputs and wrap them without automatic balancing."""
+            name_template = f"{temp_template}_{name}"
+            child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+                out_file=f"{name_template}_child.body", txins=user_inputs, txouts=txouts
+            )
+            child_signed = cluster.g_sub_transaction.sign_tx(
+                sub_tx_file=child_output.out_file,
+                tx_name=name_template,
+                signing_key_files=[user.skey_file],
+            )
+            parent_output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=name_template,
+                txins=sponsor_inputs,
+                txouts=[clusterlib.TxOut(address=sponsor.address, amount=change)],
+                tx_files=clusterlib.TxFiles(signing_key_files=[sponsor.skey_file]),
+                fee=fee,
+                sub_transaction_files=[child_signed],
+            )
+            parent_signed = cluster.g_transaction.sign_tx(
+                tx_body_file=parent_output.out_file,
+                signing_key_files=[sponsor.skey_file],
+                tx_name=name_template,
+            )
+            child_cbor = json.loads(child_signed.read_text(encoding="utf-8"))["cborHex"]
+            parent_cbor = json.loads(parent_signed.read_text(encoding="utf-8"))["cborHex"]
+            assert child_cbor in parent_cbor, "The sponsor changed the signed child"
+            assert clusterlib.calculate_utxos_balance([*user_inputs, *sponsor_inputs]) == (
+                sum(t.amount for t in child_output.txouts if t.coin == clusterlib.DEFAULT_COIN)
+                + change
+                + fee
+            ), "The batch is not balanced in ADA"
+            return child_output, child_signed, parent_output, parent_signed
+
+        # A balanced parent cannot repair an individual child's undersized output.
+        child_output, child_signed, parent_output, parent_signed = _build_batch(
+            "minimum", child_txouts, sponsor_change
+        )
+        child_bytes = child_signed.read_bytes()
+        invalid_txouts = list(child_txouts)
+        invalid_txouts[0] = dataclasses.replace(
+            invalid_txouts[0], amount=invalid_txouts[0].amount - 1
+        )
+        invalid_child, invalid_signed_child, invalid_parent, invalid_signed = _build_batch(
+            "below_minimum", invalid_txouts, sponsor_change + 1
+        )
+        with pytest.raises(clusterlib.CLIError, match="OutputTooSmallUTxO"):
+            cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+
+        invalid_child_id = cluster.g_sub_transaction.get_txid(
+            signed_sub_tx_file=invalid_signed_child
+        )
+        assert cluster.g_query.get_utxo(utxo=[*user_inputs, *sponsor_inputs]) == inputs_before
+        assert not cluster.g_query.get_utxo(tx_raw_output=invalid_parent)
+        assert not cluster.g_query.get_utxo(
+            txin=[f"{invalid_child_id}#{ix}" for ix in range(invalid_child.txouts_count)]
+        )
+
+        # The unchanged valid baseline must settle with both outputs exactly at minimum ADA.
+        cluster.g_transaction.submit_tx(tx_file=parent_signed, txins=sponsor_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*user_inputs, *sponsor_inputs])
+        child_id = cluster.g_sub_transaction.get_txid(signed_sub_tx_file=child_signed)
+        child_utxos = cluster.g_query.get_utxo(
+            txin=[f"{child_id}#{ix}" for ix in range(child_output.txouts_count)]
+        )
+        assert child_output.txouts_count == 2
+        assert sorted((u.address, u.amount, u.coin) for u in child_utxos) == sorted(
+            (t.address, t.amount, t.coin) for t in child_output.txouts
+        ), "Confirmed child outputs differ from the signed minimum-ADA outputs"
+        for utxo in child_utxos:
+            if utxo.coin != clusterlib.DEFAULT_COIN:
+                continue
+            if output_kind == "inline_datum":
+                assert utxo.inline_datum == datum, "The child's inline datum changed"
+            elif output_kind == "reference_script":
+                assert utxo.reference_script, "The child's reference script is missing"
+                # Node queries return a CBOR envelope, not the original native-script JSON.
+                clusterlib_utils.check_reference_script_policyid(
+                    name_template=f"{temp_template}_check_{utxo.utxo_ix}",
+                    cluster_obj=cluster,
+                    script_file=output_template.reference_script_file,
+                    script_data=utxo.reference_script["script"],
+                )
+
+        parent_utxos = cluster.g_query.get_utxo(tx_raw_output=parent_output)
+        assert [(u.address, u.amount, u.coin) for u in parent_utxos] == [
+            (sponsor.address, sponsor_change, clusterlib.DEFAULT_COIN)
+        ], "The sponsor did not pay exactly the child's deficit and parent fee"
+        assert child_signed.read_bytes() == child_bytes
+
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=parent_output)
+        # Child outputs are checked through the node; only the parent has a db-sync helper.
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=parent_output)
