@@ -101,6 +101,136 @@ class TestRequiredTopLevelGuards:
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
+    @pytest.mark.parametrize("guard_kind", ("key", "native"))
+    def test_parent_required_guard_field(
+        self,
+        cluster: clusterlib.ClusterLib,
+        guard_addrs: list[clusterlib.AddressRecord],
+        native_guard: pl.Path,
+        guard_kind: str,
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Require and authorize a guard declared in the parent's own requirement field.
+
+        Put a key/native requirement with no argument on the parent, not its
+        child. Reject a signed parent lacking the guard entry and a parent
+        whose guard lacks its signature. Confirm the fully authorized parent
+        with unchanged child bytes. This establishes current non-legacy field
+        compatibility, not V4 datum support or normative CIP conformance.
+        """
+        temp_template = common.get_test_id(cluster)
+        owner, _, sponsor, key_owner, native_owner = guard_addrs
+        guard_owner = key_owner if guard_kind == "key" else native_owner
+        owner_inputs = cluster.g_query.get_utxo(address=owner.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_child",
+            txins=owner_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=owner.address, amount=clusterlib.calculate_utxos_balance(owner_inputs)
+                )
+            ],
+            signing_keys=[owner.skey_file],
+        )
+
+        # Let the child CLI encode the parent-compatible guard fields and witness script.
+        requirement = (
+            clusterlib.RequiredTopLevelGuard(verification_key_file=key_owner.vkey_file)
+            if guard_kind == "key"
+            else clusterlib.RequiredTopLevelGuard(script_file=native_guard)
+        )
+        guard = (
+            clusterlib.TxGuard(verification_key_file=key_owner.vkey_file)
+            if guard_kind == "key"
+            else clusterlib.TxGuard(script_file=native_guard)
+        )
+        seed = cluster.g_sub_transaction.build_raw_tx_bare(
+            out_file=f"{temp_template}_fields.body",
+            txins=sponsor_inputs,
+            txouts=[clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace)],
+            guards=[guard],
+            top_level_guards=[requirement],
+        )
+        seed_data = cbor2.loads(bytes.fromhex(json.loads(seed.out_file.read_text())["cborHex"]))
+        assert len(seed_data[0][24]) == 1 and set(seed_data[0][24].values()) == {None}
+        before = cluster.g_query.get_utxo(address=[a.address for a in guard_addrs])
+
+        for scenario in ("missing_entry", "missing_signature", "authorized"):
+            name = f"{temp_template}_{scenario}"
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_seed",
+                txins=sponsor_inputs,
+                txouts=[
+                    clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)
+                ],
+                sub_transaction_files=[child.signed_file],
+                fee=500_000,
+            )
+            parent_file = sub_tx_utils.append_body_field(
+                tx_file=output.out_file,
+                out_file=pl.Path(f"{name}_required.body"),
+                key=24,
+                value=seed_data[0][24],
+            )
+            if scenario != "missing_entry":
+                guarded = sub_tx_utils.append_body_field(
+                    tx_file=parent_file,
+                    out_file=pl.Path(f"{name}_guards.body"),
+                    key=14,
+                    value=seed_data[0][14],
+                )
+                parent_file = sub_tx_utils.replace_witnesses(
+                    tx_file=guarded,
+                    out_file=pl.Path(f"{name}_witnessed.body"),
+                    witnesses=seed_data[1],
+                )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=parent_file,
+                tx_name=f"{name}_parent",
+                signing_key_files=[sponsor.skey_file]
+                + ([] if scenario == "missing_signature" else [guard_owner.skey_file]),
+            )
+            output = dataclasses.replace(output, out_file=parent_file)
+            assert (
+                json.loads(child.signed_file.read_text())["cborHex"]
+                in json.loads(signed.read_text())["cborHex"]
+            )
+            if scenario != "authorized":
+                expected = (
+                    "MissingRequiredGuards"
+                    if scenario == "missing_entry"
+                    else "MissingVKeyWitnessesUTXOW"
+                    if guard_kind == "key"
+                    else "ScriptWitnessNotValidatingUTXOW"
+                )
+                with (
+                    subtests.test(scenario=scenario),
+                    pytest.raises(clusterlib.CLIError, match=expected),
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                assert cluster.g_query.get_utxo(address=[a.address for a in guard_addrs]) == before
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")
+                continue
+
+            # A real node accepts the parent field and enforces its declared requirement.
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+            assert not cluster.g_query.get_utxo(utxo=[*owner_inputs, *sponsor_inputs])
+            sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+            assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+                sponsor_lovelace - output.fee
+            ]
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
     def test_shared_key_and_native_guards(
         self,
         cluster: clusterlib.ClusterLib,
