@@ -9,7 +9,6 @@ import allure
 import cbor2
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
@@ -317,9 +316,7 @@ class TestNegativeBlsKeys:
                 owner_stake_vkey_files=[owner_stake.vkey_file],
                 bls_skey_file=bls_key_pair.vkey_file,
             )
-        exc_value = str(excinfo.value)
-        if VERSIONS.cli <= version.parse("11.3.0.0"):
-            exc_value = exc_value.replace("Mininimal", "Minimal")
+        exc_value = str(excinfo.value).replace("Mininimal", "Minimal")
         with common.allow_unstable_error_messages():
             assert "TextEnvelope type error" in exc_value, exc_value
             assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value
@@ -353,9 +350,7 @@ class TestNegativeBlsKeys:
                     f"{temp_template}_derived.vkey",
                 ]
             )
-        exc_value = str(excinfo.value)
-        if VERSIONS.cli <= version.parse("11.3.0.0"):
-            exc_value = exc_value.replace("Mininimal", "Minimal")
+        exc_value = str(excinfo.value).replace("Mininimal", "Minimal")
         with common.allow_unstable_error_messages():
             assert "TextEnvelope type error" in exc_value, exc_value
             assert bls.SKEY_SPEC.envelope_type in exc_value, exc_value
