@@ -348,6 +348,77 @@ class TestSubTransactionOfferLifecycle:
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
+    def test_unmatched_offer(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+    ):
+        """Keep an unmatched child off-chain until a sponsor supplies its deficit.
+
+        Store an independently signed, ADA-deficient offer without reserving
+        its input. Ordinary transaction submission must refuse its child
+        envelope. This is tooling evidence, not proof of node-side decoding
+        rejection. Confirm the unchanged offer later through a fully funded
+        parent, checking originating output references and the sponsor's exact
+        contribution. No production matching service is required.
+        """
+        temp_template = common.get_test_id(cluster)
+        user, _, sponsor, recipient = payment_addrs
+        user_inputs = cluster.g_query.get_utxo(address=user.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        user_lovelace = clusterlib.calculate_utxos_balance(user_inputs)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        deficit_lovelace = 1_000_000
+        child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_offer",
+            txins=user_inputs,
+            txouts=[
+                clusterlib.TxOut(address=recipient.address, amount=user_lovelace + deficit_lovelace)
+            ],
+            signing_keys=[user.skey_file],
+        )
+
+        # The unmatched service copy neither submits a parent nor reserves an input.
+        published_bytes = child.signed_file.read_bytes()
+        stored = pl.Path(f"{temp_template}_unmatched.signed")
+        stored.write_bytes(published_bytes)
+        child = sub_tx_utils.SignedChild(output=child.output, signed_file=stored, txid=child.txid)
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+        with pytest.raises(clusterlib.CLIError) as excinfo:
+            cluster.g_transaction.submit_tx_bare(tx_file=stored)
+        assert "TextEnvelope" in str(excinfo.value), str(excinfo.value)
+        assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+        assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")
+
+        # A willing sponsor can settle the exact stored bytes without another user signature.
+        output, signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_matched",
+            sponsor=sponsor,
+            txins=sponsor_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=sponsor.address,
+                    amount=sponsor_lovelace - deficit_lovelace - 500_000,
+                )
+            ],
+            children=[child],
+        )
+        cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*user_inputs, *sponsor_inputs])
+        sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        assert [(u.address, u.amount) for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+            (sponsor.address, sponsor_lovelace - deficit_lovelace - output.fee)
+        ]
+        assert stored.read_bytes() == published_bytes
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
     @pytest.mark.parametrize("invalidation", ("expiry", "cancellation"))
     def test_stale_offer(
         self,
