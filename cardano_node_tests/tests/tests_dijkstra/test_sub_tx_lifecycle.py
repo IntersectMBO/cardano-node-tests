@@ -339,3 +339,114 @@ class TestSubTransactionReplay:
 
         assert child_signed.read_bytes() == child_bytes
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=winning_output)
+
+
+class TestSubTransactionOfferLifecycle:
+    """Invalidate published offers without changing an aggregator's stored copy."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    @pytest.mark.parametrize("invalidation", ("expiry", "cancellation"))
+    def test_stale_offer(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+        invalidation: str,
+    ):
+        """Reject a stored offer after expiry or a confirmed independent input spend.
+
+        Publish one live signed payment and store identical copies for two
+        assemblers. Build a funded wrapper before invalidation. Either wait
+        until the signed upper bound or confirm an ordinary cancellation spend.
+        Submit the stale wrapper and a freshly assembled wrapper from the
+        other stored copy. Both must fail without charging the sponsor or
+        creating child outputs. Expiry leaves the original input spendable;
+        cancellation leaves only the ordinary cancellation outputs.
+        """
+        temp_template = common.get_test_id(cluster)
+        user, other_assembler, sponsor, recipient = payment_addrs
+        user_inputs = cluster.g_query.get_utxo(address=user.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        user_lovelace = clusterlib.calculate_utxos_balance(user_inputs)
+
+        # Leave ample time to publish and build while the offer is still live.
+        upper_bound = cluster.g_query.get_slot_no() + 100
+        child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_offer",
+            txins=user_inputs,
+            txouts=[clusterlib.TxOut(address=recipient.address, amount=user_lovelace)],
+            signing_keys=[user.skey_file],
+            invalid_hereafter=upper_bound,
+        )
+        published_bytes = child.signed_file.read_bytes()
+        copies = [pl.Path(f"{temp_template}_service_{ix}.signed") for ix in range(2)]
+        for stored in copies:
+            stored.write_bytes(published_bytes)
+
+        # Each assembler knows the signed terms but never obtains the user's key.
+        def _wrap(ix: int) -> tuple[clusterlib.TxRawOutput, pl.Path]:
+            """Fund a wrapper using the assembler's independent fee inputs."""
+            assembler = sponsor if ix == 0 else other_assembler
+            txins = (
+                sponsor_inputs
+                if ix == 0
+                else cluster.g_query.get_utxo(address=other_assembler.address)
+            )
+            stored_child = sub_tx_utils.SignedChild(
+                output=child.output, signed_file=copies[ix], txid=child.txid
+            )
+            return sub_tx_utils.build_parent(
+                cluster=cluster,
+                name=f"{temp_template}_wrapper_{ix}",
+                sponsor=assembler,
+                txins=txins,
+                txouts=[
+                    clusterlib.TxOut(
+                        address=assembler.address,
+                        amount=clusterlib.calculate_utxos_balance(txins) - 500_000,
+                    )
+                ],
+                children=[stored_child],
+            )
+
+        first_wrapper = _wrap(0)
+        assert cluster.g_query.get_slot_no() < upper_bound, "Offer expired before publication"
+        cancellation = None
+        if invalidation == "expiry":
+            cluster.wait_for_slot(slot=upper_bound + 1)
+        else:
+            # Cancellation is a confirmed input spend, not removal of service files.
+            cancellation = cluster.g_transaction.send_tx(
+                src_address=user.address,
+                tx_name=f"{temp_template}_cancel",
+                txins=user_inputs,
+                txouts=[clusterlib.TxOut(address=user.address, amount=1_500_000)],
+                tx_files=clusterlib.TxFiles(signing_key_files=[user.skey_file]),
+            )
+            assert not cluster.g_query.get_utxo(utxo=user_inputs)
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=cancellation)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=cancellation)
+
+        # Neither a previously built wrapper nor a new assembler can revive the offer.
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+        for output, signed in (first_wrapper, _wrap(1)):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.g_transaction.submit_tx_bare(tx_file=signed)
+            error = str(excinfo.value)
+            if invalidation == "expiry":
+                assert "OutsideValidityIntervalUTxO" in error, error
+            else:
+                assert helpers.is_inputs_spent_err(error), error
+            assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+            assert not cluster.g_query.get_utxo(tx_raw_output=output)
+            assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")
+
+        assert cluster.g_query.get_utxo(utxo=sponsor_inputs) == sponsor_inputs
+        assert all(stored.read_bytes() == published_bytes for stored in copies)
+        if invalidation == "expiry":
+            assert cluster.g_query.get_utxo(utxo=user_inputs) == user_inputs
+        else:
+            assert cancellation and cluster.g_query.get_utxo(tx_raw_output=cancellation)
