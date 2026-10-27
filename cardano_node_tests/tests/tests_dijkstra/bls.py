@@ -21,13 +21,11 @@ import math
 import pathlib as pl
 
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import node_consistency
-from cardano_node_tests.utils.versions import VERSIONS
 
 # Size of the proof of possession that accompanies the BLS key in a pool registration
 # certificate. It is mandatory: BLS aggregate signatures are otherwise open to rogue-key
@@ -67,18 +65,18 @@ SKEY_SPEC = KeySpec(
 
 
 def _get_envelope_spec(*, envelope: dict[str, str], spec: KeySpec) -> KeySpec:
-    """Return the expected spec, allowing the CLI <= 11.3.0.0 type spelling typo."""
-    if VERSIONS.cli <= version.parse("11.3.0.0"):
-        legacy_type = spec.envelope_type.replace("Minimal", "Mininimal")
-        if envelope["type"] == legacy_type:
-            spec = dataclasses.replace(spec, envelope_type=legacy_type)
+    """Return the expected spec, allowing the legacy CLI type spelling typo."""
+    legacy_type = spec.envelope_type.replace("Minimal", "Mininimal")
+    if envelope["type"] == legacy_type:
+        spec = dataclasses.replace(spec, envelope_type=legacy_type)
     return spec
 
 
 def check_envelope_key(*, key_file: pl.Path, spec: KeySpec) -> bytes:
     """Check that the file is a BLS key text envelope of the expected kind.
 
-    Accepts the legacy ``Mininimal`` type spelling only for CLI <= 11.3.0.0.
+    Accepts both ``Minimal`` and legacy ``Mininimal`` type spellings, as
+    experimental CLI builds cannot be distinguished by version alone.
 
     Args:
         key_file: A path to the key file.
