@@ -831,6 +831,8 @@ class TestSubTransactionConfirmedOutputs:
         funding = cluster.g_transaction.send_tx(
             src_address=owner.address,
             tx_name=f"{temp_template}_lock",
+            # Earlier legacy cases can leave only datum-bearing key outputs in this cache.
+            txins=cluster.g_query.get_utxo(address=owner.address),
             txouts=[
                 clusterlib.TxOut(address=script_address, amount=1_500_000, inline_datum_value="42")
             ],
