@@ -189,3 +189,37 @@ def append_body_field(*, tx_file: pl.Path, out_file: pl.Path, key: int, value: t
     assert cbor2.loads(changed)[0] == {**decoded[0], key: cbor2.loads(cbor2.dumps(value))}
     out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
     return out_file
+
+
+def replace_body_field(
+    *, tx_file: pl.Path, out_file: pl.Path, key: int, value_cbor: bytes
+) -> pl.Path:
+    """Replace one unsigned body field with explicit bytes, preserving all other fields.
+
+    The caller supplies complete CBOR for the replacement field, including any
+    already signed children. Reject parent key witnesses so intentional parent
+    mutations cannot accidentally leave stale authorization in the artifact.
+    """
+    envelope = json.loads(tx_file.read_text(encoding="utf-8"))
+    encoded = bytes.fromhex(envelope["cborHex"])
+    original = cbor2.loads(encoded)
+    assert not original[1].get(0)
+    stream = io.BytesIO(encoded)
+    assert stream.read(1) == b"\x83"
+    header = stream.read(1)[0]
+    assert 0xA0 <= header < 0xB8
+    decoder = cbor2.CBORDecoder(stream)
+    start = end = 0
+    for _ in range(header - 0xA0):
+        field = decoder.decode()
+        value_start = stream.tell()
+        decoder.decode()
+        if field == key:
+            start, end = value_start, stream.tell()
+    assert start and end, f"Missing body field {key}"
+    changed = encoded[:start] + value_cbor + encoded[end:]
+    decoded = cbor2.loads(changed)
+    assert decoded[1:] == original[1:]
+    assert {k for k in original[0] if original[0][k] != decoded[0][k]} == {key}
+    out_file.write_text(json.dumps({**envelope, "cborHex": changed.hex()}), encoding="utf-8")
+    return out_file

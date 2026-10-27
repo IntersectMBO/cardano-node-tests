@@ -288,3 +288,101 @@ class TestSubTransactionCanonicalWorkflows:
         assert child_signed.read_bytes() == child_bytes
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
+@pytest.mark.usefixtures("require_sub_cli")
+class TestSubTransactionWireStructure:
+    """Retain structural boundary cases through real encoders and node submission."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_duplicate_child_decode_refusal(
+        self,
+        cluster: clusterlib.ClusterLib,
+        payment_addrs: list[clusterlib.AddressRecord],
+    ):
+        """Reject duplicate child decoding locally without silently deduplicating.
+
+        Bypass the builder's duplicate-ID check with exact signed child bytes.
+        Verify the duplicate collection is present, then check the CLI decoder
+        refuses signing without writing an output or changing owned state.
+        Confirm a single copy of the same signed child through the node. This
+        tooling regression does not prove node-side rejection, because the
+        supported CLI path cannot submit the malformed collection.
+        """
+        temp_template = common.get_test_id(cluster)
+        owner, _, sponsor, recipient = payment_addrs
+        owner_inputs = cluster.g_query.get_utxo(address=owner.address)
+        sponsor_inputs = cluster.g_query.get_utxo(address=sponsor.address)
+        sponsor_lovelace = clusterlib.calculate_utxos_balance(sponsor_inputs)
+        child = sub_tx_utils.build_child(
+            cluster=cluster,
+            name=f"{temp_template}_child",
+            txins=owner_inputs,
+            txouts=[
+                clusterlib.TxOut(
+                    address=recipient.address,
+                    amount=clusterlib.calculate_utxos_balance(owner_inputs),
+                )
+            ],
+            signing_keys=[owner.skey_file],
+        )
+        original = child.signed_file.read_bytes()
+        decoded_child = cbor2.loads(bytes.fromhex(json.loads(original)["cborHex"]))
+        before = cluster.g_query.get_utxo(address=[a.address for a in payment_addrs])
+
+        # Bypass the builder's duplicate-ID refusal without re-encoding the signed child.
+        rejected = cluster.g_transaction.build_raw_tx(
+            src_address=sponsor.address,
+            tx_name=f"{temp_template}_seed",
+            txins=sponsor_inputs,
+            txouts=[clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)],
+            sub_transaction_files=[child.signed_file],
+            fee=500_000,
+        )
+        duplicated = sub_tx_utils.replace_body_field(
+            tx_file=rejected.out_file,
+            out_file=pl.Path(f"{temp_template}_duplicate.body"),
+            key=23,
+            value_cbor=b"\x82" + bytes.fromhex(json.loads(original)["cborHex"]) * 2,
+        )
+        encoded = bytes.fromhex(json.loads(duplicated.read_text())["cborHex"])
+        assert cbor2.loads(encoded)[0][23] == [decoded_child, decoded_child]
+        refused_output = pl.Path(f"{temp_template}_duplicate.signed")
+        with pytest.raises(clusterlib.CLIError, match="Duplicates found, expected no duplicates"):
+            cluster.cli(
+                [
+                    "transaction",
+                    "sign",
+                    "--tx-body-file",
+                    str(duplicated),
+                    "--signing-key-file",
+                    str(sponsor.skey_file),
+                    "--out-file",
+                    str(refused_output),
+                ]
+            )
+        assert not refused_output.exists()
+        assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
+        assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")
+
+        # Removing only the duplicate permits the same authorized payment to settle once.
+        output, signed = sub_tx_utils.build_parent(
+            cluster=cluster,
+            name=f"{temp_template}_single",
+            sponsor=sponsor,
+            txins=sponsor_inputs,
+            txouts=[clusterlib.TxOut(address=sponsor.address, amount=sponsor_lovelace - 500_000)],
+            children=[child],
+        )
+        cluster.g_transaction.submit_tx(tx_file=signed, txins=sponsor_inputs)
+        assert not cluster.g_query.get_utxo(utxo=[*owner_inputs, *sponsor_inputs])
+        sub_tx_utils.check_child_outputs(cluster=cluster, child=child)
+        assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+            sponsor_lovelace - output.fee
+        ]
+        assert child.signed_file.read_bytes() == original
+        node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
