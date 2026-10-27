@@ -680,6 +680,140 @@ class TestSubTransactionAccounts:
 
 
 @pytest.mark.usefixtures("require_sub_cli")
+class TestSubTransactionTreasury:
+    """Check treasury declarations against original state despite batch donations."""
+
+    @allure.link(helpers.get_vcs_link())
+    @pytest.mark.testnets
+    @pytest.mark.smoke
+    @pytest.mark.dbsync
+    def test_treasury_declarations(
+        self,
+        cluster_treasury: clusterlib.ClusterLib,
+        atomicity_addrs: list[clusterlib.AddressRecord],
+        subtests: pytest_subtests.SubTests,
+    ):
+        """Validate original treasury declarations in children and parent.
+
+        Give the early child and parent small donations. Reject incorrect
+        declarations in either child or parent, including later declarations
+        increased by an earlier child's donation. Preserve test-owned inputs
+        and outputs on rejection. Confirm correct original-value declarations
+        with exact UTxO donation/fee deductions. No donation accumulator or
+        phase-2-invalid effects are inferred from these checks.
+        """
+        cluster = cluster_treasury
+        temp_template = common.get_test_id(cluster)
+        first, second, sponsor, _, _ = atomicity_addrs
+        inputs = [cluster.g_query.get_utxo(address=a.address) for a in (first, second, sponsor)]
+        balances_lovelace = [clusterlib.calculate_utxos_balance(ins) for ins in inputs]
+        donation_lovelace = 1_000
+
+        # Avoid an epoch boundary changing the treasury between declaration and submission.
+        clusterlib_utils.wait_for_epoch_interval(
+            cluster_obj=cluster,
+            start=5,
+            stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster),
+        )
+        treasury_lovelace = cluster.g_query.get_treasury()
+        before = cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs])
+        for scenario in (
+            "wrong_first",
+            "wrong_second",
+            "wrong_parent",
+            "second_counts_donation",
+            "parent_counts_donation",
+            "original_value",
+        ):
+            name = f"{temp_template}_{scenario}"
+            child_ids = []
+            child_files = []
+            child_outputs = []
+            for ix, owner in enumerate((first, second)):
+                declared_lovelace = treasury_lovelace
+                if scenario == ("wrong_first" if ix == 0 else "wrong_second"):
+                    declared_lovelace += 1
+                if ix == 1 and scenario == "second_counts_donation":
+                    declared_lovelace += donation_lovelace
+                child_output = cluster.g_sub_transaction.build_raw_tx_bare(
+                    out_file=f"{name}_child_{ix}.body",
+                    txins=inputs[ix],
+                    txouts=[
+                        clusterlib.TxOut(
+                            address=owner.address,
+                            amount=balances_lovelace[ix] - (donation_lovelace if ix == 0 else 0),
+                        )
+                    ],
+                    current_treasury_value=declared_lovelace,
+                    treasury_donation=donation_lovelace if ix == 0 else None,
+                )
+                signed_child = cluster.g_sub_transaction.sign_tx(
+                    sub_tx_file=child_output.out_file,
+                    tx_name=f"{name}_child_{ix}",
+                    signing_key_files=[owner.skey_file],
+                )
+                child_ids.append(
+                    cluster.g_sub_transaction.get_txid(signed_sub_tx_file=signed_child)
+                )
+                child_files.append(signed_child)
+                child_outputs.append(child_output)
+
+            declared_lovelace = treasury_lovelace
+            if scenario == "wrong_parent":
+                declared_lovelace += 1
+            if scenario == "parent_counts_donation":
+                declared_lovelace += donation_lovelace
+            output = cluster.g_transaction.build_raw_tx(
+                src_address=sponsor.address,
+                tx_name=f"{name}_parent",
+                txins=inputs[2],
+                txouts=[
+                    clusterlib.TxOut(
+                        address=sponsor.address,
+                        amount=balances_lovelace[2] - 500_000 - donation_lovelace,
+                    )
+                ],
+                current_treasury_value=declared_lovelace,
+                treasury_donation=donation_lovelace,
+                sub_transaction_files=child_files,
+                fee=500_000,
+            )
+            signed = cluster.g_transaction.sign_tx(
+                tx_body_file=output.out_file,
+                tx_name=f"{name}_parent",
+                signing_key_files=[sponsor.skey_file],
+            )
+            parent_cbor = json.loads(signed.read_text())["cborHex"]
+            assert all(
+                json.loads(child.read_text())["cborHex"] in parent_cbor for child in child_files
+            )
+            if scenario != "original_value":
+                with (
+                    subtests.test(scenario=scenario),
+                    pytest.raises(clusterlib.CLIError, match="TreasuryValueMismatch"),
+                ):
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                assert (
+                    cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
+                )
+                assert not cluster.g_query.get_utxo(tx_raw_output=output)
+                assert not cluster.g_query.get_utxo(txin=[f"{txid}#0" for txid in child_ids])
+                continue
+
+            # Donations are deducted once from the encoded payment balance at each level.
+            cluster.g_transaction.submit_tx(tx_file=signed, txins=inputs[2])
+            assert not cluster.g_query.get_utxo(utxo=[u for group in inputs for u in group])
+            for txid, child_output in zip(child_ids, child_outputs, strict=True):
+                assert [
+                    (u.address, u.amount) for u in cluster.g_query.get_utxo(txin=f"{txid}#0")
+                ] == [(t.address, t.amount) for t in child_output.txouts]
+            assert [u.amount for u in cluster.g_query.get_utxo(tx_raw_output=output)] == [
+                balances_lovelace[2] - output.fee - donation_lovelace
+            ]
+            node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=output)
+            dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=output)
+
+
 class TestSubTransactionMinUtxo:
     """Sponsor minimum-ADA outputs without relaxing per-output requirements."""
 
