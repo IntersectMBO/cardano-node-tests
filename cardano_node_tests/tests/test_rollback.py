@@ -4,6 +4,7 @@ In rollback tests, we split the cluster into two parts. We achieve this by chang
 configuration.
 """
 
+import json
 import logging
 import os
 import pathlib as pl
@@ -100,13 +101,30 @@ class TestRollback:
 
         cluster_nodes.restart_all_nodes()
 
-    def restore_cluster(self, backup_topology: pl.Path) -> None:
-        """Restore the original topology files == restore the cluster."""
+    def restore_cluster(self, backup_topology: pl.Path, *, keep_split_peers: bool = False) -> None:
+        """Restore the original topology, optionally retaining peers from the split network."""
         state_dir = cluster_nodes.get_cluster_env().state_dir
         topology_files = list(state_dir.glob("topology*.json"))
 
         for f in topology_files:
-            shutil.copy(backup_topology / f.name, f)
+            if not keep_split_peers:
+                shutil.copy(backup_topology / f.name, f)
+                continue
+
+            topology = json.loads((backup_topology / f.name).read_text(encoding="utf-8"))
+            split_topology = json.loads(f.read_text(encoding="utf-8"))
+            peer_ports = {
+                peer["port"] for root in topology["localRoots"] for peer in root["accessPoints"]
+            }
+            for root in split_topology["localRoots"]:
+                # Local cluster nodes have unique ports, even when their hostnames differ.
+                peers = [peer for peer in root["accessPoints"] if peer["port"] not in peer_ports]
+                if peers:
+                    topology["localRoots"].append(
+                        {**root, "accessPoints": peers, "valency": len(peers)}
+                    )
+                    peer_ports.update(peer["port"] for peer in peers)
+            helpers.write_json(out_file=f, content=topology)
 
         cluster_nodes.restart_all_nodes()
 
@@ -374,6 +392,9 @@ class TestRollback:
         * Wait until `securityParam` number of blocks is produced on both clusters
         * Restore the cluster topology
         * Check that global consensus was NOT restored
+
+        Retain split-network peers when restoring cross-fork connections so every node
+        can keep following its own branch, even when its original peers are on another fork.
         """
         cluster = cluster_singleton
         temp_template = common.get_test_id(cluster)
@@ -434,8 +455,8 @@ class TestRollback:
         self.node_wait_for_block(cluster_obj=cluster, node="pool1", block_no=final_block)
         self.node_wait_for_block(cluster_obj=cluster, node=LAST_POOL_NAME, block_no=final_block)
 
-        # Restore the cluster topology
-        self.restore_cluster(backup_topology=backup_topology)
+        # Restore cross-fork connections without isolating nodes from their own branch.
+        self.restore_cluster(backup_topology=backup_topology, keep_split_peers=True)
         time.sleep(10)
 
         # Wait for new blocks to let chains progress
