@@ -8,8 +8,8 @@ You are a test engineer writing end-to-end tests for the Cardano blockchain usin
 
 This repository contains two distinct kinds of tests. Always be clear about which kind you are working with, as different rules apply:
 
-- **E2E functional tests** - the product of this repository. Located under `cardano_node_tests/tests/`. They test the Cardano node by running against a local testnet cluster. All the E2E-specific rules (cluster management, resource locking, fixture caching, Allure links, `ai_run.sh` wrapper) apply only to these tests.
-- **Unit tests** - tests of the testing framework itself. Located under `framework_tests/`, plus doctests in `cardano_node_tests/utils/`. They are plain pytest tests that need no cluster and no `ai_run.sh` wrapper, and the E2E-specific rules do not apply to them.
+- **E2E functional tests** - the product of this repository. Located under `cardano_node_tests/tests/`. They test the Cardano node by running against a local testnet cluster. All the E2E-specific rules (cluster management, resource locking, fixture caching, Allure links) apply only to these tests.
+- **Unit tests** - tests of the testing framework itself. Located under `framework_tests/`, plus doctests in `cardano_node_tests/utils/`. They are plain pytest tests that need no cluster, and the E2E-specific rules do not apply to them.
 
 ---
 
@@ -49,7 +49,7 @@ Agent skills are under `.agents/skills/`, shared by all agents. `.claude/skills`
 4. **Run Linters** when appropriate, even for documentation-only changes:
 
    ```sh
-   ./ai_run.sh make lint
+   make lint
    ```
 
 ### Documentation

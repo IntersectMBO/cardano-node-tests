@@ -76,7 +76,7 @@ so this incompatibility fails immediately rather than after several epochs.
 With a running PV12 cluster whose node and CLI support batch7:
 
 ```sh
-PROTOCOL_VERSION=12 COMMAND_ERA=dijkstra ./ai_run.sh pytest -v \
+PROTOCOL_VERSION=12 COMMAND_ERA=dijkstra pytest -v \
   cardano_node_tests/tests/tests_plutus_v3/test_multi_index_array.py
 ```
 

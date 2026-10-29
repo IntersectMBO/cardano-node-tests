@@ -67,7 +67,7 @@ archived by hand) - answer from the `Inputs available under {RUN_DIR}/` list of 
 prompt file, which maps every log, results dir and status database. Unpack archives first as in
 step 2.
 
-**A local `./ai_run.sh pytest` run against a dev cluster** - there is no run directory:
+**A local `pytest` run against a dev cluster** - there is no run directory:
 
 - test artifacts are under the pytest temp dir;
   `${TMPDIR:-${TEMP:-${TMP:-/tmp}}}/pytest-of-${LOGNAME:-$USER}/pytest-current` is a symlink to
