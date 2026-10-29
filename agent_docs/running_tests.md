@@ -10,6 +10,8 @@ Unit tests cover the testing framework itself (`framework_tests/` plus doctests 
 
 Never add unit tests for code under `cardano_node_tests/tests/`, including test-specific helpers and fixtures, even if the unit tests would live in `framework_tests/`. Validate that code through E2E functional tests instead.
 
+Never create unit tests for shell scripts.
+
 ## E2E Functional Tests
 
 E2E functional tests (everything under `cardano_node_tests/tests/`) run against a local testnet cluster. The tests are using pytest. Always use the `ai_run.sh` wrapper script to run the `pytest` command.
