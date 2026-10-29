@@ -472,4 +472,12 @@ fi
 # Save testing artifacts
 ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
 
+kill_monitor
+
+if [ "$retval" -eq 0 ]; then
+  echo "### Testrun PASSED (exit code: $retval) ###"
+else
+  echo "### Testrun FAILED (exit code: $retval) ###"
+fi
+
 exit "$retval"
