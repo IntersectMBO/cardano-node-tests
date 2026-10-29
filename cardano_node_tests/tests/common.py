@@ -86,12 +86,16 @@ if cluster_nodes.get_cluster_type().is_local:
     EPOCH_STOP_SEC_LEDGER_STATE = -15
     # Maximal time a test is allowed to spend waiting for epochs
     MAX_EPOCHS_WAIT_SEC = 90 * 60
+    # Slots between the tip and the end of the validity interval of a transaction
+    TX_VALIDITY_SLOTS_OFFSET = 1_000
 else:
     # We can be more generous on testnets
     EPOCH_STOP_SEC_BUFFER_MIN = 200
     EPOCH_LEDGER_STATE_WINDOW_SEC_MIN = 100
     EPOCH_STOP_SEC_LEDGER_STATE = -200
     MAX_EPOCHS_WAIT_SEC = 2 * 60 * 60
+    # A public testnet can hold a transaction in the mempool for many minutes under load
+    TX_VALIDITY_SLOTS_OFFSET = 3_000
 
 # Number of mean block intervals in the time buffer at the end of an epoch. A tx can miss
 # the next block (e.g. under Tx load), and there can be long gaps with no blocks.

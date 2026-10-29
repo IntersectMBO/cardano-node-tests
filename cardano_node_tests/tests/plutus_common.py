@@ -318,6 +318,8 @@ _ROTATE_SHIFT_SCRIPTS_V3 = (
 # a "time range" script. Long enough for the transaction to get submitted and land in a
 # block, and capped by `get_timerange_slots_offset`.
 TIMERANGE_SLOTS_OFFSET = 300
+# A public testnet can hold a transaction in the mempool for many minutes under load
+TIMERANGE_SLOTS_OFFSET_TESTNET = 3_000
 
 
 def get_timerange_slots_offset(*, cluster_obj: clusterlib.ClusterLib) -> int:
@@ -330,15 +332,21 @@ def get_timerange_slots_offset(*, cluster_obj: clusterlib.ClusterLib) -> int:
     `TIMERANGE_SLOTS_OFFSET` is capped with the stability window, which is by definition
     always inside the horizon.
 
+    A public testnet gets the wider `TIMERANGE_SLOTS_OFFSET_TESTNET` instead, under the same
+    cap.
+
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
 
     Returns:
         int: The number of slots to set the validity interval to, counted from the tip.
     """
-    return min(
-        TIMERANGE_SLOTS_OFFSET, clusterlib_utils.get_stability_window(cluster_obj=cluster_obj)
+    slots_offset = (
+        TIMERANGE_SLOTS_OFFSET_TESTNET
+        if cluster_nodes.get_cluster_type().is_testnet
+        else TIMERANGE_SLOTS_OFFSET
     )
+    return min(slots_offset, clusterlib_utils.get_stability_window(cluster_obj=cluster_obj))
 
 
 def rotate_shift_bitwise_fails(protocol_version: int) -> bool:
