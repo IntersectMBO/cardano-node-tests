@@ -182,7 +182,7 @@ tn_start_node() {
   echo "Waiting for relay node startup and ledger replay (30-minute inactivity timeout)"
   local idle_checks=0 replay_progress="" last_replay_progress="" node_status
   while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
-    node_status="$(supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" status relay1)" || true
+    node_status="$(supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" status nodes:relay1)" || true
     case "$node_status" in
       *RUNNING*|*STARTING*|*BACKOFF*) ;;
       *) echo "Failed to start the relay node: $node_status" >&2; exit 1 ;;
