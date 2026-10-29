@@ -177,27 +177,36 @@ EoF
 tn_start_node() {
   supervisord --config "${STATE_CLUSTER}/supervisor.conf"
 
-  echo "Waiting until replay is finished"
-  sleep 10
-  # No `-q`: it exits on the first match, leaving `tail` writing into a closed pipe, and
-  # `pipefail` would promote that SIGPIPE status and end the wait early. Plain `grep` scans
-  # all of its input, so `tail` always finishes writing.
-  while tail -n 10 "${STATE_CLUSTER}/relay1.stdout" |
-    grep -E "LedgerReplay|replay progress|IPSubscriptionTarget" > /dev/null; do
-    sleep 10
-  done
+  # The socket is created after ledger replay. Replay can take hours, and opening the
+  # database can delay the first replay message. Bound inactivity, not total startup time.
+  echo "Waiting for relay node startup and ledger replay (30-minute inactivity timeout)"
+  local idle_checks=0 replay_progress="" last_replay_progress="" node_status
+  while [ ! -S "$CARDANO_NODE_SOCKET_PATH" ]; do
+    node_status="$(supervisorctl -s "unix:///${SUPERVISORD_SOCKET_PATH}" status relay1)" || true
+    case "$node_status" in
+      *RUNNING*|*STARTING*|*BACKOFF*) ;;
+      *) echo "Failed to start the relay node: $node_status" >&2; exit 1 ;;
+    esac
 
-  local _
-  for _ in {1..10}; do
-    if [ -S "$CARDANO_NODE_SOCKET_PATH" ]; then
-      break
+    # Extract progress rather than timestamps: repeated messages at the same progress
+    # must not keep a stalled node alive. Read only recent output, which may not exist yet.
+    replay_progress="$(tail -n 200 "${STATE_CLUSTER}/relay1.stdout" 2>/dev/null |
+      grep -E 'LedgerReplay|replay progress' |
+      grep -oE 'Replayed block: slot [0-9]+|[Pp]rogress: [0-9.]+%' | tail -n 1)" || true
+    if [ -n "$replay_progress" ] && [ "$replay_progress" != "$last_replay_progress" ]; then
+      idle_checks=0
+      last_replay_progress="$replay_progress"
     fi
-    echo "Waiting 5 seconds for relay node to start"
-    sleep 5
+    if [ "$idle_checks" -ge 180 ]; then
+      echo "Failed to start the relay node: no socket or ledger replay progress for 30 minutes" >&2
+      exit 1
+    fi
+    sleep 10
+    idle_checks=$((idle_checks + 1))
   done
-  [ -S "$CARDANO_NODE_SOCKET_PATH" ] || { echo "Failed to start the relay node, line $LINENO in ${BASH_SOURCE[0]}" >&2; exit 1; }
 
   echo "Waiting to make sure the chain is synced"
+  local _
   local sync_progress=""
   for _ in {1..600}; do
     sync_progress="$(cardano-cli query tip --testnet-magic "$NETWORK_MAGIC" | jq -r '.syncProgress')"
