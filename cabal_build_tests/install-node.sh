@@ -68,6 +68,11 @@ fi
 export TZ=Europe/London
 ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo "$TZ" > /etc/timezone
 
+# The container images start without a locale. Template Haskell splices that read
+# files then decode them as ASCII and fail on UTF-8 characters, e.g. in
+# cardano-ledger-byron's testlib.
+export LANG=C.UTF-8
+
 
 ### Checking the actual installation steps ###
 
