@@ -537,6 +537,7 @@ class TestSubTransactionAccounts:
     @pytest.mark.testnets
     @pytest.mark.smoke
     @pytest.mark.dbsync
+    @pytest.mark.usefixtures("require_direct_deposit")
     def test_original_balance_withdrawals(
         self,
         cluster_treasury: clusterlib.ClusterLib,
