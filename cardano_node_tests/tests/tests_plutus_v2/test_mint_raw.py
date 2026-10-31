@@ -189,7 +189,8 @@ class TestMinting:
             tx_files=tx_files_step2,
             fee=minting_cost.fee + fee_txsize,
             # Ttl is optional in this test
-            invalid_hereafter=cluster.g_query.get_slot_no() + 200,
+            invalid_hereafter=cluster.g_query.get_slot_no()
+            + plutus_common.get_timerange_slots_offset(cluster_obj=cluster),
         )
         tx_signed_step2 = cluster.g_transaction.sign_tx(
             tx_body_file=tx_raw_output_step2.out_file,

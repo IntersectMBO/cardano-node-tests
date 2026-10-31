@@ -2444,7 +2444,7 @@ class TestReferenceUTxO:
                 json.dump(script_content, fp_out, indent=4)
         else:
             invalid_before = 100
-            invalid_hereafter = cluster.g_query.get_slot_no() + 1_000
+            invalid_hereafter = cluster.g_query.get_slot_no() + common.TX_VALIDITY_SLOTS_OFFSET
 
             reference_type = clusterlib.ScriptTypes.SIMPLE_V2
             script_type_str = "SimpleScriptV2"
