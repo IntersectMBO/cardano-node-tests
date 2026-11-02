@@ -20,3 +20,4 @@ Sync Reports
    :maxdepth: 4
 
    sync_reports/mainnet_11_1_1.rst
+   sync_reports/mainnet_11_2_0.rst
