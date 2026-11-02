@@ -10,6 +10,8 @@ Committee queries vary between feature branches. Keep their temporary compatibil
 handling here, without adding the experimental query to clusterlib.
 """
 
+import ctypes
+import ctypes.util
 import dataclasses
 import functools
 import hashlib
@@ -17,6 +19,7 @@ import json
 import logging
 import pathlib as pl
 import re
+import shutil
 import time
 import typing as tp
 
@@ -212,20 +215,109 @@ def skip_unsupported_committee(reason: str) -> tp.NoReturn:
     pytest.skip(reason)
 
 
+@functools.cache
+def _get_blst() -> ctypes.CDLL:
+    """Load libblst for the temporary decoding of committee debug keys.
+
+    Nix keeps the CLI's shared libraries outside the system library search path, so
+    fall back to the libblst path reported by the CLI's dynamic linker dependencies.
+    """
+    library = ctypes.util.find_library("blst")
+    if not library:
+        cli_path = shutil.which("cardano-cli")
+        assert cli_path, "Cannot locate cardano-cli to find its libblst dependency"
+        dependencies = helpers.run_command(["ldd", cli_path], ignore_fail=True).decode("utf-8")
+        match = re.search(r"(?m)^\s*libblst\.so\S*\s+=>\s+(/\S+)", dependencies)
+        if match:
+            library = match[1]
+    if not library:
+        skip_unsupported_committee(
+            "Cannot find libblst to decode the leios-committee query's debug voting keys."
+        )
+
+    blst = ctypes.CDLL(library)
+    blst.blst_p2_in_g2.argtypes = [ctypes.c_void_p]
+    blst.blst_p2_in_g2.restype = ctypes.c_bool
+    blst.blst_p2_compress.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    blst.blst_p2_compress.restype = None
+    return blst
+
+
+def _get_seat_vkey_hex(seat_vkey: str) -> str | None:
+    """Compress a Haskell debug BLS key to the standard 96-byte public key hex.
+
+    The quoted hex is the native 288-byte blst_p2 structure, not a serialized key.
+    Validate its size and subgroup before handing it to the compression function.
+    A keyless seat cannot be mapped to a pool from its key.
+    """
+    if seat_vkey == "Nothing":
+        return None
+    match = re.fullmatch(r'Just \(VerKeyBLS12381 "([0-9a-f]+)"\)', seat_vkey)
+    assert match, f"Unexpected Leios seat voting key: {seat_vkey}"
+    raw = bytes.fromhex(match[1])
+    assert len(raw) == 288, f"Unexpected Leios seat voting key size: {len(raw)}"
+
+    # Use an aligned buffer for blst's native 64-bit limbs.
+    point = (ctypes.c_uint64 * 36).from_buffer_copy(raw)
+    blst = _get_blst()
+    assert blst.blst_p2_in_g2(point), f"Invalid Leios seat voting key: {seat_vkey}"
+    compressed = ctypes.create_string_buffer(96)
+    blst.blst_p2_compress(compressed, point)
+    return compressed.raw.hex()
+
+
+def _resolve_committee_pools(
+    *, cluster_obj: clusterlib.ClusterLib, committee: list[dict]
+) -> list[dict]:
+    """Recover pool identities and key state for seats reported as opaque BLS keys.
+
+    Use the set snapshot that seated the current committee, not current pool state:
+    after rotation a pool can already have a newer key than its committee seat.
+    Keep keyless or ambiguous seats opaque rather than guessing their pool from rank.
+    """
+    ledger_state = cluster_obj.g_query.get_ledger_state()
+    set_snapshot = ledger_state["stateBefore"]["esSnapshots"]["pstakeSet"]
+    assert set_snapshot["leiosCommittee"] == committee, (
+        "The current Leios committee changed between the committee and ledger-state queries"
+    )
+    pools = set_snapshot["snapShot"]["stakePoolsSnapShot"]
+    pools_by_key: dict[str, list[tuple[str, dict]]] = {}
+    for pool_id, pool in pools.items():
+        key_state = pool.get("blsKey")
+        if key_state:
+            public_key = key_state["bksKey"]["blsPubKey"]
+            pools_by_key.setdefault(public_key, []).append((pool_id, key_state))
+
+    resolved: list[dict] = []
+    for seat in committee:
+        public_key = _get_seat_vkey_hex(seat["seatVKey"])
+        matches = pools_by_key.get(public_key, []) if public_key is not None else []
+        if public_key is not None:
+            assert matches, f"No pool in the set snapshot has the Leios seat key {public_key}"
+        if len(matches) != 1:
+            resolved.append(seat)
+            continue
+        pool_id, key_state = matches[0]
+        resolved.append({**seat, "poolId": pool_id, "key": key_state, "voting": True})
+    return resolved
+
+
 def get_committee(
     *,
     cluster_obj: clusterlib.ClusterLib,
     snapshot: dict | None = None,
     required_fields: tuple[str, ...] = (),
 ) -> list[dict]:
-    """Read the current Leios committee without interpreting opaque voting keys.
+    """Read the current Leios committee, resolving debug voting keys temporarily.
 
     Prefer the old stake-snapshot schema when present. Otherwise inspect query help
-    before using the experimental leios-committee command. Its opaque seats support
-    counts and weights, but cannot identify pools or expose structured key state.
+    before using the experimental leios-committee command. Through node 11.2.1, decode
+    its debug keys and match them to the set snapshot to recover pool identities and
+    key state. Keyless seats and keys shared by pools cannot establish pool identities.
 
     Missing capabilities skip the affected check through node 11.2.1 and fail on newer
-    nodes. An advertised command failing, or malformed JSON, is always a failure.
+    nodes. Still needing debug-key decoding after that version is also a failure.
+    An advertised command failing, or malformed JSON, is always a failure.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.
@@ -236,11 +328,13 @@ def get_committee(
             committee cannot establish support for these fields.
 
     Returns:
-        The current committee seats, with their original field names and values.
+        The current committee seats, retaining the original fields and adding resolved
+        `poolId`, `key` and `voting` fields when the temporary workaround is needed.
     """
     if snapshot is None:
         snapshot = cluster_obj.g_query.get_stake_snapshot(all_stake_pools=True)
     legacy = "leiosCommittee" in snapshot
+    committee: list[dict]
     if legacy:
         committee = snapshot["leiosCommittee"]
     else:
@@ -256,13 +350,10 @@ def get_committee(
     assert isinstance(committee, list) and all(isinstance(s, dict) for s in committee), (
         f"Unexpected Leios committee format: {committee}"
     )
-    if (
-        not legacy
-        and committee
-        and any("poolId" not in s for s in committee)
-        and VERSIONS.node > version.parse("11.2.1")
-    ):
-        skip_unsupported_committee("The leios-committee query does not expose pool identities.")
+    if not legacy and committee and any("poolId" not in s for s in committee):
+        if VERSIONS.node > version.parse("11.2.1"):
+            skip_unsupported_committee("The leios-committee query does not expose pool identities.")
+        committee = _resolve_committee_pools(cluster_obj=cluster_obj, committee=committee)
 
     missing = sorted({field for field in required_fields for s in committee if field not in s})
     if required_fields and not committee and not legacy:
