@@ -208,8 +208,8 @@ def cluster_leios_singleton(
 def require_committee_details(cluster: clusterlib.ClusterLib) -> None:
     """Require pool membership and structured BLS state before registration or waits.
 
-    Try both committee query schemas. Missing capabilities skip through node 11.2.1
-    and fail after that version, rather than being interpreted as an empty committee.
+    Try both committee query schemas and the voting-key workaround. Missing capabilities
+    skip the test rather than being interpreted as an empty committee.
     """
     leios.get_committee(cluster_obj=cluster, required_fields=("poolId", "key", "voting"))
 

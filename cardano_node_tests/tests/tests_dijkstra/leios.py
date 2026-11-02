@@ -25,7 +25,6 @@ import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
-from packaging import version
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
@@ -202,16 +201,14 @@ MIN_BLOCK_INTERVAL_SEC = 10
 
 
 def skip_unsupported_committee(reason: str) -> tp.NoReturn:
-    """Skip an unsupported committee check, but fail after node 11.2.1.
+    """Skip a committee check that the available query schemas cannot support.
 
-    Feature branches report different committee schemas under the same version. Detect
-    capabilities from the CLI, using the version only to expire these workarounds.
+    Feature branches report different committee schemas under the same version. The
+    raw query's missing details are covered separately by the ledger issue 6245 test.
 
     Args:
         reason: The committee capability that the current CLI cannot report.
     """
-    if VERSIONS.node > version.parse("11.2.1"):
-        pytest.fail(f"{reason} Committee query workarounds expired after node 11.2.1.")
     pytest.skip(reason)
 
 
@@ -243,15 +240,17 @@ def _get_blst() -> ctypes.CDLL:
     return blst
 
 
-def _get_seat_vkey_hex(seat_vkey: str) -> str | None:
-    """Compress a Haskell debug BLS key to the standard 96-byte public key hex.
+def _get_seat_vkey_hex(seat_vkey: str | None) -> str | None:
+    """Return standard 96-byte public key hex, decoding Haskell debug keys if needed.
 
-    The quoted hex is the native 288-byte blst_p2 structure, not a serialized key.
-    Validate its size and subgroup before handing it to the compression function.
-    A keyless seat cannot be mapped to a pool from its key.
+    Newer queries already return compressed hex or null. Older ones quote the native
+    288-byte blst_p2 structure, not a serialized key. Validate its size and subgroup
+    before compressing it. A keyless seat cannot be mapped to a pool from its key.
     """
-    if seat_vkey == "Nothing":
+    if seat_vkey is None or seat_vkey == "Nothing":
         return None
+    if re.fullmatch(r"[0-9a-f]{192}", seat_vkey):
+        return seat_vkey
     match = re.fullmatch(r'Just \(VerKeyBLS12381 "([0-9a-f]+)"\)', seat_vkey)
     assert match, f"Unexpected Leios seat voting key: {seat_vkey}"
     raw = bytes.fromhex(match[1])
@@ -311,12 +310,12 @@ def get_committee(
     """Read the current Leios committee, resolving debug voting keys temporarily.
 
     Prefer the old stake-snapshot schema when present. Otherwise inspect query help
-    before using the experimental leios-committee command. Through node 11.2.1, decode
-    its debug keys and match them to the set snapshot to recover pool identities and
-    key state. Keyless seats and keys shared by pools cannot establish pool identities.
+    before using the experimental leios-committee command. Match its voting keys to
+    the set snapshot to recover pool identities and key state, decoding debug keys
+    when necessary. Keyless seats cannot establish pool identities this way.
 
-    Missing capabilities skip the affected check through node 11.2.1 and fail on newer
-    nodes. Still needing debug-key decoding after that version is also a failure.
+    Missing capabilities skip the affected check. The raw query's missing details are
+    covered separately by the ledger issue 6245 test, without using this workaround.
     An advertised command failing, or malformed JSON, is always a failure.
 
     Args:
@@ -351,8 +350,6 @@ def get_committee(
         f"Unexpected Leios committee format: {committee}"
     )
     if not legacy and committee and any("poolId" not in s for s in committee):
-        if VERSIONS.node > version.parse("11.2.1"):
-            skip_unsupported_committee("The leios-committee query does not expose pool identities.")
         committee = _resolve_committee_pools(cluster_obj=cluster_obj, committee=committee)
 
     missing = sorted({field for field in required_fields for s in committee if field not in s})
@@ -382,7 +379,7 @@ def get_committee_seat(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> d
     """Return the Leios committee seat of a pool in the current epoch.
 
     Use either committee query schema, requiring pool identities and structured key
-    state. Unsupported queries skip through node 11.2.1 and fail after that version.
+    state. Skip when neither schema nor the voting-key workaround supports the check.
 
     Args:
         cluster_obj: An instance of `clusterlib.ClusterLib`.

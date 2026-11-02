@@ -229,6 +229,11 @@ ledger_6102 = blockers.GH(
     fixed_in="11.3.0",  # Fixed in some node release after 11.2.0
     message="Genesis staking injection leaves `psVRFKeyHashes` empty.",
 )
+ledger_6245 = blockers.GH(
+    issue=6245,
+    repo="IntersectMBO/cardano-ledger",
+    message="Leios committee query does not identify committee members.",
+)
 
 network_5281 = blockers.GH(
     issue=5281,
