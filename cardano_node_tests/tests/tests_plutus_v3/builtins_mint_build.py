@@ -1,4 +1,4 @@
-"""Shared minting scenarios for PlutusV3 builtin E2E tests."""
+"""Shared minting scenarios for PlutusV3+ builtin E2E tests."""
 
 import enum
 import logging

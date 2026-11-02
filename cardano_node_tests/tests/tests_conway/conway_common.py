@@ -594,7 +594,7 @@ def update_cost_model(
         )
 
     def _check_models(cost_models: dict):
-        for m in ("PlutusV1", "PlutusV2", "PlutusV3"):
+        for m in ("PlutusV1", "PlutusV2", "PlutusV3", "PlutusV4"):
             if m not in cost_models_in:
                 continue
             assert len(cost_models_in[m]) == len(cost_models[m]), f"Unexpected length for {m}"
