@@ -100,7 +100,7 @@ class TestMinting:
     """Tests for minting using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -246,8 +246,9 @@ class TestMinting:
         (
             "v1",
             pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
-        ids=("plutus_v1", "plutus_v3"),
+        ids=("plutus_v1", "plutus_v3", "plutus_v4"),
     )
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -509,6 +510,7 @@ class TestMinting:
             "plutus_v1",
             pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
             pytest.param("mix_v3_v1", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("mix_v4_v1", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -566,6 +568,9 @@ class TestMinting:
         elif plutus_version == "mix_v3_v1":
             script_file1 = script_file1_v3
             execution_cost1 = minting_cost1_v3
+        elif plutus_version == "mix_v4_v1":
+            script_file1 = plutus_common.MINTING_PLUTUS_V4
+            execution_cost1 = plutus_common.MINTING_V4_COST
         else:
             msg = "Unknown test variant."
             raise AssertionError(msg)
@@ -734,6 +739,11 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        ("v1", pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE)),
+        ids=("plutus_v1", "plutus_v4"),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -741,6 +751,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -771,8 +782,9 @@ class TestMinting:
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_TOKENNAME[plutus_version]
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_TOKENNAME_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -791,9 +803,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoins"
 
-        policyid_tokenname = cluster.g_transaction.get_policyid(
-            plutus_common.MINTING_TOKENNAME_PLUTUS_V1
-        )
+        policyid_tokenname = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
 
         # QacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
@@ -820,18 +830,18 @@ class TestMinting:
             # even when we passed it twice.
             clusterlib.Mint(
                 txouts=mint_txouts_a,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 # Execution units are too low, but it doesn't matter as they get ignored anyway
                 execution_units=(1, 1),
                 redeemer_value='"ignored_value"',
             ),
             clusterlib.Mint(
                 txouts=mint_txouts_b,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_TOKENNAME_COST.per_time,
-                    plutus_common.MINTING_TOKENNAME_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 redeemer_value=f'"{asset_name_b_dec}"',
             ),
@@ -893,6 +903,11 @@ class TestMinting:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output_step2)
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        ("v1", pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE)),
+        ids=("plutus_v1", "plutus_v4"),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -900,6 +915,7 @@ class TestMinting:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test that minting policy is executed only once even when the same policy is used twice.
 
@@ -926,8 +942,9 @@ class TestMinting:
         lovelace_amount = 2_000_000
         token_amount = 5
 
+        plutus_v_record = plutus_common.MINTING_TOKENNAME[plutus_version]
         minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_TOKENNAME_COST,
+            execution_cost=plutus_v_record.execution_cost,
             protocol_params=cluster.g_query.get_protocol_params(),
         )
 
@@ -947,7 +964,7 @@ class TestMinting:
 
         # Step 2: mint the "qacoin"
 
-        policyid = cluster.g_transaction.get_policyid(plutus_common.MINTING_TOKENNAME_PLUTUS_V1)
+        policyid = cluster.g_transaction.get_policyid(plutus_v_record.script_file)
 
         # QacoinA
         asset_name_a_dec = f"qacoinA{clusterlib.get_rand_str(4)}"
@@ -967,11 +984,11 @@ class TestMinting:
         plutus_mint_data = [
             clusterlib.Mint(
                 txouts=mint_txouts,
-                script_file=plutus_common.MINTING_TOKENNAME_PLUTUS_V1,
+                script_file=plutus_v_record.script_file,
                 collaterals=collateral_utxos,
                 execution_units=(
-                    plutus_common.MINTING_TOKENNAME_COST.per_time,
-                    plutus_common.MINTING_TOKENNAME_COST.per_space,
+                    plutus_v_record.execution_cost.per_time,
+                    plutus_v_record.execution_cost.per_space,
                 ),
                 # Both tokens will be minted even though the redeemer value
                 # matches the name of only the second one
@@ -1040,7 +1057,7 @@ class TestMinting:
         if plutus_costs:
             plutus_common.check_plutus_costs(
                 plutus_costs=plutus_costs,
-                expected_costs=[plutus_common.MINTING_TOKENNAME_COST],
+                expected_costs=[plutus_v_record.execution_cost],
             )
 
         # Check tx view
@@ -1058,7 +1075,7 @@ class TestMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_ttl_horizon(
         self,
@@ -1198,7 +1215,7 @@ class TestCollateralOutput:
     """Tests for collateral output."""
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(

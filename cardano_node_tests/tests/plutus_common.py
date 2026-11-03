@@ -66,6 +66,8 @@ MINTING_TIME_RANGE_PLUTUS_V3 = SCRIPTS_V3_DIR / "timeRangePolicyScriptV3.plutus"
 MINTING_WITNESS_REDEEMER_PLUTUS_V3 = SCRIPTS_V3_DIR / "witnessRedeemerPolicyScriptV3.plutus"
 
 MINTING_PLUTUS_V4 = SCRIPTS_V4_DIR / "alwaysSucceedPolicyScript_V4_110.plutus"
+MINTING_WITNESS_REDEEMER_PLUTUS_V4 = SCRIPTS_V4_DIR / "witnessRedeemerPolicyScript_V4_110.plutus"
+MINTING_TOKENNAME_PLUTUS_V4 = SCRIPTS_V4_DIR / "mintTokenNamePolicyScript_V4_110.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -124,6 +126,8 @@ ALWAYS_FAILS_V3_COST = ExecutionCost(per_time=230_100, per_space=1_100, fixed_co
 ALWAYS_SUCCEEDS_V3_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 
 ALWAYS_SUCCEEDS_V4_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
+# A sufficient evaluation budget for the failing script, not a measured execution cost.
+ALWAYS_FAILS_V4_COST = ExecutionCost(per_time=1_000_000, per_space=10_000, fixed_cost=650)
 
 MINTING_COST = ExecutionCost(per_time=195_825_449, per_space=978_434, fixed_cost=74_960)
 MINTING_TIME_RANGE_COST = ExecutionCost(
@@ -159,6 +163,10 @@ MINTING_V3_WITNESS_REDEEMER_COST = ExecutionCost(
 )
 
 MINTING_V4_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
+MINTING_V4_WITNESS_REDEEMER_COST = ExecutionCost(
+    per_time=28_639_635, per_space=161_269, fixed_cost=11_371
+)
+MINTING_V4_TOKENNAME_COST = ExecutionCost(per_time=63_758_017, per_space=362_076, fixed_cost=25_489)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -190,6 +198,11 @@ ALWAYS_FAILS = {
         script_file=ALWAYS_FAILS_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=ALWAYS_FAILS_V3_COST,
+    ),
+    "v4": PlutusScriptData(
+        script_file=ALWAYS_FAILS_PLUTUS_V4,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
+        execution_cost=ALWAYS_FAILS_V4_COST,
     ),
 }
 
@@ -275,6 +288,24 @@ MINTING_WITNESS_REDEEMER = {
         script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=MINTING_V3_WITNESS_REDEEMER_COST,
+    ),
+    "v4": PlutusScriptData(
+        script_file=MINTING_WITNESS_REDEEMER_PLUTUS_V4,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
+        execution_cost=MINTING_V4_WITNESS_REDEEMER_COST,
+    ),
+}
+
+MINTING_TOKENNAME = {
+    "v1": PlutusScriptData(
+        script_file=MINTING_TOKENNAME_PLUTUS_V1,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V1,
+        execution_cost=MINTING_TOKENNAME_COST,
+    ),
+    "v4": PlutusScriptData(
+        script_file=MINTING_TOKENNAME_PLUTUS_V4,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
+        execution_cost=MINTING_V4_TOKENNAME_COST,
     ),
 }
 

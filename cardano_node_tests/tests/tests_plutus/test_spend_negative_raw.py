@@ -285,7 +285,7 @@ class TestNegative:
             assert "MissingScriptWitnessesUTXOW" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collateral_w_tokens(
@@ -352,7 +352,7 @@ class TestNegative:
             assert "CollateralContainsNonADA" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_same_collateral_txin(
@@ -408,7 +408,7 @@ class TestNegative:
             assert "ScriptsNotPaidUTxO" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collateral_percent(
@@ -468,7 +468,7 @@ class TestNegative:
             assert "InsufficientCollateral" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_two_scripts_spending_one_fail(
         self,
@@ -635,8 +635,13 @@ class TestNegative:
     @common.hypothesis_settings(100)
     @pytest.mark.parametrize(
         "fund_execution_units_above_limit",
-        ("v1", pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE)),
-        ids=("plutus_v1", "plutus_v2"),
+        (
+            "v1",
+            pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v2", "plutus_v3", "plutus_v4"),
         indirect=True,
     )
     @pytest.mark.smoke

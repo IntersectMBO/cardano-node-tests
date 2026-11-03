@@ -566,7 +566,7 @@ class TestReferenceScripts:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.parametrize("address_type", ("shelley", "byron"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -642,7 +642,7 @@ class TestReferenceScripts:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @pytest.mark.parametrize("plutus_version", ("v1", "v2"), ids=("plutus_v1", "plutus_v2"))
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_spend_regular_utxo_and_reference_script(

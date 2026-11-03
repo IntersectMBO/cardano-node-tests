@@ -95,7 +95,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -220,7 +220,7 @@ class TestBuildMinting:
         expected_fee_step1 = 168_977
         assert common.is_fee_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 187_031 if plutus_version == "v3" else 350_000
+        expected_fee_step2 = 187_031 if plutus_version in ("v3", "v4") else 350_000
         assert common.is_fee_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
@@ -236,7 +236,7 @@ class TestBuildMinting:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_missing_txout(
@@ -511,6 +511,7 @@ class TestBuildMinting:
             "plutus_v1",
             pytest.param("mix_v2_v1", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
             pytest.param("mix_v3_v1", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("mix_v4_v1", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
     )
     @pytest.mark.smoke
@@ -574,6 +575,9 @@ class TestBuildMinting:
         elif plutus_version == "mix_v3_v1":
             script_file1 = script_file1_v3
             execution_cost1 = minting_cost1_v3
+        elif plutus_version == "mix_v4_v1":
+            script_file1 = plutus_common.MINTING_PLUTUS_V4
+            execution_cost1 = plutus_common.MINTING_V4_COST
         else:
             msg = "Unknown test variant."
             raise AssertionError(msg)
@@ -755,7 +759,7 @@ class TestBuildMinting:
         expected_fee_step1 = 168_977
         assert common.is_fee_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 428_543 if plutus_version == "mix_v3_v1" else 633_269
+        expected_fee_step2 = 428_543 if plutus_version in ("mix_v3_v1", "mix_v4_v1") else 633_269
         assert common.is_fee_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
@@ -784,8 +788,9 @@ class TestBuildMinting:
         (
             "v1",
             pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
-        ids=("plutus_v1", "plutus_v3"),
+        ids=("plutus_v1", "plutus_v3", "plutus_v4"),
     )
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -936,7 +941,7 @@ class TestBuildMinting:
         expected_fee_step1 = 167_349
         assert common.is_fee_in_interval(tx_output_step1.fee, expected_fee_step1, frac=0.15)
 
-        expected_fee_step2 = 372_438
+        expected_fee_step2 = 287_092 if plutus_version == "v4" else 372_438
         assert common.is_fee_in_interval(tx_output_step2.fee, expected_fee_step2, frac=0.15)
 
         plutus_common.check_plutus_costs(
@@ -956,7 +961,7 @@ class TestBuildMinting:
         "ttl_offset",
         (100, 1_000, 3_000, 10_000, 100_000, 1000_000, -1, -2),
     )
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_ttl_horizon(
         self,
@@ -1069,7 +1074,7 @@ class TestCollateralOutput:
 
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_duplicated_collateral(

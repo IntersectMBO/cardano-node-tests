@@ -67,7 +67,7 @@ class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -519,7 +519,7 @@ class TestBuildLocking:
             )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_always_fails(
         self,
@@ -580,7 +580,7 @@ class TestBuildLocking:
         assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_script_invalid(
         self,
@@ -643,7 +643,7 @@ class TestBuildLocking:
             assert common.is_fee_in_interval(tx_output.fee, expected_fee, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -723,7 +723,7 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_partial_spending(
@@ -852,7 +852,7 @@ class TestBuildLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync

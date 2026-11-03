@@ -43,6 +43,11 @@ class TestBuildLocking:
     """Tests for Tx output locking using Plutus smart contracts and `transaction build`."""
 
     @allure.link(helpers.get_vcs_link())
+    @pytest.mark.parametrize(
+        "plutus_version",
+        ("v3", pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE)),
+        ids=("plutus_v3", "plutus_v4"),
+    )
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -50,10 +55,11 @@ class TestBuildLocking:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        plutus_version: str,
     ):
         """Test locking a Tx output with a Plutus script and spending the locked UTxO.
 
-        No datum is provided. Datum for spending scripts is optional in PlutusV3.
+        No datum is provided. Datum for spending scripts is optional in PlutusV3+.
 
         Uses `cardano-cli transaction build` command for building the transactions.
 
@@ -69,9 +75,9 @@ class TestBuildLocking:
 
         # No datum is provided
         plutus_op = plutus_common.PlutusOp(
-            script_file=plutus_common.ALWAYS_SUCCEEDS["v3"].script_file,
+            script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
             redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-            execution_cost=plutus_common.ALWAYS_SUCCEEDS["v3"].execution_cost,
+            execution_cost=plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost,
         )
 
         script_utxos, collateral_utxos, tx_output_fund = spend_build._build_fund_script(
@@ -103,5 +109,5 @@ class TestBuildLocking:
 
         plutus_common.check_plutus_costs(
             plutus_costs=plutus_costs,
-            expected_costs=[plutus_common.ALWAYS_SUCCEEDS["v3"].execution_cost],
+            expected_costs=[plutus_common.ALWAYS_SUCCEEDS[plutus_version].execution_cost],
         )

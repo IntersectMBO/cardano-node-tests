@@ -88,8 +88,9 @@ class TestBuildMintingNegative:
         (
             "v1",
             pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
-        ids=("plutus_v1", "plutus_v3"),
+        ids=("plutus_v1", "plutus_v3", "plutus_v4"),
     )
     @submit_utils.PARAM_SUBMIT_METHOD
     @pytest.mark.smoke

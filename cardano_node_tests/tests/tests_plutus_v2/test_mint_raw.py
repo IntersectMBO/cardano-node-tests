@@ -119,7 +119,7 @@ class TestMinting:
 
         plutus_v_record = plutus_common.MINTING_PLUTUS[plutus_version]
 
-        if use_reference_script:
+        if use_reference_script and plutus_version == "v2":
             execution_cost = plutus_common.MINTING_V2_REF_COST
         else:
             execution_cost = plutus_v_record.execution_cost

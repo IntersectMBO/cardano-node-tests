@@ -120,7 +120,7 @@ class TestLocking:
     """Tests for Tx output locking using Plutus smart contracts."""
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -516,7 +516,7 @@ class TestLocking:
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output_redeem)
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_always_fails(
         self,
@@ -578,7 +578,7 @@ class TestLocking:
             assert "PlutusFailure" in err, err
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_script_invalid(
         self,
@@ -629,7 +629,7 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -693,7 +693,7 @@ class TestLocking:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_partial_spending(
@@ -784,7 +784,7 @@ class TestLocking:
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("scenario", ("max", "max+1", "none"))
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collaterals(
