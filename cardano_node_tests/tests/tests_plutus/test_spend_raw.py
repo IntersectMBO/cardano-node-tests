@@ -628,9 +628,14 @@ class TestLocking:
                 script_valid=False,
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+            str_exc = str(exc)
+            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST and (
+                "(ValidationTagMismatch" in str_exc or "--script-invalid" in str_exc
+            ):
+                issues.node_6748.finish_test()
+            if "(ValidationTagMismatch" in str_exc:
+                issues.consensus_947.finish_test()
+            raise
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_PLUTUS3_VERSION

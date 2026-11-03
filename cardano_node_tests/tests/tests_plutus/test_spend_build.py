@@ -20,6 +20,7 @@ from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import node_consistency
 from cardano_node_tests.utils import tx_view
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -634,7 +635,12 @@ class TestBuildLocking:
                 script_valid=False,
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
+            str_exc = str(exc)
+            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST and (
+                "(ValidationTagMismatch" in str_exc or "--script-invalid" in str_exc
+            ):
+                issues.node_6748.finish_test()
+            if "(ValidationTagMismatch" in str_exc:
                 issues.consensus_947.finish_test()
             raise
 

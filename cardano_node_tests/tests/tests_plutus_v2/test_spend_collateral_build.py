@@ -195,7 +195,12 @@ class TestCollateralOutput:
                 return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
+            str_exc = str(exc)
+            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST and (
+                "(ValidationTagMismatch" in str_exc or "--script-invalid" in str_exc
+            ):
+                issues.node_6748.finish_test()
+            if "(ValidationTagMismatch" in str_exc:
                 issues.consensus_947.finish_test()
             raise
 
@@ -249,7 +254,7 @@ class TestCollateralOutput:
     )
     @pytest.mark.smoke
     @pytest.mark.dbsync
-    def test_collateral_with_tokens(
+    def test_collateral_with_tokens(  # noqa: C901
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
@@ -342,7 +347,12 @@ class TestCollateralOutput:
                 return_collateral_txouts=txouts_return_collateral,
             )
         except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
+            str_exc = str(exc)
+            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST and (
+                "(ValidationTagMismatch" in str_exc or "--script-invalid" in str_exc
+            ):
+                issues.node_6748.finish_test()
+            if "(ValidationTagMismatch" in str_exc:
                 issues.consensus_947.finish_test()
             raise
 

@@ -291,6 +291,9 @@ node_5324 = blockers.GH(issue=5324, fixed_in="8.1.1", message="`UnknownVersionIn
 node_6719 = blockers.GH(
     issue=6719, message="cardano-submit-api cannot decode Dijkstra era transactions."
 )
+node_6748 = blockers.GH(
+    issue=6748, message="Missing local-submission support for phase-2-invalid transactions."
+)
 
 plutus_apps_583 = blockers.GH(
     issue=583, repo="IntersectMBO/plutus-apps", message="`DeserialiseFailure` error."
