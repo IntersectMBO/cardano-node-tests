@@ -1000,7 +1000,7 @@ class TestDelegateAddr:
             )
 
         try:
-            tx_raw_output_deleg = common.match_blocker(func=_build_and_submit)
+            tx_raw_output_deleg = common.run_with_query_mismatch_check(func=_build_and_submit)
         except clusterlib.CLIError as exc:
             if "ValueNotConservedUTxO" in str(exc):
                 issues.cli_942.finish_test()
