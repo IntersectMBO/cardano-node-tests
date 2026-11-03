@@ -155,12 +155,9 @@ class TestCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        try:
-            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+        plutus_common.run_with_invalid_script_check(
+            func=lambda: cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
+        )
 
         # Check that the collateral UTxO was spent
         try:
@@ -316,12 +313,9 @@ class TestCollateralOutput:
             tx_name=f"{temp_template}_step2",
         )
 
-        try:
-            cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+        plutus_common.run_with_invalid_script_check(
+            func=lambda: cluster.g_transaction.submit_tx_bare(tx_file=tx_signed_redeem)
+        )
 
         # Check that the collateral UTxO was spent
         try:

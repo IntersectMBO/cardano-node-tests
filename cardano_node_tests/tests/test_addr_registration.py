@@ -650,7 +650,7 @@ class TestNegative:
                         witness_override=len(tx_files.signing_key_files),
                     )
 
-                tx_raw_output: clusterlib.TxRawOutput = common.match_blocker(func=_build_dereg)
+                tx_raw_output = common.run_with_query_mismatch_check(func=_build_dereg)
                 tx_signed = cluster.g_transaction.sign_tx(
                     tx_body_file=tx_raw_output.out_file,
                     signing_key_files=tx_files.signing_key_files,

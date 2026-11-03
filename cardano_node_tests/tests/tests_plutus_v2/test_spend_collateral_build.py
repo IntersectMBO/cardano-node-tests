@@ -182,8 +182,8 @@ class TestCollateralOutput:
             clusterlib.TxOut(dst_addr.address, amount=return_collateral_amount)
         ]
 
-        try:
-            tx_output_redeem = self._build_spend_locked_txin(
+        tx_output_redeem = plutus_common.run_with_invalid_script_check(
+            func=lambda: self._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster=cluster,
                 payment_addr=payment_addr,
@@ -194,10 +194,7 @@ class TestCollateralOutput:
                 total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
                 return_collateral_txouts=return_collateral_txouts if use_return_collateral else (),
             )
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
-                issues.consensus_947.finish_test()
-            raise
+        )
 
         # Check that the collateral UTxO was spent
         try:
@@ -329,8 +326,8 @@ class TestCollateralOutput:
             else []
         )
 
-        try:
-            tx_output_redeem = self._build_spend_locked_txin(
+        tx_output_redeem = plutus_common.run_with_invalid_script_check(
+            func=lambda: self._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster=cluster,
                 payment_addr=payment_addr,
@@ -341,10 +338,7 @@ class TestCollateralOutput:
                 total_collateral_amount=total_collateral_amount,
                 return_collateral_txouts=txouts_return_collateral,
             )
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
-                issues.consensus_947.finish_test()
-            raise
+        )
 
         # Check that the collateral UTxO was spent
         try:

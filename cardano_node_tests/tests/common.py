@@ -179,8 +179,12 @@ def get_fixture_cluster_obj(
     return cluster_obj
 
 
-def match_blocker(func: tp.Callable) -> tp.Any:
-    """Fail or Xfail the test if CLI error is raised."""
+def run_with_query_mismatch_check[T](func: tp.Callable[[], T]) -> T:
+    """Run a callable, handling the known CLI certificate query mismatch.
+
+    Return the callable's result on success. Fail or xfail for CLI issue 268,
+    and re-raise any other CLI error.
+    """
     try:
         ret = func()
     except clusterlib.CLIError as exc:

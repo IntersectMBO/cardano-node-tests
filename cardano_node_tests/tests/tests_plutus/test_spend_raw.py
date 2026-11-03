@@ -14,7 +14,6 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_raw
@@ -615,8 +614,8 @@ class TestLocking:
             amount=amount,
         )
 
-        try:
-            spend_raw._spend_locked_txin(
+        plutus_common.run_with_invalid_script_check(
+            func=lambda: spend_raw._spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
                 payment_addr=payment_addrs[0],
@@ -627,10 +626,7 @@ class TestLocking:
                 amount=amount,
                 script_valid=False,
             )
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" not in str(exc):
-                raise
-            issues.consensus_947.finish_test()
+        )
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_PLUTUS3_VERSION

@@ -2,11 +2,13 @@ import dataclasses
 import itertools
 import math
 import pathlib as pl
+import typing as tp
 
 import pytest
 from cardano_clusterlib import clusterlib
 from packaging import version
 
+from cardano_node_tests.tests import issues
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_utils
@@ -318,6 +320,26 @@ _ROTATE_SHIFT_SCRIPTS_V3 = (
 # a "time range" script. Long enough for the transaction to get submitted and land in a
 # block, and capped by `get_timerange_slots_offset`.
 TIMERANGE_SLOTS_OFFSET = 300
+
+
+def run_with_invalid_script_check[T](func: tp.Callable[[], T]) -> T:
+    """Run a callable, handling known phase-2-invalid transaction errors.
+
+    Return the callable's result on success. Fail or xfail for node issue 6748
+    in Dijkstra or consensus issue 947 for a validation tag mismatch. Re-raise
+    any unrelated CLI error.
+    """
+    try:
+        return func()
+    except clusterlib.CLIError as exc:
+        str_exc = str(exc)
+        if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST and (
+            "(ValidationTagMismatch" in str_exc or "--script-invalid" in str_exc
+        ):
+            issues.node_6748.finish_test()
+        if "(ValidationTagMismatch" in str_exc:
+            issues.consensus_947.finish_test()
+        raise
 
 
 def get_timerange_slots_offset(*, cluster_obj: clusterlib.ClusterLib) -> int:

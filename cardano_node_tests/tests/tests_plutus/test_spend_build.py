@@ -11,7 +11,6 @@ from cardano_clusterlib import clusterlib
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
-from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.tests.tests_plutus import spend_build
@@ -621,8 +620,8 @@ class TestBuildLocking:
             amount=1_000_000,
         )
 
-        try:
-            __, tx_output, __ = spend_build._build_spend_locked_txin(
+        __, tx_output, __ = plutus_common.run_with_invalid_script_check(
+            func=lambda: spend_build._build_spend_locked_txin(
                 temp_template=temp_template,
                 cluster_obj=cluster,
                 payment_addr=payment_addrs[0],
@@ -633,10 +632,7 @@ class TestBuildLocking:
                 amount=-1,
                 script_valid=False,
             )
-        except clusterlib.CLIError as exc:
-            if "(ValidationTagMismatch" in str(exc):
-                issues.consensus_947.finish_test()
-            raise
+        )
 
         # Check expected fees
         expected_fee_fund = 168_845
