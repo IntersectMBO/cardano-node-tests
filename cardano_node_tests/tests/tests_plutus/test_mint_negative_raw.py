@@ -93,8 +93,9 @@ class TestMintingNegative:
         (
             "v1",
             pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
         ),
-        ids=("plutus_v1", "plutus_v3"),
+        ids=("plutus_v1", "plutus_v3", "plutus_v4"),
     )
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -192,7 +193,7 @@ class TestMintingNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_low_budget(
@@ -291,7 +292,7 @@ class TestMintingNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_low_fee(
@@ -392,8 +393,13 @@ class TestMintingNegative:
     @common.hypothesis_settings(100)
     @pytest.mark.parametrize(
         "fund_execution_units_above_limit",
-        ("v1", pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE)),
-        ids=("plutus_v1", "plutus_v2"),
+        (
+            "v1",
+            pytest.param("v2", marks=markers.SKIPIF_PLUTUSV2_UNUSABLE),
+            pytest.param("v3", marks=markers.SKIPIF_PLUTUSV3_UNUSABLE),
+            pytest.param("v4", marks=markers.SKIPIF_PLUTUSV4_UNUSABLE),
+        ),
+        ids=("plutus_v1", "plutus_v2", "plutus_v3", "plutus_v4"),
         indirect=True,
     )
     @pytest.mark.smoke
@@ -619,7 +625,7 @@ class TestNegativeCollateral:
     """Tests for collaterals that are expected to fail."""
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_invalid_collaterals(
@@ -721,7 +727,7 @@ class TestNegativeCollateral:
             assert "NoCollateralInputs" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_minting_with_insufficient_collateral(

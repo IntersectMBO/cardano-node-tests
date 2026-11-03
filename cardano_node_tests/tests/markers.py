@@ -159,13 +159,34 @@ PARAM_PLUTUS3_VERSION = pytest.mark.parametrize(
     ids=("plutus_v1", "plutus_v2", "plutus_v3"),
 )
 
-PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
+PARAM_PLUTUS4_VERSION = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v1",
+        pytest.param("v2", marks=SKIPIF_PLUTUSV2_UNUSABLE),
+        pytest.param("v3", marks=SKIPIF_PLUTUSV3_UNUSABLE),
+        pytest.param("v4", marks=SKIPIF_PLUTUSV4_UNUSABLE),
+    ),
+    ids=("plutus_v1", "plutus_v2", "plutus_v3", "plutus_v4"),
+)
+
+PARAM_PLUTUS2TO3_VERSION = pytest.mark.parametrize(
     "plutus_version",
     (
         "v2",
         pytest.param("v3", marks=SKIPIF_PLUTUSV3_UNUSABLE),
     ),
     ids=("plutus_v2", "plutus_v3"),
+)
+
+PARAM_PLUTUS2ONWARDS_VERSION = pytest.mark.parametrize(
+    "plutus_version",
+    (
+        "v2",
+        pytest.param("v3", marks=SKIPIF_PLUTUSV3_UNUSABLE),
+        pytest.param("v4", marks=SKIPIF_PLUTUSV4_UNUSABLE),
+    ),
+    ids=("plutus_v2", "plutus_v3", "plutus_v4"),
 )
 
 PARAM_COMPAT_ERAS = pytest.mark.parametrize("era", _COMPAT_ERAS)

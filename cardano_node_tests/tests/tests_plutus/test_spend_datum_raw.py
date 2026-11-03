@@ -113,29 +113,26 @@ class TestNegativeDatum:
         return cluster.g_query.get_utxo_with_highest_amount(payment_addrs[0].address)
 
     @pytest.fixture
-    def pbt_script_addresses(
+    def pbt_script_address(
         self,
+        cluster_manager: cluster_management.ClusterManager,
         cluster: clusterlib.ClusterLib,
-    ) -> dict[str, str]:
-        """Get Plutus script addresses.
-
-        Meant for property-based tests, so this expensive operation gets executed only once.
-        """
-        temp_template = common.get_test_id(cluster)
-
-        script_address_v1 = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template,
-            payment_script_file=plutus_common.ALWAYS_SUCCEEDS["v1"].script_file,
-        )
-        script_address_v2 = cluster.g_address.gen_payment_addr(
-            addr_name=temp_template,
-            payment_script_file=plutus_common.ALWAYS_SUCCEEDS["v2"].script_file,
-        )
-        return {"v1": script_address_v1, "v2": script_address_v2}
+        plutus_version: str,
+    ) -> str:
+        """Cache the selected Plutus version's address for property-based tests."""
+        with cluster_manager.cache_fixture(
+            key=f"{helpers.get_current_line_str()}_{plutus_version}"
+        ) as fixture_cache:
+            if fixture_cache.value is None:
+                fixture_cache.value = cluster.g_address.gen_payment_addr(
+                    addr_name=f"{common.get_test_id(cluster)}_{plutus_version}",
+                    payment_script_file=plutus_common.ALWAYS_SUCCEEDS[plutus_version].script_file,
+                )
+            return fixture_cache.value
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.parametrize("address_type", ("script_address", "key_address"))
-    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_no_datum_txout(
         self,
@@ -220,7 +217,7 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.text())
     @common.hypothesis_settings(max_examples=200)
-    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.testnets
     def test_lock_tx_invalid_datum(
@@ -275,7 +272,7 @@ class TestNegativeDatum:
             assert "JSON object expected. Unexpected value" in exc_value, exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_unlock_tx_wrong_datum(
         self,
@@ -344,7 +341,7 @@ class TestNegativeDatum:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_unlock_non_script_utxo(
         self,
@@ -444,14 +441,14 @@ class TestNegativeDatum:
     @allure.link(helpers.get_vcs_link())
     @hypothesis.given(datum_value=st.binary(min_size=65))
     @common.hypothesis_settings(max_examples=200)
-    @markers.PARAM_PLUTUS_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_too_big(
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         pbt_highest_utxo: clusterlib.UTXOData,
-        pbt_script_addresses: dict[str, str],
+        pbt_script_address: str,
         datum_value: bytes,
         plutus_version: str,
     ):
@@ -482,7 +479,7 @@ class TestNegativeDatum:
         )
         assert plutus_op.execution_cost  # for mypy
 
-        script_address = pbt_script_addresses[plutus_version]
+        script_address = pbt_script_address
 
         # Create a Tx output with a datum hash at the script address
 

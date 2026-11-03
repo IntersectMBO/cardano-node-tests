@@ -134,7 +134,7 @@ class TestSECP256k1:
         )
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2TO3_VERSION
     @pytest.mark.parametrize("algorithm", ("ecdsa", "schnorr"))
     @pytest.mark.smoke
     @pytest.mark.testnets
@@ -182,7 +182,7 @@ class TestSECP256k1:
             raise
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS2ONWARDS_VERSION
+    @markers.PARAM_PLUTUS2TO3_VERSION
     @pytest.mark.parametrize(
         "test_vector",
         ("invalid_sig", "invalid_pubkey", "no_msg", "no_pubkey", "no_sig"),

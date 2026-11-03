@@ -170,7 +170,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_collateral_w_tokens(
@@ -248,7 +248,7 @@ class TestNegative:
         assert common.is_fee_in_interval(tx_output_fund.fee, expected_fee_fund, frac=0.15)
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     @pytest.mark.dbsync
     def test_same_collateral_txin(
@@ -396,7 +396,7 @@ class TestNegative:
             ), exc_value
 
     @allure.link(helpers.get_vcs_link())
-    @markers.PARAM_PLUTUS3_VERSION
+    @markers.PARAM_PLUTUS4_VERSION
     @pytest.mark.smoke
     def test_two_scripts_spending_one_fail(
         self,

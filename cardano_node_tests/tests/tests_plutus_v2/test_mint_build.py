@@ -231,6 +231,11 @@ class TestBuildMinting:
                 "fee_2": 182_235,
                 "cost": plutus_common.MINTING_V3_REF_COST,
             },
+            "v4": {
+                "fee_1": 169_769,
+                "fee_2": 182_235,
+                "cost": plutus_common.MINTING_V4_COST,
+            },
         }
 
         script_expected_fee = expected_fees[plutus_version]
@@ -251,6 +256,7 @@ class TestBuildMinting:
         expected_sizes = {
             "v2": 1893,
             "v3": 6,
+            "v4": 6,
         }
         expected_size = expected_sizes[plutus_version]
         assert ref_size == expected_size, (
