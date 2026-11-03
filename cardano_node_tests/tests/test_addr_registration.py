@@ -253,7 +253,7 @@ class TestRegisterAddr:
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
-    def test_addr_registration_certificate_order(
+    def test_addr_registration_certificate_order_pre_dijkstra(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
@@ -335,7 +335,7 @@ class TestRegisterAddr:
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
-    def test_distinct_certificate_order(
+    def test_addr_registration_certificate_order(
         self,
         cluster: clusterlib.ClusterLib,
         pool_users: list[clusterlib.PoolUser],
