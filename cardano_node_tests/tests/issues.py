@@ -202,8 +202,8 @@ ledger_4349 = blockers.GH(
 ledger_4566 = blockers.GH(
     issue=4566,
     repo="IntersectMBO/cardano-ledger",
-    fixed_in="11.2.0",  # Unknown yet, will be fixed/changed sometime in the future
-    message="Repeated certificates stripped from Conway transaction.",
+    fixed_in="11.2.0",  # Fix applies only in Dijkstra; Conway remains blocked.
+    message="Duplicate certificates are silently stripped instead of rejected.",
 )
 ledger_4772 = blockers.GH(
     issue=4772,
