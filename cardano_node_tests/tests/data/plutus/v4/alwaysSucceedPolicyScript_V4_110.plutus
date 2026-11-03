@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV4",
+    "description": "alwaysSucceedPolicyScript_V4_110",
+    "cborHex": "450101002499"
+}

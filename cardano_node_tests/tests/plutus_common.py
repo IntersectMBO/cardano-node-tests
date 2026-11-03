@@ -43,7 +43,8 @@ BYTE_STRING_ROUNDTRIP = SCRIPTS_V2_DIR / "byteStringToIntegerRoundtripPolicyV2.p
 ALWAYS_SUCCEEDS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysSucceedPolicyScriptV3.plutus"
 ALWAYS_FAILS_PLUTUS_V3 = SCRIPTS_V3_DIR / "alwaysFailsPolicyScriptV3.plutus"
 
-ALWAYS_SUCCEEDS_PLUTUS_V4 = SCRIPTS_V4_DIR / "always-succeeds.plutus"
+ALWAYS_SUCCEEDS_PLUTUS_V4 = SCRIPTS_V4_DIR / "alwaysSucceedSpendScript_V4_110.plutus"
+ALWAYS_FAILS_PLUTUS_V4 = SCRIPTS_V4_DIR / "alwaysFailsPolicyScript_V4_110.plutus"
 
 MINTING_PLUTUS_V1 = SCRIPTS_V1_DIR / "anyone-can-mint.plutus"
 MINTING_TIME_RANGE_PLUTUS_V1 = SCRIPTS_V1_DIR / "time_range.plutus"
@@ -63,6 +64,8 @@ MINTING_SECP256K1_ECDSA_PLUTUS_V3 = SCRIPTS_V3_DIR / "verifyEcdsaPolicyScriptV3.
 MINTING_SECP256K1_SCHNORR_PLUTUS_V3 = SCRIPTS_V3_DIR / "verifySchnorrPolicyScriptV3.plutus"
 MINTING_TIME_RANGE_PLUTUS_V3 = SCRIPTS_V3_DIR / "timeRangePolicyScriptV3.plutus"
 MINTING_WITNESS_REDEEMER_PLUTUS_V3 = SCRIPTS_V3_DIR / "witnessRedeemerPolicyScriptV3.plutus"
+
+MINTING_PLUTUS_V4 = SCRIPTS_V4_DIR / "alwaysSucceedPolicyScript_V4_110.plutus"
 
 STAKE_GUESS_42_PLUTUS_V1 = SCRIPTS_V1_DIR / "guess-42-stake.plutus"
 
@@ -154,6 +157,8 @@ MINTING_V3_TIME_RANGE_COST = ExecutionCost(
 MINTING_V3_WITNESS_REDEEMER_COST = ExecutionCost(
     per_time=81_663_642, per_space=333_824, fixed_cost=26_920
 )
+
+MINTING_V4_COST = ExecutionCost(per_time=64_100, per_space=500, fixed_cost=34)
 
 
 @dataclasses.dataclass(frozen=True, order=True)
@@ -252,6 +257,11 @@ MINTING_PLUTUS = {
         script_file=MINTING_PLUTUS_V3,
         script_type=clusterlib.ScriptTypes.PLUTUS_V3,
         execution_cost=MINTING_V3_COST,
+    ),
+    "v4": PlutusScriptData(
+        script_file=MINTING_PLUTUS_V4,
+        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
+        execution_cost=MINTING_V4_COST,
     ),
 }
 
