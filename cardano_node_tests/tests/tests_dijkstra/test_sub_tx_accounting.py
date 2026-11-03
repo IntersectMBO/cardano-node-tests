@@ -61,15 +61,16 @@ def atomicity_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster_treasury: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
-    """Cache two participants, sponsor, collateral owner, and recipient."""
+    """Cache participants with enough funding for registration and subsequent batches."""
     return addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster_treasury),
         cluster_manager=cluster_manager,
         cluster_obj=cluster_treasury,
         num=5,
         fund_idx=[0, 1, 2, 3],
-        amount=3_000_000,
-        min_amount=2_500_000,
+        # The sponsor must cover a stake deposit, batch fees, and minimum-ADA change.
+        amount=6_000_000,
+        min_amount=5_000_000,
         caching_key=helpers.get_current_line_str(),
     )
 
