@@ -222,17 +222,19 @@ def get_future_bls_key(*, cluster_obj: clusterlib.ClusterLib, pool_id: str) -> d
         pool_id: An ID of the stake pool (Bech32-encoded or hex-encoded).
 
     Returns:
-        dict: The ``spsBlsKey.bksKey`` record of ``futurePoolParams``, or an empty dict
-            when there is no pending update, or it carries no BLS key.
+        dict: The pending BLS key record, or an empty dict when there is no pending
+            update, or it carries no BLS key.
 
     Note:
-        Both pending and active parameters are reported as pool state, with the key
-        under ``spsBlsKey.bksKey``. Return only the key record, without the registration
-        epoch reported alongside it.
+        ``futureStakePoolParams.blsKey`` contains the key directly, unlike the active
+        key state, which wraps it in ``bksKey`` alongside its registration epoch.
+        Also accept the wrapped ``futurePoolParams.spsBlsKey.bksKey`` query format.
     """
     future_params = cluster_obj.g_query.get_pool_state(stake_pool_id=pool_id).future_pool_params
-    bls_key_state = helpers.get_pool_param("spsBlsKey", pool_params=future_params) or {}
-    return bls_key_state.get("bksKey") or {}
+    bls_key = helpers.get_pool_param("spsBlsKey", pool_params=future_params) or {}
+    if "blsPubKey" in bls_key:
+        return bls_key
+    return bls_key.get("bksKey") or {}
 
 
 def write_bls_key_bundle(*, key_files: list[pl.Path], out_file: pl.Path) -> pl.Path:
