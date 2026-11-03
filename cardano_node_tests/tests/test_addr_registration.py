@@ -1,9 +1,11 @@
 """Tests for stake address registration."""
 
+import json
 import logging
 import pathlib as pl
 
 import allure
+import cbor2
 import pytest
 from cardano_clusterlib import clusterlib
 from packaging import version
@@ -209,8 +211,7 @@ class TestRegisterAddr:
             certificate_files=[
                 stake_addr_reg_cert_file,
                 stake_addr_dereg_cert_file,
-            ]
-            * 3,
+            ],
             signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
         )
 
@@ -242,8 +243,95 @@ class TestRegisterAddr:
             assert user_registered.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
+    @allure.issue(issues.ledger_4566.gh_issue.url)
     @submit_utils.PARAM_SUBMIT_METHOD
     @markers.PARAM_BUILD_METHOD
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era >= VERSIONS.DIJKSTRA_FIRST,
+        reason="Dijkstra rejects duplicate certificates; covered by test_duplicate_certificates",
+    )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
+    def test_addr_registration_certificate_order_pre_dijkstra(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
+        submit_method: str,
+        build_method: str,
+    ):
+        """Retain the pre-Conway duplicate certificate ordering regression test.
+
+        Register, deregister, register, deregister, and register one address in
+        the same transaction. Babbage and earlier eras should preserve all five
+        certificates, leave the address registered, and charge one net deposit.
+        Conway silently strips duplicates, so its conservation error or final
+        unregistered state is always XFAILed against ledger issue #4566, even
+        when running a node release that includes the Dijkstra-only fix.
+        """
+        temp_template = common.get_test_id(cluster)
+        user = pool_users_disposable[0]
+        payment = pool_users[0].payment
+        src_init_balance = cluster.g_query.get_address_balance(payment.address)
+        is_conway = VERSIONS.CONWAY_FIRST <= VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST
+
+        # Reuse the exact same certificates to exercise duplicate preservation or stripping.
+        address_deposit = addrs_common.get_conway_address_deposit(cluster_obj=cluster)
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_vkey_file=user.stake.vkey_file,
+        )
+        dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_vkey_file=user.stake.vkey_file,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, dereg_cert, reg_cert, dereg_cert, reg_cert],
+            signing_key_files=[payment.skey_file, user.stake.skey_file],
+        )
+        deposit = cluster.g_query.get_address_deposit()
+
+        # Conway builders may balance the stripped pair or retain the requested net deposit.
+        try:
+            tx_output = clusterlib_utils.build_and_submit_tx(
+                cluster_obj=cluster,
+                name_template=temp_template,
+                src_address=payment.address,
+                submit_method=submit_method,
+                build_method=build_method,
+                tx_files=tx_files,
+                deposit=deposit,
+            )
+        except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
+            err = str(exc)
+            if is_conway and "ValueNotConservedUTxO" in err:
+                issues.ledger_4566.finish_test(force_blocked=True)
+            if build_method == clusterlib_utils.BuildMethods.BUILD_EST and (
+                "The transaction balance is negative" in err
+                or "does not balance in its use of assets" in err
+            ):
+                issues.cli_1199.finish_test()
+            raise
+
+        # Preserving all five certificates must leave the final registration active.
+        stake_addr_info = cluster.g_query.get_stake_addr_info(user.stake.address)
+        if is_conway and not stake_addr_info:
+            issues.ledger_4566.finish_test(force_blocked=True)
+        assert stake_addr_info, f"Stake address is not registered: {user.stake.address}"
+        assert cluster.g_query.get_address_balance(payment.address) == (
+            src_init_balance - tx_output.fee - deposit
+        )
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        if tx_db_record:
+            assert user.stake.address in tx_db_record.stake_registration
+            assert user.stake.address in tx_db_record.stake_deregistration
+
+    @allure.link(helpers.get_vcs_link())
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @markers.PARAM_BUILD_METHOD_NO_EST
     @pytest.mark.smoke
     @pytest.mark.testnets
     @pytest.mark.dbsync
@@ -255,19 +343,18 @@ class TestRegisterAddr:
         submit_method: str,
         build_method: str,
     ):
-        """Submit (de)registration certificates in single TX and check that the order matter.
+        """Process distinct certificates in order with one net stake address deposit.
 
-        * Create stake address registration cert
-        * Create stake address deregistration cert
-        * Register, deregister, register, deregister and register stake address in single TX
-        * Check that the address is registered
-        * Check that the balance for source address was correctly updated and that key deposit
-          was needed
-        * (optional) Check records in db-sync
+        Register and deregister the first address, then register a second address.
+        Verify the first is unregistered, the second is registered, and only one
+        deposit is charged. Check both registrations and the deregistration in
+        db-sync when available. No duplicate certificates are needed or allowed
+        in Conway and later eras.
         """
         temp_template = common.get_test_id(cluster)
 
         user_registered = pool_users_disposable[0]
+        user_remaining = pool_users_disposable[1]
         user_payment = pool_users[0].payment
         src_init_balance = cluster.g_query.get_address_balance(user_payment.address)
 
@@ -287,55 +374,45 @@ class TestRegisterAddr:
             stake_vkey_file=user_registered.stake.vkey_file,
         )
 
-        # Register, deregister, register, deregister and register stake address in single TX
-        # prove that the order matters
+        stake_addr_remaining_cert_file = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr1",
+            deposit_amt=address_deposit,
+            stake_vkey_file=user_remaining.stake.vkey_file,
+        )
+
+        # The first registration must precede its deregistration; the second remains active.
         tx_files = clusterlib.TxFiles(
             certificate_files=[
                 stake_addr_reg_cert_file,
                 stake_addr_dereg_cert_file,
-                stake_addr_reg_cert_file,
-                stake_addr_dereg_cert_file,
-                stake_addr_reg_cert_file,
+                stake_addr_remaining_cert_file,
             ],
-            signing_key_files=[user_payment.skey_file, user_registered.stake.skey_file],
+            signing_key_files=[
+                user_payment.skey_file,
+                user_registered.stake.skey_file,
+                user_remaining.stake.skey_file,
+            ],
         )
 
         deposit = cluster.g_query.get_address_deposit()
 
-        try:
-            tx_raw_output = clusterlib_utils.build_and_submit_tx(
-                cluster_obj=cluster,
-                name_template=temp_template,
-                src_address=user_payment.address,
-                submit_method=submit_method,
-                build_method=build_method,
-                tx_files=tx_files,
-                deposit=deposit,
-            )
-        except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
-            str_exc = str(exc)
-            if "(ValueNotConservedUTxO" in str_exc:
-                if VERSIONS.cluster_era in (9, 10, 11):
-                    # The ledger issue 4566 will not be fixed in any Conway protocol version
-                    issues.ledger_4566.finish_test(force_blocked=True)
-                if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST:
-                    issues.ledger_4566.finish_test()
-            if build_method == clusterlib_utils.BuildMethods.BUILD_EST and (
-                "The transaction balance is negative" in str_exc
-                or "does not balance in its use of assets" in str_exc
-            ):
-                issues.cli_1199.finish_test()
-            raise
+        tx_raw_output = clusterlib_utils.build_and_submit_tx(
+            cluster_obj=cluster,
+            name_template=temp_template,
+            src_address=user_payment.address,
+            submit_method=submit_method,
+            build_method=build_method,
+            tx_files=tx_files,
+            deposit=deposit,
+        )
 
-        # Check that the stake address is registered
-        stake_addr_info = cluster.g_query.get_stake_addr_info(user_registered.stake.address)
-        if not stake_addr_info:
-            if VERSIONS.cluster_era in (9, 10, 11):
-                # The ledger issue 4566 will not be fixed in any Conway protocol version
-                issues.ledger_4566.finish_test(force_blocked=True)
-            if VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST:
-                issues.ledger_4566.finish_test()
-        assert stake_addr_info, f"Stake address is not registered: {user_registered.stake.address}"
+        # Check that both addresses reflect the ordered sequence of certificates.
+        assert not cluster.g_query.get_stake_addr_info(user_registered.stake.address), (
+            f"Stake address is registered: {user_registered.stake.address}"
+        )
+        assert cluster.g_query.get_stake_addr_info(user_remaining.stake.address), (
+            f"Stake address is not registered: {user_remaining.stake.address}"
+        )
 
         # Check that the balance for source address was correctly updated and that key deposit
         # was needed
@@ -347,7 +424,127 @@ class TestRegisterAddr:
         tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_raw_output)
         if tx_db_record:
             assert user_registered.stake.address in tx_db_record.stake_registration
+            assert user_remaining.stake.address in tx_db_record.stake_registration
             assert user_registered.stake.address in tx_db_record.stake_deregistration
+
+    @allure.link(helpers.get_vcs_link())
+    @allure.issue(issues.ledger_4566.gh_issue.url)
+    @submit_utils.PARAM_SUBMIT_METHOD
+    @pytest.mark.skipif(
+        VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST,
+        reason="Duplicate certificate decoding is rejected in Dijkstra+ eras",
+    )
+    @pytest.mark.smoke
+    @pytest.mark.testnets
+    @pytest.mark.dbsync
+    def test_duplicate_certificates(
+        self,
+        cluster: clusterlib.ClusterLib,
+        pool_users: list[clusterlib.PoolUser],
+        pool_users_disposable: list[clusterlib.PoolUser],
+        submit_method: str,
+    ):
+        """Reject duplicate certificates on decoding, then confirm the unique control.
+
+        Build and sign a valid registration/deregistration transaction. Insert
+        repeated certificates directly into its CBOR to bypass CLI deduplication.
+        Require the precise duplicate-count decoder error, not a signature or
+        balance failure, and verify the inputs and stake registration are unchanged.
+        CLI submission rejects locally; submit-api exercises its raw CBOR decoder.
+        Report ledger issue #4566 if duplicates instead reach validation or settle.
+        Submit the original transaction as a positive control and check db-sync
+        when available.
+        """
+        temp_template = common.get_test_id(cluster)
+        user = pool_users_disposable[0]
+        payment = pool_users[0].payment
+        address_deposit = cluster.g_query.get_address_deposit()
+
+        # Build a balanced control with one registration and its matching refund.
+        reg_cert = cluster.g_stake_address.gen_stake_addr_registration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_vkey_file=user.stake.vkey_file,
+        )
+        dereg_cert = cluster.g_stake_address.gen_stake_addr_deregistration_cert(
+            addr_name=f"{temp_template}_addr0",
+            deposit_amt=address_deposit,
+            stake_vkey_file=user.stake.vkey_file,
+        )
+        tx_files = clusterlib.TxFiles(
+            certificate_files=[reg_cert, dereg_cert],
+            signing_key_files=[payment.skey_file, user.stake.skey_file],
+        )
+        tx_output = cluster.g_transaction.build_raw_tx(
+            src_address=payment.address,
+            tx_name=f"{temp_template}_control",
+            tx_files=tx_files,
+            fee=500_000,
+            deposit=0,
+        )
+        signed = cluster.g_transaction.sign_tx(
+            tx_body_file=tx_output.out_file,
+            signing_key_files=tx_files.signing_key_files,
+            tx_name=f"{temp_template}_control",
+        )
+        before = cluster.g_query.get_utxo(address=payment.address)
+        assert not cluster.g_query.get_stake_addr_info(user.stake.address)
+
+        # The malformed body deliberately retains stale witnesses: decoding must fail first.
+        envelope = clusterlib_utils.load_envelope(envelope_file=signed)
+        transaction = clusterlib_utils.decode_envelope_cbor(envelope=envelope)
+        assert len(transaction[0][4]) == 2
+        reg_cbor = bytes.fromhex(clusterlib_utils.load_envelope(envelope_file=reg_cert)["cborHex"])
+        dereg_cbor = bytes.fromhex(
+            clusterlib_utils.load_envelope(envelope_file=dereg_cert)["cborHex"]
+        )
+        reg = cbor2.loads(reg_cbor)
+        dereg = cbor2.loads(dereg_cbor)
+        transaction[0][4] = cbor2.CBORTag(258, [reg, dereg, reg, dereg, reg])
+        encoded = cbor2.dumps(transaction)
+        assert encoded.count(reg_cbor) == 3
+        assert encoded.count(dereg_cbor) == 2
+        malformed = pl.Path(f"{temp_template}_duplicate.signed")
+        malformed.write_text(json.dumps({**envelope, "cborHex": encoded.hex()}), encoding="utf-8")
+
+        # Neither submission path may silently strip duplicates or reach ledger validation.
+        try:
+            submit_utils.submit_tx(
+                submit_method=submit_method,
+                cluster_obj=cluster,
+                tx_file=malformed,
+                txins=tx_output.txins,
+            )
+        except (clusterlib.CLIError, submit_api.SubmitApiError) as exc:
+            err = str(exc)
+            if "ShelleyTxValidationError" in err:
+                # A ledger validation error proves the duplicate collection passed decoding.
+                issues.ledger_4566.finish_test()
+            assert (
+                "Final number of elements: 2 does not match the total count that was decoded: 5"
+                in err
+            ), err
+        else:
+            issues.ledger_4566.finish_test()
+        assert cluster.g_query.get_utxo(address=payment.address) == before
+        assert not cluster.g_query.get_stake_addr_info(user.stake.address)
+
+        # The unmodified, correctly witnessed control must still be accepted.
+        submit_utils.submit_tx(
+            submit_method=submit_method,
+            cluster_obj=cluster,
+            tx_file=signed,
+            txins=tx_output.txins,
+        )
+        assert not cluster.g_query.get_utxo(utxo=tx_output.txins)
+        assert not cluster.g_query.get_stake_addr_info(user.stake.address)
+        assert cluster.g_query.get_address_balance(payment.address) == (
+            clusterlib.calculate_utxos_balance(before) - tx_output.fee
+        )
+        tx_db_record = dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        if tx_db_record:
+            assert user.stake.address in tx_db_record.stake_registration
+            assert user.stake.address in tx_db_record.stake_deregistration
 
     @allure.link(helpers.get_vcs_link())
     @markers.PARAM_BUILD_METHOD_NO_EST
