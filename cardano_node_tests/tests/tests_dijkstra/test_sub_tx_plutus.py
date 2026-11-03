@@ -76,7 +76,7 @@ class TestSubTransactionSponsorship:
         temp_template = common.get_test_id(cluster)
         user, sponsor, collateral_owner, recipient = payment_addrs
         script_file = (
-            plutus_common.SCRIPTS_V4_DIR / "always-fails.plutus"
+            plutus_common.ALWAYS_FAILS_PLUTUS_V4
             if script_fails
             else plutus_common.ALWAYS_SUCCEEDS_PLUTUS_V4
         )
@@ -235,7 +235,7 @@ class TestSubTransactionPhaseOne:
         cluster = cluster_plutus
         temp_template = common.get_test_id(cluster)
         user, sponsor, collateral, recipient = payment_addrs
-        script_file = plutus_common.SCRIPTS_V4_DIR / "always-fails.plutus"
+        script_file = plutus_common.ALWAYS_FAILS_PLUTUS_V4
         script_address = cluster.g_address.gen_payment_addr(
             addr_name=f"{temp_template}_script", payment_script_file=script_file
         )

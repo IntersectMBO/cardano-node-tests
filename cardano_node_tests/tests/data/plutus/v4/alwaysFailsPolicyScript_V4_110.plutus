@@ -1,0 +1,5 @@
+{
+    "type": "PlutusScriptV4",
+    "description": "alwaysFailsPolicyScript_V4_110",
+    "cborHex": "58190101003223290019900119801a49035054350049a93195ce01"
+}
