@@ -2,9 +2,9 @@
 
 Issue: [plutus-private#2261](https://github.com/IntersectMBO/plutus-private/issues/2261).
 The builtin takes the array first, unlike the older signature in the issue.
-The tests target PV12 with PlutusV3 / PLC 1.1.0. The node and CLI must both use
-a Plutus revision that activates batch7 at PV12; a development version number
-alone does not establish that activation.
+The tests target PV12 with PlutusV3 and PlutusV4 / PLC 1.1.0. The node and CLI
+must both use a Plutus revision that activates batch7 at PV12 in both languages;
+a development version number alone does not establish that activation.
 
 ## Established practice
 
@@ -19,9 +19,16 @@ the complete conformance suite or its golden budgets.
 The test reuses the chunked funding/subtest runner, caches funded addresses, and
 checks confirmed transaction outputs and optional db-sync records. Its fixture locks
 governance and Plutus resources and uses the cluster pools. When necessary, it
-enacts a PlutusV3 cost-model update before running all scenarios in one test, then
-marks the cluster for respin. The update can require three epochs; the fixture
-skips this setup on long-epoch testnets before doing any governance work.
+enacts one cost-model update for every tested language, then marks the cluster for
+respin. The update can require three epochs; the fixture skips this setup on
+long-epoch testnets before doing any governance work. All PlutusV3 scenarios and
+then all PlutusV4 scenarios run as subtests of one test, so both languages share
+this setup. Separate parametrized tests would each pay for the update and a respin.
+
+The PlutusV4 policies have the same code as the PlutusV3 ones, because the
+policies don't read the script context. Only the envelope `type` differs. The
+PlutusV4 scenarios are skipped, without skipping PlutusV3, when the transaction
+era is older than Dijkstra or the CLI cannot decode the PlutusV4 policies.
 
 ## Scenario selection
 
@@ -61,12 +68,20 @@ The batch7 modules use the common generator, updated to Plutus 1.72 by
 [PR #30](https://github.com/mkoura/plutus-scripts-e2e/pull/30). Keep builtin
 evaluation disabled in the compiler so the tested operation survives optimization.
 
-`cost_models_list_355_v3.json` preserves the existing 350 PlutusV3
+For PlutusV3, `cost_models_list_355_v3_v4.json` preserves the existing 350
 parameters from `cost_models_list_332_350_v2_v3.json` and appends the five
 `multiIndexArray` parameters in ledger `V3.ParamName` order: CPU c0/c1/c2
 `326163/12304/2`, memory intercept/slope `4/3`, from Plutus's
 `plutus-core/cost-model/data/builtinCostModelE.json`. Other language models are
 unchanged by the proposal. These are test parameters, not proposed mainnet pricing.
+
+The file gives PlutusV4 the same 355 values. At PV12 the PlutusV4 parameters have
+the same names and order as the PlutusV3 ones, and both languages use the same
+builtin semantics variant. The genesis from cardonnay gives PlutusV4 only 251
+parameters. Plutus sets the missing parameters to `maxBound`, so a PlutusV4
+policy that uses `multiIndexArray` exceeds any budget without this update. The
+fixture proposes both languages even when the PlutusV4 scenarios are skipped,
+and then checks only the cost models of the tested languages.
 
 The CLI must also decode PV12 scripts in `transaction policyid` and transaction
 witnesses. Some development builds accept `dijkstra` commands but still decode
