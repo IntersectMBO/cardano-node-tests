@@ -1,9 +1,10 @@
-"""Tests for `utils.logfiles` ignore rules handling and expected messages checks."""
+"""Tests for rotation-aware log searches, ignore rules and expected messages checks."""
 
 import logging
 import os
 import pathlib as pl
 import re
+import typing as tp
 from collections import deque
 
 import pytest
@@ -12,6 +13,212 @@ from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils import temptools
+
+
+class TestLogCursor:
+    """Check independent incremental tail cursors and polling searches."""
+
+    def test_position(self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch):
+        """Record a byte offset, inode and wall-clock timestamp from one stat call."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("λ\n", encoding="utf-8")
+        monkeypatch.setattr(logfiles.time, "time", lambda: 123.0)
+        position = logfiles.get_log_position(logfile)
+        assert position == (3, logfile.stat().st_ino, 123.0)
+
+    def test_find_msgs(self, tmp_path: pl.Path):
+        """Match multiple regexes, collapse duplicates and exclude old content."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("old\n", encoding="utf-8")
+        offset, inode, timestamp = logfiles.get_log_position(logfile)
+        with logfile.open("a", encoding="utf-8") as out:
+            out.write("new 42\nother\n")
+        found = logfiles.find_msgs(
+            regexes=["old", r"new \d+", r"new \d+", "other", "missing"],
+            logfile=logfile,
+            seek_offset=offset,
+            inode=inode,
+            timestamp=timestamp,
+        )
+        assert found == {r"new \d+", "other"}
+
+    def test_empty_regexes(self, tmp_path: pl.Path):
+        """An empty message set needs no file search."""
+        assert (
+            logfiles.find_msgs(
+                regexes=(), logfile=tmp_path / "missing", seek_offset=0, inode=0, timestamp=0
+            )
+            == set()
+        )
+
+    def test_append_during_search(self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch):
+        """An append made during a search is still searched in the next round."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("old\n", encoding="utf-8")
+        searches = logfiles.init_searches([logfile])
+        cursor = searches[logfile]
+        with logfile.open("a", encoding="utf-8") as out:
+            out.write("first\n")
+        before_search_size = logfile.stat().st_size
+        real_search = logfiles.find_msgs_in_logs
+
+        def append_after_read(**kwargs: tp.Any) -> list[str]:
+            """Append after the reader finishes but before it returns its result."""
+            lines = real_search(**kwargs)
+            with logfile.open("a", encoding="utf-8") as out:
+                out.write("second\n")
+            return lines
+
+        monkeypatch.setattr(logfiles, "find_msgs_in_logs", append_after_read)
+        errors: dict[pl.Path, str] = {}
+        assert logfiles.search_lines_round(
+            searches=searches, regex="first|second", log_errors=errors
+        ) == {logfile: ["first"]}
+        assert cursor.seek_offset == before_search_size
+        monkeypatch.setattr(logfiles, "find_msgs_in_logs", real_search)
+        assert logfiles.search_lines_round(
+            searches=searches, regex="first|second", log_errors=errors
+        ) == {logfile: ["second"]}
+        assert cursor.found == set()
+        assert not errors
+        assert not list(tmp_path.glob(".*.offset"))
+
+    def test_rotation(self, tmp_path: pl.Path):
+        """Follow the old inode after rotation and include the new live file."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("old\n", encoding="utf-8")
+        searches = logfiles.init_searches([logfile])
+        with logfile.open("a", encoding="utf-8") as out:
+            out.write("rotated\n")
+        logfile.rename(tmp_path / "node.stdout.1")
+        logfile.write_text("live\n", encoding="utf-8")
+        errors: dict[pl.Path, str] = {}
+        logfiles.search_round(
+            searches=searches,
+            missing_msgs=lambda cursor: {"old", "rotated", "live"} - cursor.found,
+            log_errors=errors,
+        )
+        assert searches[logfile].found == {"rotated", "live"}
+        assert searches[logfile].inode == logfile.stat().st_ino
+        assert not errors
+
+    @pytest.mark.parametrize("fail_at", ("position", "search"))
+    def test_failure_and_recovery(
+        self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch, fail_at: str
+    ):
+        """Failures keep cursors and only the latest per-file error; recovery clears it."""
+        paths = [tmp_path / "node1.stdout", tmp_path / "node2.stdout"]
+        for path in paths:
+            path.write_text("old\n", encoding="utf-8")
+        searches = logfiles.init_searches(paths)
+        initial = [(s.seek_offset, s.inode, s.timestamp) for s in searches.values()]
+        for path in paths:
+            with path.open("a", encoding="utf-8") as out:
+                out.write("new\n")
+        target = "get_log_position" if fail_at == "position" else "find_msgs"
+        original = getattr(logfiles, target)
+        failure = "first rotation"
+
+        def fail(*_args: tp.Any, **_kwargs: tp.Any) -> tp.NoReturn:
+            """Simulate rotation exhausting the reader's retries."""
+            raise FileNotFoundError(failure)
+
+        monkeypatch.setattr(logfiles, target, fail)
+        errors: dict[pl.Path, str] = {}
+        for failure in ("first rotation", "last rotation"):
+            logfiles.search_round(
+                searches=searches, missing_msgs=lambda s: {"new"} - s.found, log_errors=errors
+            )
+            assert [(s.seek_offset, s.inode, s.timestamp) for s in searches.values()] == initial
+            assert all(not s.found for s in searches.values())
+            assert len(errors) == 2
+            assert all(failure in error for error in errors.values())
+
+        monkeypatch.setattr(logfiles, target, original)
+        logfiles.search_round(
+            searches=searches, missing_msgs=lambda s: {"new"} - s.found, log_errors=errors
+        )
+        assert not errors
+        assert all(s.found == {"new"} for s in searches.values())
+        assert all(s.seek_offset == path.stat().st_size for path, s in searches.items())
+
+    def test_skip_complete_cursor(self, tmp_path: pl.Path):
+        """A cursor with no missing messages is not touched, even if its file is gone."""
+        logfile = tmp_path / "node.stdout"
+        logfile.touch()
+        searches = logfiles.init_searches([logfile])
+        searches[logfile].found.add("done")
+        logfile.unlink()
+        errors: dict[pl.Path, str] = {}
+        logfiles.search_round(
+            searches=searches, missing_msgs=lambda s: {"done"} - s.found, log_errors=errors
+        )
+        assert not errors
+
+    def test_expired_deadline(self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch):
+        """A caller-started search still gets one final round after its deadline."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("old\n", encoding="utf-8")
+        searches = logfiles.init_searches([logfile])
+        with logfile.open("a", encoding="utf-8") as out:
+            out.write("new\n")
+        monkeypatch.setattr(logfiles.time, "monotonic", lambda: 10.0)
+        errors = logfiles.search_logs_until(
+            searches=searches, regexes=["new", "missing"], deadline=9, search_step_sec=30
+        )
+        assert searches[logfile].found == {"new"}
+        assert not errors
+
+    @pytest.mark.parametrize("stop_on", ((), ("stop",)))
+    def test_wait_for_msgs(
+        self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch, stop_on: tuple[str, ...]
+    ):
+        """Wait only for new content, cap sleep at the deadline, and honor stop_on."""
+        logfile = tmp_path / "node.stdout"
+        logfile.write_text("old\n", encoding="utf-8")
+        sleeps: list[float] = []
+
+        def sleep(seconds: float) -> None:
+            """Write the outcome during the first polling delay."""
+            sleeps.append(seconds)
+            with logfile.open("a", encoding="utf-8") as out:
+                out.write("stop\n" if stop_on else "new\n")
+
+        monkeypatch.setattr(logfiles.time, "sleep", sleep)
+        monkeypatch.setattr(logfiles.time, "monotonic", lambda: 10.0)
+        found, errors = logfiles.wait_for_msgs(
+            logfile=logfile, regexes=["new"], stop_on=stop_on, deadline=12, search_step_sec=30
+        )
+        assert found == ({"stop"} if stop_on else {"new"})
+        assert sleeps == [2.0]
+        assert not errors
+
+    @pytest.mark.parametrize("stop_on", ((), ("stop",)))
+    def test_search_logs_until(
+        self, tmp_path: pl.Path, monkeypatch: pytest.MonkeyPatch, stop_on: tuple[str, ...]
+    ):
+        """Require all logs to match, unless a stop message appears in any log."""
+        paths = [tmp_path / "node1.stdout", tmp_path / "node2.stdout"]
+        for path in paths:
+            path.touch()
+        searches = logfiles.init_searches(paths)
+        paths[0].write_text("new\n", encoding="utf-8")
+        sleeps: list[float] = []
+
+        def sleep(seconds: float) -> None:
+            """Supply the second log's outcome after one configured delay."""
+            sleeps.append(seconds)
+            paths[1].write_text("stop\n" if stop_on else "new\n", encoding="utf-8")
+
+        monkeypatch.setattr(logfiles.time, "sleep", sleep)
+        monkeypatch.setattr(logfiles.time, "monotonic", lambda: 10.0)
+        errors = logfiles.search_logs_until(
+            searches=searches, regexes=["new"], stop_on=stop_on, deadline=20, search_step_sec=3
+        )
+        assert searches[paths[0]].found == {"new"}
+        assert searches[paths[1]].found == ({"stop"} if stop_on else {"new"})
+        assert sleeps == [3.0]
+        assert not errors
 
 
 @pytest.fixture(autouse=True)

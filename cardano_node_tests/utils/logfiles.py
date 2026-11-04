@@ -1,3 +1,5 @@
+"""Rotation-aware log searches and checks for expected messages and errors."""
+
 import contextlib
 import dataclasses
 import fnmatch
@@ -857,6 +859,248 @@ def find_msgs_in_logs(
     lines_found = _retry_search(_search)
 
     return lines_found
+
+
+@dataclasses.dataclass
+class LogCursor:
+    """In-memory tail search position and matches, independent of error-checker offsets."""
+
+    seek_offset: int
+    inode: int
+    timestamp: float
+    found: set[str] = dataclasses.field(default_factory=set)
+
+
+def get_log_position(logfile: pl.Path) -> tuple[int, int, float]:
+    """Return the current log end as (byte offset, inode, wall-clock timestamp).
+
+    A single stat call keeps the offset and inode tied to the same file even when
+    the log is rotated between calls.
+    """
+    logfile_stat = logfile.stat()
+    return logfile_stat.st_size, logfile_stat.st_ino, time.time()
+
+
+def find_msgs(
+    *,
+    regexes: tp.Collection[str],
+    logfile: pl.Path,
+    seek_offset: int,
+    inode: int,
+    timestamp: float,
+) -> set[str]:
+    """Return the message regexes present after a rotation-aware log position.
+
+    Args:
+        regexes: Message regexes to search for; duplicates are collapsed.
+        logfile: Path to the live log file.
+        seek_offset: Byte offset to start the search at.
+        inode: Inode of the file the offset belongs to.
+        timestamp: Wall-clock time the offset was recorded at.
+
+    Returns:
+        The subset of regexes matching at least one complete log line.
+    """
+    regexes = frozenset(regexes)
+    if not regexes:
+        return set()
+    lines = find_msgs_in_logs(
+        regex="|".join(f"(?:{r})" for r in regexes),
+        logfile=logfile,
+        seek_offset=seek_offset,
+        timestamp=timestamp,
+        inode=inode,
+    )
+    found: set[str] = set()
+    for line in lines:
+        for regex in regexes:
+            if regex not in found and re.search(regex, line):
+                found.add(regex)
+        if len(found) == len(regexes):
+            break
+    return found
+
+
+def init_searches(logfiles_list: tp.Iterable[pl.Path]) -> dict[pl.Path, LogCursor]:
+    """Return a tail cursor for each log file, starting at its current end."""
+    searches: dict[pl.Path, LogCursor] = {}
+    for logfile in logfiles_list:
+        seek_offset, inode, timestamp = get_log_position(logfile)
+        searches[logfile] = LogCursor(seek_offset=seek_offset, inode=inode, timestamp=timestamp)
+    return searches
+
+
+def _search_one[T](
+    *,
+    logfile: pl.Path,
+    search: LogCursor,
+    search_func: tp.Callable[..., T],
+    log_errors: dict[pl.Path, str],
+) -> T | None:
+    """Search one tail, advancing its cursor only on success.
+
+    Args:
+        logfile: Path to the live log file.
+        search: Cursor updated in place.
+        search_func: Search accepting logfile, seek_offset, inode and timestamp keywords.
+        log_errors: Last error per file; removed when a later search recovers.
+
+    Returns:
+        The search result, or None if rotation prevents the search.
+    """
+    try:
+        # Record before searching so concurrent appends are not skipped next round.
+        next_position = get_log_position(logfile)
+        result = search_func(
+            logfile=logfile,
+            seek_offset=search.seek_offset,
+            inode=search.inode,
+            timestamp=search.timestamp,
+        )
+    except FileNotFoundError as err:
+        # Keep the cursor so the same content is retried after rotation settles.
+        msg = f"Cannot search '{logfile}': {err}"
+        LOGGER.warning("%s", msg)
+        log_errors[logfile] = msg
+        return None
+
+    log_errors.pop(logfile, None)
+    search.seek_offset, search.inode, search.timestamp = next_position
+    return result
+
+
+def search_round(
+    *,
+    searches: dict[pl.Path, LogCursor],
+    missing_msgs: tp.Callable[[LogCursor], tp.Collection[str]],
+    log_errors: dict[pl.Path, str],
+) -> None:
+    """Search new content of each log, accumulating matches in its cursor.
+
+    Args:
+        searches: Per-file cursors, updated in place.
+        missing_msgs: Returns the regexes still needed for a cursor.
+        log_errors: Last error per file, replaced on failure and removed on recovery.
+    """
+    for logfile, search in searches.items():
+        missing = missing_msgs(search)
+        if not missing:
+            continue
+        found = _search_one(
+            logfile=logfile,
+            search=search,
+            search_func=functools.partial(find_msgs, regexes=missing),
+            log_errors=log_errors,
+        )
+        if found is not None:
+            search.found |= found
+
+
+def search_lines_round(
+    *,
+    searches: dict[pl.Path, LogCursor],
+    regex: str,
+    log_errors: dict[pl.Path, str],
+) -> dict[pl.Path, list[str]]:
+    """Return matching new lines per log, advancing cursors but not their found sets.
+
+    Args:
+        searches: Per-file cursors, updated in place.
+        regex: Regex to search for.
+        log_errors: Last error per file, updated as by search_round.
+
+    Returns:
+        Matching lines per file, or an empty list for a failed search.
+    """
+    new_lines: dict[pl.Path, list[str]] = {}
+    for logfile, search in searches.items():
+        lines = _search_one(
+            logfile=logfile,
+            search=search,
+            search_func=functools.partial(find_msgs_in_logs, regex=regex),
+            log_errors=log_errors,
+        )
+        new_lines[logfile] = lines or []
+    return new_lines
+
+
+def wait_for_msgs(
+    *,
+    logfile: pl.Path,
+    regexes: tp.Collection[str],
+    deadline: float,
+    search_step_sec: float,
+    stop_on: tp.Collection[str] = (),
+) -> tuple[set[str], list[str]]:
+    """Search newly appended messages until all are found or the deadline passes.
+
+    Args:
+        logfile: Path to the live log file.
+        regexes: Message regexes to search for.
+        deadline: Monotonic deadline; a final round runs even if it has passed.
+        search_step_sec: Seconds between rounds, capped by the remaining time.
+        stop_on: Additional regexes; any match ends the search early.
+
+    Returns:
+        Found regexes (including stop_on matches) and unrecovered per-file errors.
+    """
+    searches = init_searches([logfile])
+    log_errors: dict[pl.Path, str] = {}
+    all_msgs = frozenset(regexes)
+    stop_msgs = frozenset(stop_on)
+    searched_msgs = all_msgs | stop_msgs
+    while True:
+        time.sleep(min(search_step_sec, max(0.0, deadline - time.monotonic())))
+        search_round(
+            searches=searches,
+            missing_msgs=lambda search: searched_msgs - search.found,
+            log_errors=log_errors,
+        )
+        found = searches[logfile].found
+        if all_msgs <= found or found & stop_msgs or time.monotonic() >= deadline:
+            break
+    return searches[logfile].found, list(log_errors.values())
+
+
+def search_logs_until(
+    *,
+    searches: dict[pl.Path, LogCursor],
+    regexes: tp.Collection[str],
+    deadline: float,
+    search_step_sec: float,
+    stop_on: tp.Collection[str] = (),
+) -> list[str]:
+    """Continue tail searches until every log has all messages or the deadline passes.
+
+    Args:
+        searches: Caller-started per-file cursors, updated in place.
+        regexes: Message regexes needed in every log.
+        deadline: Monotonic deadline; a final round runs even if it has passed.
+        search_step_sec: Seconds between rounds, capped by the remaining time.
+        stop_on: Additional regexes; any match in any log ends the search early.
+
+    Returns:
+        Unrecovered per-file errors from the last search round.
+    """
+    log_errors: dict[pl.Path, str] = {}
+    all_msgs = frozenset(regexes)
+    stop_msgs = frozenset(stop_on)
+    searched_msgs = all_msgs | stop_msgs
+    while True:
+        search_round(
+            searches=searches,
+            missing_msgs=lambda search: searched_msgs - search.found,
+            log_errors=log_errors,
+        )
+        found_any = {m for s in searches.values() for m in s.found}
+        if (
+            found_any & stop_msgs
+            or all(all_msgs <= s.found for s in searches.values())
+            or time.monotonic() >= deadline
+        ):
+            break
+        time.sleep(min(search_step_sec, max(0.0, deadline - time.monotonic())))
+    return list(log_errors.values())
 
 
 def _subpattern_constrains(parsed: tp.Any) -> bool:

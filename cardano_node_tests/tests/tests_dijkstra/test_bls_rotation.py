@@ -327,7 +327,8 @@ def search_voting_activity(
                 f"{cluster_obj.g_query.get_epoch()} for the log search, which needs at "
                 f"least {leios.MIN_SEARCH_SEC} sec to be conclusive"
             )
-    return leios.wait_for_msgs(
+    return logfiles.wait_for_msgs(
+        search_step_sec=leios.SEARCH_STEP_SEC,
         logfile=logfile,
         regexes=[
             leios.MSG_VOTED,
