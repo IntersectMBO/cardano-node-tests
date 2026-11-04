@@ -484,12 +484,15 @@ class TestBlsProofOfPossession:
             pool_user=pool_user,
             temp_template=temp_template,
         )
-        with pytest.raises(clusterlib.CLIError, match="BlsKeyInvalidProofOfPossession"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.send_tx(
                 src_address=pool_user.payment.address,
                 tx_name=f"{temp_template}_reg_pool",
                 tx_files=tx_files,
             )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BlsKeyInvalidProofOfPossession" in exc_value, exc_value
 
         pool_state = cluster.g_query.get_pool_state(stake_pool_id=pool_id)
         assert not pool_state.pool_params, (

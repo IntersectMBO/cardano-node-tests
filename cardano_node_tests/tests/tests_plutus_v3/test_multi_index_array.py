@@ -384,8 +384,12 @@ class TestMultiIndexArray:
                     tx_name=tx_name,
                 )
                 if name != "sufficient":
-                    with pytest.raises(clusterlib.CLIError, match="overspending the budget"):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
                         cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "overspending the budget" in exc_value, exc_value
+
                     for utxo in (*funds.mint_utxos, *funds.collateral_utxos):
                         assert cluster.g_query.get_utxo(utxo=utxo), "Rejected mint spent an input"
                     continue
