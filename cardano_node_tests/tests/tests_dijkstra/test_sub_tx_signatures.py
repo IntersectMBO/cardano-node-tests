@@ -239,8 +239,11 @@ class TestSubTransactionSignatures:
                     encoding="utf-8",
                 )
                 parent_output, parent_signed = _wrap(name, mutated_child, parent_user_key)
-                with pytest.raises(clusterlib.CLIError, match=error):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=parent_signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert error in exc_value, exc_value
 
                 child_id = cluster.g_sub_transaction.get_txid(signed_sub_tx_file=mutated_child)
                 assert cluster.g_query.get_utxo(utxo=inputs) == inputs_before
@@ -475,11 +478,12 @@ class TestSubTransactionGuardSignatures:
 
         # An always-succeeding guard accepts either datum, but cannot authorize a stale signature.
         rejected_output, rejected_signed = _wrap("stale_signature", mutated_child)
-        with (
-            subtests.test(scenario="changed_required_guard_argument"),
-            pytest.raises(clusterlib.CLIError, match="SubInvalidWitnessesUTXOW"),
-        ):
-            cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+        with subtests.test(scenario="changed_required_guard_argument"):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "SubInvalidWitnessesUTXOW" in exc_value, exc_value
 
         assert cluster.g_query.get_utxo(address=owned_addresses) == state_before
         assert not cluster.g_query.get_utxo(tx_raw_output=rejected_output)

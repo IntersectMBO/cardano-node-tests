@@ -288,8 +288,11 @@ class TestSubTransactionWorkflows:
             )
 
         # A stale wrapper must fail atomically, leaving its counterparty's inputs untouched.
-        with pytest.raises(clusterlib.CLIError, match="BadInputsUTxO"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=losing_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BadInputsUTxO" in exc_value, exc_value
 
         assert cluster.g_query.get_utxo(utxo=losing_inputs) == losing_before
         assert not cluster.g_query.get_utxo(tx_raw_output=losing_output)
@@ -449,8 +452,11 @@ class TestSubTransactionWorkflows:
                 invalid_output, invalid_signed = _build_wrapper(
                     name, src, txins, invalid_change, extra_tokens
                 )
-                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedUTxO"):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "ValueNotConservedUTxO" in exc_value, exc_value
 
                 assert cluster.g_query.get_utxo(utxo=all_inputs) == inputs_before
                 assert not cluster.g_query.get_utxo(txin=child_refs)
@@ -644,8 +650,11 @@ class TestSubTransactionWorkflows:
         for name, selected, include_liquidity in invalid_batches:
             with subtests.test(scenario=name):
                 invalid_output, invalid_signed = _assemble(name, selected, include_liquidity)
-                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedUTxO"):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "ValueNotConservedUTxO" in exc_value, exc_value
 
                 assert cluster.g_query.get_utxo(utxo=all_inputs) == inputs_before
                 assert not cluster.g_query.get_utxo(txin=child_refs)

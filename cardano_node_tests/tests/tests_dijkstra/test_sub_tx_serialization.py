@@ -351,7 +351,7 @@ class TestSubTransactionWireStructure:
         encoded = bytes.fromhex(json.loads(duplicated.read_text())["cborHex"])
         assert cbor2.loads(encoded)[0][23] == [decoded_child, decoded_child]
         refused_output = pl.Path(f"{temp_template}_duplicate.signed")
-        with pytest.raises(clusterlib.CLIError, match="Duplicates found, expected no duplicates"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.cli(
                 [
                     "transaction",
@@ -364,6 +364,10 @@ class TestSubTransactionWireStructure:
                     str(refused_output),
                 ]
             )
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "Duplicates found, expected no duplicates" in exc_value, exc_value
+
         assert not refused_output.exists()
         assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
         assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")

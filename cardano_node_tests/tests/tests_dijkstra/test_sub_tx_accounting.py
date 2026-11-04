@@ -235,11 +235,12 @@ class TestSubTransactionConservation:
                 fee_lovelace=fee_lovelace,
             )
             if name != "balanced":
-                with (
-                    subtests.test(mismatch=name),
-                    pytest.raises(clusterlib.CLIError, match="ValueNotConservedUTxO"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(mismatch=name):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "ValueNotConservedUTxO" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
@@ -357,11 +358,12 @@ class TestSubTransactionAtomicity:
                 else [sponsor.skey_file, collateral.skey_file],
             )
             if name != "authorized":
-                with (
-                    subtests.test(failure=name),
-                    pytest.raises(clusterlib.CLIError, match="MissingVKeyWitnessesUTXOW"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(failure=name):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "MissingVKeyWitnessesUTXOW" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
@@ -499,11 +501,12 @@ class TestSubTransactionCertificates:
                 children=children,
             )
             if scenario != "authorized":
-                with (
-                    subtests.test(scenario=scenario),
-                    pytest.raises(clusterlib.CLIError, match="StakeKeyNotRegisteredDELEG"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(scenario=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "StakeKeyNotRegisteredDELEG" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
@@ -645,13 +648,12 @@ class TestSubTransactionAccounts:
                 children=children,
             )
             if name != "split_exact":
-                with (
-                    subtests.test(withdrawals=name),
-                    pytest.raises(
-                        clusterlib.CLIError, match="WithdrawalAmountsExceedingOriginalBalance"
-                    ),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(withdrawals=name):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "WithdrawalAmountsExceedingOriginalBalance" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
@@ -789,11 +791,13 @@ class TestSubTransactionTreasury:
                 json.loads(child.read_text())["cborHex"] in parent_cbor for child in child_files
             )
             if scenario != "original_value":
-                with (
-                    subtests.test(scenario=scenario),
-                    pytest.raises(clusterlib.CLIError, match="TreasuryValueMismatch"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(scenario=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "TreasuryValueMismatch" in exc_value, exc_value
+
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in atomicity_addrs]) == before
                 )
@@ -994,8 +998,11 @@ class TestSubTransactionMinUtxo:
         invalid_child, invalid_signed_child, invalid_parent, invalid_signed = _build_batch(
             "below_minimum", invalid_txouts, sponsor_change + 1
         )
-        with pytest.raises(clusterlib.CLIError, match="OutputTooSmallUTxO"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=invalid_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "OutputTooSmallUTxO" in exc_value, exc_value
 
         invalid_child_id = cluster.g_sub_transaction.get_txid(
             signed_sub_tx_file=invalid_signed_child

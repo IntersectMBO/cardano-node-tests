@@ -130,11 +130,12 @@ class TestSubTransactionValidity:
                 invalid_hereafter=parent_upper,
             )
             if scenario != "overlap":
-                with (
-                    subtests.test(interval=scenario),
-                    pytest.raises(clusterlib.CLIError, match="OutsideValidityIntervalUTxO"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(interval=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "OutsideValidityIntervalUTxO" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
