@@ -14,7 +14,7 @@ Never create unit tests for shell scripts.
 
 ## E2E Functional Tests
 
-E2E functional tests (everything under `cardano_node_tests/tests/`) run against a local testnet cluster using pytest. Load the development environment with `source .source` (or `source .source.dev`) first. Ensure the cluster is running, `CARDANO_NODE_SOCKET_PATH` points to its socket, and `cardano-node` and `cardano-cli` are available on `PATH`.
+E2E functional tests (everything under `cardano_node_tests/tests/`) run against a local testnet cluster using pytest. To use an existing development cluster, load the environment with `source .source` (or `source .source.dev`) first. Ensure the cluster is running, `CARDANO_NODE_SOCKET_PATH` points to its socket, and `cardano-node` and `cardano-cli` are available on `PATH`.
 For example, to run the `test_minting_one_token` test:
 
 ```sh
@@ -26,6 +26,8 @@ In order to see the full CLI command logging, you can add the `--log-level=debug
 ```sh
 pytest -s --log-level=debug -k "test_minting_one_token" cardano_node_tests/
 ```
+
+To let pytest start and stop its own disposable cluster without touching an existing dev testnet, follow [Running Selected Tests on a Managed Cluster](managed_cluster_tests.md). This requires isolated socket/state paths, a separate pytest directory, and unused ports selected with `PORTS_BASE`; changing the port base alone is not enough.
 
 ## Troubleshooting E2E Runs
 
