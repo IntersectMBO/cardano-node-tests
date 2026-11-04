@@ -26,6 +26,7 @@ from packaging import version
 from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
+from cardano_node_tests.tests import delegation
 from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
@@ -970,14 +971,16 @@ class TestStakePool:
 
         * Create pool with metadata and 3 pool owners
         * Register and delegate stake addresses to the pool
-        * Wait for pool to be registered and receive first rewards
         * Generate pool deregistration certificate for future epoch
         * Submit deregistration certificate
+        * Register a fresh stake address and delegate it to the pool while retirement is pending
         * Wait for retirement epoch
-        * Check that the pool was deregistered and no longer appears in stake distribution
-        * Check that owner stake addresses are no longer delegated to the pool
+        * Check that the pool was deregistered
+        * Check that owner and fresh stake addresses are no longer delegated to the pool
+        * Check that the fresh stake address remains registered with its vote delegation intact
+        * Check that delegation to the retired pool is rejected and leaves the address undelegated
         * Check that the pool deposit was returned to reward account
-        * (optional) Check pool deregistration in db-sync
+        * (optional) Check pending-retirement delegation and pool deregistration in db-sync
         * (optional) Check SMASH service delisted the pool
         """
         rand_str = clusterlib.get_rand_str(4)
@@ -1033,6 +1036,14 @@ class TestStakePool:
             pool_owner.stake.address
         ).reward_account_balance
 
+        # Fund a fresh delegator before entering the retirement transaction window.
+        pool_user = addrs_common.get_pool_user(
+            name_template=f"{temp_template}_pending_retirement",
+            cluster_manager=cluster_manager,
+            cluster_obj=cluster,
+            amount=100_000_000,
+        )
+
         # Deregister stake pool
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
@@ -1072,6 +1083,27 @@ class TestStakePool:
             == src_register_balance - tx_raw_output.fee
         )
 
+        # Pending retirement must not prevent a fresh stake address from delegating.
+        delegation_out = delegation.delegate_stake_addr(
+            cluster_obj=cluster,
+            addrs_data=cluster_manager.cache.addrs_data,
+            temp_template=f"{temp_template}_pending_retirement",
+            pool_user=pool_user,
+            pool_id=pool_creation_out.stake_pool_id,
+            build_method=build_method,
+        )
+        assert cluster.g_query.get_epoch() < depoch, "Delegation crossed the retirement epoch"
+
+        tx_db_record = dbsync_utils.check_tx(
+            cluster_obj=cluster, tx_raw_output=delegation_out.tx_raw_output
+        )
+        delegation.db_check_delegation(
+            pool_user=pool_user,
+            db_record=tx_db_record,
+            deleg_epoch=depoch - 1,
+            pool_id=pool_creation_out.stake_pool_id,
+        )
+
         if common.is_epochs_wait_ok(cluster_obj=cluster, epochs=1):
             # Check that the pool was deregistered
             cluster.wait_for_epoch(epoch_no=depoch, padding_seconds=5)
@@ -1082,11 +1114,48 @@ class TestStakePool:
             ), f"The pool {pool_creation_out.stake_pool_id} was not deregistered"
 
             # Check that the stake addresses are no longer delegated
-            for owner_rec in pool_owners:
-                stake_addr_info = cluster.g_query.get_stake_addr_info(owner_rec.stake.address)
+            for delegator in [*pool_owners, pool_user]:
+                stake_addr_info = cluster.g_query.get_stake_addr_info(delegator.stake.address)
                 assert not stake_addr_info.delegation, (
                     f"Stake address is still delegated: {stake_addr_info}"
                 )
+
+            # Pool retirement clears only the pool delegation, not registration or voting.
+            stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+            assert stake_addr_info, "Fresh stake address was deregistered at pool retirement"
+            assert stake_addr_info.vote_delegation == "alwaysAbstain", stake_addr_info
+
+            # A registered address cannot delegate to the pool after it has retired.
+            retired_deleg_cert = cluster.g_stake_address.gen_stake_addr_delegation_cert(
+                addr_name=f"{temp_template}_retired_pool",
+                stake_vkey_file=pool_user.stake.vkey_file,
+                stake_pool_id=pool_creation_out.stake_pool_id,
+            )
+            retired_deleg_tx_files = clusterlib.TxFiles(
+                certificate_files=[retired_deleg_cert],
+                signing_key_files=[pool_user.payment.skey_file, pool_user.stake.skey_file],
+            )
+            with pytest.raises(clusterlib.CLIError) as excinfo:
+                clusterlib_utils.build_and_submit_tx(
+                    cluster_obj=cluster,
+                    name_template=f"{temp_template}_retired_pool",
+                    src_address=pool_user.payment.address,
+                    tx_files=retired_deleg_tx_files,
+                    build_method=build_method,
+                    witness_override=len(retired_deleg_tx_files.signing_key_files),
+                )
+
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert (
+                    "DelegateeNotRegisteredDELEG" in exc_value  # Before cardano-node 10.0.0
+                    or "DelegateeStakePoolNotRegisteredDELEG" in exc_value
+                ), exc_value
+
+            stake_addr_info = cluster.g_query.get_stake_addr_info(pool_user.stake.address)
+            assert stake_addr_info, "Rejected delegation deregistered the stake address"
+            assert not stake_addr_info.delegation, stake_addr_info
+            assert stake_addr_info.vote_delegation == "alwaysAbstain", stake_addr_info
 
             # Check that the pool deposit was returned to reward account
             assert (
