@@ -207,11 +207,13 @@ class TestRequiredTopLevelGuards:
                     if guard_kind == "key"
                     else "ScriptWitnessNotValidatingUTXOW"
                 )
-                with (
-                    subtests.test(scenario=scenario),
-                    pytest.raises(clusterlib.CLIError, match=expected),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(scenario=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert expected in exc_value, exc_value
+
                 assert cluster.g_query.get_utxo(address=[a.address for a in guard_addrs]) == before
                 assert not cluster.g_query.get_utxo(tx_raw_output=output)
                 assert not cluster.g_query.get_utxo(txin=f"{child.txid}#0")
@@ -359,11 +361,12 @@ class TestRequiredTopLevelGuards:
                     if scenario == "missing_native_signature"
                     else "MissingRequiredGuards"
                 )
-                with (
-                    subtests.test(scenario=scenario),
-                    pytest.raises(clusterlib.CLIError, match=expected),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+                with subtests.test(scenario=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert expected in exc_value, exc_value
 
                 assert cluster.g_query.get_utxo(address=[a.address for a in guard_addrs]) == before
                 assert not cluster.g_query.get_utxo(tx_raw_output=output)
@@ -578,11 +581,13 @@ class TestNativeRequireGuard:
                     if scenario == "missing_signature"
                     else "ScriptWitnessNotValidatingUTXOW"
                 )
-                with (
-                    subtests.test(scenario=scenario),
-                    pytest.raises(clusterlib.CLIError, match=error),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(scenario=scenario):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert error in exc_value, exc_value
+
                 assert cluster.g_query.get_utxo(address=addresses) == before
                 assert cluster.g_query.get_utxo(utxo=inputs) == inputs
                 assert not cluster.g_query.get_utxo(tx_raw_output=output)

@@ -53,6 +53,26 @@ The full list of markers is in `pyproject.toml`. For db-sync related markers, se
 
 Gate on node or CLI versions (`VERSIONS.node`, `VERSIONS.cli`) only for released builds. Experimental branches (e.g. the Leios prototype) ship forks whose reported version follows the fork point, not the feature set. When a test must handle both the old and the new behavior of a CLI command, detect the feature from `<command> --help` output or from the shape of the returned data instead (see `_has_old_ping_iface` in `cardano_node_tests/tests/test_cli.py`).
 
+## Error Message Assertions
+
+Use `common.allow_unstable_error_messages()` for node/CLI error-message assertions that can vary between versions, rather than `pytest.raises(..., match=...)`. Keep the exception check strict and guard only the message assertions:
+
+```python
+with pytest.raises(clusterlib.CLIError) as excinfo:
+    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+exc_value = str(excinfo.value)
+with common.allow_unstable_error_messages():
+    assert "BadInputsUTxO" in exc_value, exc_value
+
+assert cluster.g_query.get_utxo(utxo=inputs) == inputs_before
+```
+
+- By default, message mismatches still fail. With `ALLOW_UNSTABLE_ERROR_MESSAGES=1`, the context manager logs and suppresses `AssertionError` within its block. Other exceptions are not suppressed.
+- Keep the operation, `pytest.raises`, and state or behavior assertions outside the context manager. Never weaken the requirement that the operation must fail with the expected exception type.
+- Include the full error message as the assertion's diagnostic value. Use substring checks for literal messages or `re.search` when a regular expression is needed.
+- Guard related message checks, such as Plutus failure or budget diagnostics, too. In subtests, keep exception capture and guarded message assertions within the same `subtests.test(...)` block.
+- Do not use this helper for stable framework-owned error messages in unit tests. Those should retain strict `pytest.raises(..., match=...)` checks.
+
 ## Epoch Waits
 
 Epoch length differs between testnets - some local testnet variants (e.g. `leios_fast`) have epochs several times longer than the default `local_fast` ones. A test that waits for epochs must not take too long on any of them:
@@ -89,6 +109,7 @@ When writing a new E2E test, or making larger changes to an existing one, ensure
 - [ ] `common.get_test_id(cluster)` is used for unique naming
 - [ ] Artifact file names derived from `temp_template` are unique, including within loops
 - [ ] Appropriate pytest markers are set (see Pytest Markers above)
+- [ ] Version-dependent node/CLI message assertions use `common.allow_unstable_error_messages()` without weakening exception or state checks
 - [ ] Tests that wait for epochs call `common.skip_on_long_epochs` (see Epoch Waits above)
 - [ ] Node restarts on local testnets restart all nodes (see Node Restarts above)
 - [ ] db-sync checks are added where results are verifiable in db-sync (see `agent_docs/dbsync.md`)

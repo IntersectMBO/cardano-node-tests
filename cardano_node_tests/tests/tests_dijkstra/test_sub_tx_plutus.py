@@ -169,14 +169,15 @@ class TestSubTransactionSponsorship:
             assert json.loads(child_bytes)["cborHex"] in json.loads(signed.read_text())["cborHex"]
 
             if name != "valid":
-                with (
-                    subtests.test(collateral=name),
-                    pytest.raises(
-                        clusterlib.CLIError,
-                        match=r"NoCollateralInputs|InsufficientCollateral",
-                    ),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(collateral=name):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert (
+                            "NoCollateralInputs" in exc_value
+                            or "InsufficientCollateral" in exc_value
+                        ), exc_value
 
                 assert cluster.g_query.get_utxo(address=addresses) == state_before
                 assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
@@ -186,9 +187,13 @@ class TestSubTransactionSponsorship:
 
             if script_fails:
                 # Local submission protects the sponsor from an unexpectedly failing action.
-                with pytest.raises(clusterlib.CLIError, match="ValidationTagMismatch") as excinfo:
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=signed)
-                assert "The PlutusV4 script failed" in str(excinfo.value)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "ValidationTagMismatch" in exc_value, exc_value
+                    assert "The PlutusV4 script failed" in exc_value, exc_value
+
                 assert cluster.g_query.get_utxo(address=addresses) == state_before
                 assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
                 assert not cluster.g_query.get_utxo(txin=f"{child_id}#0")
@@ -316,14 +321,15 @@ class TestSubTransactionPhaseOne:
                 if failure == "evaluation_control"
                 else "MissingVKeyWitnessesUTXOW"
             )
-            with (
-                subtests.test(failure=failure),
-                pytest.raises(clusterlib.CLIError, match=expected) as excinfo,
-            ):
-                cluster.g_transaction.submit_tx_bare(tx_file=signed)
+            with subtests.test(failure=failure):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
+                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert expected in exc_value, exc_value
+                    if failure == "evaluation_control":
+                        assert "The PlutusV4 script failed" in exc_value, exc_value
 
-            if failure == "evaluation_control":
-                assert "The PlutusV4 script failed" in str(excinfo.value)
             assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
             assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
             assert not cluster.g_query.get_utxo(tx_raw_output=output)
@@ -461,11 +467,12 @@ class TestSubTransactionDatums:
                 signing_key_files=[sponsor.skey_file, collateral.skey_file],
             )
             if location != "local":
-                with (
-                    subtests.test(datum_location=location),
-                    pytest.raises(clusterlib.CLIError, match="MissingRequiredDatums"),
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+                with subtests.test(datum_location=location):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "MissingRequiredDatums" in exc_value, exc_value
 
                 assert cluster.g_query.get_utxo(address=addresses) == before
                 assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs

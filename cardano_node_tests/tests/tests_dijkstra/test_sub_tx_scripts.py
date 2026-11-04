@@ -245,8 +245,11 @@ class TestSubTransactionScriptSupply:
                 "unused": "ExtraneousScriptWitnessesUTXOW",
                 "parent_key": "ScriptWitnessNotValidatingUTXOW",
             }[supply]
-            with pytest.raises(clusterlib.CLIError, match=expected):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert expected in exc_value, exc_value
 
             assert cluster.g_query.get_utxo(address=addresses) == before
             assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
@@ -408,14 +411,15 @@ class TestSubTransactionScriptSupply:
             output = dataclasses.replace(output, out_file=parent_file)
 
             if failing_index >= 0:
-                with (
-                    subtests.test(failing_child=failing_index),
-                    pytest.raises(clusterlib.CLIError, match="ValidationTagMismatch") as excinfo,
-                ):
-                    cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                with subtests.test(failing_child=failing_index):
+                    with pytest.raises(clusterlib.CLIError) as excinfo:
+                        cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                    exc_value = str(excinfo.value)
+                    with common.allow_unstable_error_messages():
+                        assert "ValidationTagMismatch" in exc_value, exc_value
+                        assert "The PlutusV4 script failed" in exc_value, exc_value
+                        assert "budget" in exc_value.lower(), exc_value
 
-                assert "The PlutusV4 script failed" in str(excinfo.value)
-                assert "budget" in str(excinfo.value).lower()
                 assert cluster.g_query.get_utxo(address=addresses) == before
                 assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
                 assert not cluster.g_query.get_utxo(tx_raw_output=output)
@@ -568,8 +572,12 @@ class TestSubTransactionNewOutputScripts:
             if is_plutus
             else [sponsor.skey_file],
         )
-        with pytest.raises(clusterlib.CLIError, match="MissingScriptWitnessesUTXOW"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MissingScriptWitnessesUTXOW" in exc_value, exc_value
+
         assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
         assert cluster.g_query.get_utxo(utxo=script_inputs) == script_inputs
         assert not cluster.g_query.get_utxo(tx_raw_output=rejected)
@@ -736,8 +744,11 @@ class TestSubTransactionLegacyMode:
                 signing_key_files=[sponsor.skey_file, collateral.skey_file],
             )
             if not balanced_children:
-                with pytest.raises(clusterlib.CLIError, match="ValueNotConservedInLegacyMode"):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "ValueNotConservedInLegacyMode" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
@@ -773,8 +784,11 @@ class TestSubTransactionLegacyMode:
                     tx_name=f"{name}_parent_inline",
                     signing_key_files=[sponsor.skey_file, collateral.skey_file],
                 )
-                with pytest.raises(clusterlib.CLIError, match="InlineDatumsNotSupported"):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=unsupported_signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "InlineDatumsNotSupported" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before

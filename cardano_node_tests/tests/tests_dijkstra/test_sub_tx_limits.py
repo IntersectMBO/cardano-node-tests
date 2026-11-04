@@ -151,8 +151,11 @@ class TestSubTransactionLimits:
         # A CBOR chunk/list header can add bytes at an adjacent padding boundary.
         assert rejected_size - accepted_size <= 3
 
-        with pytest.raises(clusterlib.CLIError, match="MaxTxSizeUTxO"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "MaxTxSizeUTxO" in exc_value, exc_value
 
         assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
         assert not cluster.g_query.get_utxo(tx_raw_output=rejected_output)
@@ -181,8 +184,11 @@ class TestSubTransactionLimits:
             )
             assert _size(signed) == accepted_size
             if name == "below_minimum_fee":
-                with pytest.raises(clusterlib.CLIError, match="FeeTooSmallUTxO"):
+                with pytest.raises(clusterlib.CLIError) as excinfo:
                     cluster.g_transaction.submit_tx_bare(tx_file=signed)
+                exc_value = str(excinfo.value)
+                with common.allow_unstable_error_messages():
+                    assert "FeeTooSmallUTxO" in exc_value, exc_value
 
                 assert (
                     cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before

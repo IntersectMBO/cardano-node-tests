@@ -107,8 +107,11 @@ class TestSubTransactionInputs:
             ],
             children=conflicting,
         )
-        with pytest.raises(clusterlib.CLIError, match="BadInputsUTxO"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BadInputsUTxO" in exc_value, exc_value
 
         assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
         assert not cluster.g_query.get_utxo(tx_raw_output=rejected_output)
@@ -271,8 +274,11 @@ class TestSubTransactionSupplementalDatums:
             signing_key_files=[sponsor.skey_file],
         )
         if scope in ("sibling_only", "unrelated"):
-            with pytest.raises(clusterlib.CLIError, match="NotAllowedSupplementalDatums"):
+            with pytest.raises(clusterlib.CLIError) as excinfo:
                 cluster.g_transaction.submit_tx_bare(tx_file=signed_parent)
+            exc_value = str(excinfo.value)
+            with common.allow_unstable_error_messages():
+                assert "NotAllowedSupplementalDatums" in exc_value, exc_value
 
             assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
             assert not cluster.g_query.get_utxo(tx_raw_output=output)
@@ -420,8 +426,11 @@ class TestSubTransactionReferences:
             reference_inputs=parent_references,
             signing_keys=parent_keys,
         )
-        with pytest.raises(clusterlib.CLIError, match="BadInputsUTxO"):
+        with pytest.raises(clusterlib.CLIError) as excinfo:
             cluster.g_transaction.submit_tx_bare(tx_file=rejected_signed)
+        exc_value = str(excinfo.value)
+        with common.allow_unstable_error_messages():
+            assert "BadInputsUTxO" in exc_value, exc_value
 
         assert cluster.g_query.get_utxo(address=[a.address for a in payment_addrs]) == before
         assert not cluster.g_query.get_utxo(tx_raw_output=rejected_output)
