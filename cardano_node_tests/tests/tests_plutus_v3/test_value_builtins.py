@@ -504,24 +504,22 @@ def _check_state_transitions(
                 if not succeeds:
                     with pytest.raises(clusterlib.CLIError) as excinfo:
                         cluster.g_transaction.build_tx(**build_args)
-                    error = str(excinfo.value)
-                    # Keep the failure class mandatory even when unstable trace
-                    # wording is allowed; an unbalanced transaction is not evidence.
-                    assert any(
-                        text in error
-                        for text in (
-                            "The Plutus script evaluation failed",
-                            "Script evaluation error",
-                            "The machine terminated because of an error",
-                        )
-                    ), error
+                    exc_value = str(excinfo.value)
                     with common.allow_unstable_error_messages():
+                        assert any(
+                            text in exc_value
+                            for text in (
+                                "The Plutus script evaluation failed",
+                                "Script evaluation error",
+                                "The machine terminated because of an error",
+                            )
+                        ), exc_value
                         expected_error = (
                             "value state redeemer"
                             if scenario == "malformed"
                             else "value state transition"
                         )
-                        assert expected_error in error, error
+                        assert expected_error in exc_value, exc_value
                     continue
 
                 # Evaluate and submit a transition accepted by the selected restriction.
