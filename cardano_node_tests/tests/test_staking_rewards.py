@@ -2,6 +2,7 @@
 
 import dataclasses
 import logging
+import re
 import typing as tp
 
 import allure
@@ -15,6 +16,7 @@ from cardano_node_tests.cluster_management import resources_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import delegation
+from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import dbsync_types
@@ -204,6 +206,23 @@ def _check_leader_pool_ids(
 
     if db_pool_ids_dict:
         assert pool_ids_dict == db_pool_ids_dict
+
+
+def _dbsync_check_pool(*, pool_params: dict, pool_id: str) -> None:
+    """Check pool records and report the known quoted relay IP regression."""
+    try:
+        dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
+    except AssertionError as exc:
+        # Handle only a relay mismatch caused entirely by quotes around IP addresses.
+        # Other pool fields and other differences within the relays must still fail.
+        relay_error = str(exc).split("\n\n", 1)[0]
+        prefix = "'relays' value is different than expected; Expected: "
+        if relay_error.startswith(prefix):
+            expected, _, returned = relay_error.removeprefix(prefix).partition(" vs Returned: ")
+            unquoted = re.sub(r"""('IPv[46]': )'"([^"']+)"'""", r"\1'\2'", returned)
+            if returned != unquoted and expected == unquoted:
+                issues.dbsync_2182.finish_test()
+        raise
 
 
 def _dbsync_check_rewards(
@@ -955,7 +974,7 @@ class TestRewards:
 
         # Check pool records in db-sync
         pool_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool_id).pool_params
-        dbsync_utils.check_pool_data(ledger_pool_data=pool_params, pool_id=pool_id)
+        _dbsync_check_pool(pool_params=pool_params, pool_id=pool_id)
 
         # Check rewards in db-sync
         reward_db_record = _dbsync_check_rewards(
@@ -1317,9 +1336,9 @@ class TestRewards:
 
         # Check pool records in db-sync
         pool1_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool1_id).pool_params
-        dbsync_utils.check_pool_data(ledger_pool_data=pool1_params, pool_id=pool1_id)
+        _dbsync_check_pool(pool_params=pool1_params, pool_id=pool1_id)
         pool2_params: dict = cluster.g_query.get_pool_state(stake_pool_id=pool2_id).pool_params
-        dbsync_utils.check_pool_data(ledger_pool_data=pool2_params, pool_id=pool2_id)
+        _dbsync_check_pool(pool_params=pool2_params, pool_id=pool2_id)
 
         # Check rewards in db-sync
         rewards_db_pool1 = _dbsync_check_rewards(

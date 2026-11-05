@@ -153,6 +153,11 @@ dbsync_2105 = blockers.GH(
     fixed_in="13.7.0.3",
     message="Swapped min_pool_cost / coins_per_utxo_size.",
 )
+dbsync_2182 = blockers.GH(
+    issue=2182,
+    repo="IntersectMBO/cardano-db-sync",
+    message="Pool relay IPv4 and IPv6 addresses are stored with literal double quotes.",
+)
 
 ledger_3731 = blockers.GH(
     issue=3731,
