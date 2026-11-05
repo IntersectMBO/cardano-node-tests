@@ -1,0 +1,73 @@
+10.1.2
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/10.1.2>
+* Tag commits - <https://github.com/IntersectMBO/cardano-node/compare/10.1.1...10.1.2>
+
+
+This is a minor update to 10.1.1 that fixes `cardano-cli issue <https://github.com/IntersectMBO/cardano-cli/issues/953>`__ where era agnostic queries were missing from top level.
+
+Testing done for 10.1.1 release is valid for 10.1.2 as well.
+
+
+Regression testing on a local cluster
+-------------------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - P2P ON - `Conway PV9 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.1.2-conway9_default_p2p_01/>`__
+     - |:heavy_check_mark:|
+   * - P2P ON - `Conway PV10 <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/10.1.2-conway10_default_p2p_01/>`__
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (10.1.1 to 10.1.2)
+     - |:hourglass_flowing_sand:|
+   * - Rollback testing
+     - |:hourglass_flowing_sand:|
+   * - Reconnection testing
+     - |:hourglass_flowing_sand:|
+   * - Block production testing on network with 10 pools, 5 of them P2P, 5 of them Legacy - `results (sqlite db) <https://cardano-tests-reports-3-74-115-22.nip.io/data/block_production_10pools.db>`__
+     - |:hourglass_flowing_sand:|
+   * - Sanity checks of the submit-api REST service
+     - |:heavy_check_mark:|
+   * - P2P Dynamic Block Production testing
+     - |:heavy_check_mark:|
+
+
+Release testing checklist
+-------------------------
+
+.. list-table::
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `10.1.2` pushed to `preview`
+     - |:heavy_check_mark:|
+   * - Regression testing against `preview`
+     - |:hourglass_flowing_sand:|
+   * - `Sync testing ran against Mainnet (Linux) <https://tests.cardano.intersectmbo.org/test_results/sync_tests.html>`__
+     - |:hourglass_flowing_sand:|
+   * - DB re-validation testing (ledger snapshots compatibility)
+     - |:hourglass_flowing_sand:|
+   * - Backward compatibility testing (Node with version N-1)
+     - |:hourglass_flowing_sand:|
+   * - Check build instructions changes
+     - |:hourglass_flowing_sand:|
+
+
+New functionalities in this tag
+-------------------------------
+
+
+New issues
+----------
+
+
+Breaking changes
+----------------
