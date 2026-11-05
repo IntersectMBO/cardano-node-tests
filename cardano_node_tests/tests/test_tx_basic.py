@@ -169,22 +169,6 @@ class TestBasicTransactions:
 
         pytest.skip(skip_msg)
 
-    @pytest.fixture
-    def cluster_future_tx_era(
-        self,
-        future_tx_era: int,
-        cluster: clusterlib.ClusterLib,  # noqa: ARG002
-        request: SubRequest,
-    ) -> clusterlib.ClusterLib:
-        """Return a CLI wrapper for the assigned cluster using a future transaction era.
-
-        The `cluster` dependency ensures a cluster instance is assigned before creating
-        the wrapper; it does not start a separate cluster or change the network era.
-        """
-        return common.get_fixture_cluster_obj(
-            request=request, command_era=VERSIONS.MAP[future_tx_era]
-        )
-
     @allure.link(helpers.get_vcs_link())
     @submit_utils.PARAM_SUBMIT_METHOD
     @markers.PARAM_BUILD_METHOD
@@ -1446,13 +1430,14 @@ class TestBasicTransactions:
     def test_future_tx_era(
         self,
         cluster: clusterlib.ClusterLib,
-        cluster_future_tx_era: clusterlib.ClusterLib,
+        future_tx_era: int,
         payment_addrs: list[clusterlib.AddressRecord],
         submit_method: str,
     ):
         """Submit a simple payment built for an era later than the network era.
 
-        * Build and sign a 2 ADA payment using the future era's CLI commands.
+        * Balance a 2 ADA payment using the current network era.
+        * Build and sign it using the future era's CLI commands without future genesis files.
         * Use a fixed fee to avoid parsing current-era protocol parameters as a future era.
         * Submit through the parametrized submission method and expect acceptance.
         * Verify the destination output and source change, including the fee.
@@ -1467,18 +1452,39 @@ class TestBasicTransactions:
         txouts = [clusterlib.TxOut(address=dst_address, amount=amount)]
         tx_files = clusterlib.TxFiles(signing_key_files=[payment_addrs[0].skey_file])
 
-        # Future-era fee calculation may require protocol parameters the network does not emit.
-        tx_raw_output = cluster_future_tx_era.g_transaction.build_raw_tx(
+        # Balance using the network era; future-era protocol parameters may be unavailable.
+        balanced_tx = cluster.g_transaction.build_raw_tx(
             src_address=src_address,
-            tx_name=temp_template,
+            tx_name=f"{temp_template}_balance",
             txouts=txouts,
             tx_files=tx_files,
             fee=500_000,
         )
-        out_file_signed = cluster_future_tx_era.g_transaction.sign_tx(
-            tx_body_file=tx_raw_output.out_file,
-            signing_key_files=tx_files.signing_key_files,
-            tx_name=temp_template,
+        # Use the future CLI era directly, without constructing a wrapper needing its genesis.
+        future_era_name = VERSIONS.MAP[future_tx_era]
+        future_tx_body = balanced_tx.out_file.with_name(f"{temp_template}_future.body")
+        build_args = list(balanced_tx.build_args)
+        build_args[build_args.index("--out-file") + 1] = str(future_tx_body)
+        cluster.cli(["cardano-cli", future_era_name, *build_args], add_default_args=False)
+        tx_raw_output = dataclasses.replace(
+            balanced_tx, out_file=future_tx_body, build_args=build_args, era=future_era_name
+        )
+        out_file_signed = future_tx_body.with_suffix(".signed")
+        cluster.cli(
+            [
+                "cardano-cli",
+                future_era_name,
+                "transaction",
+                "sign",
+                "--tx-body-file",
+                str(future_tx_body),
+                "--signing-key-file",
+                str(payment_addrs[0].skey_file),
+                *cluster.magic_args,
+                "--out-file",
+                str(out_file_signed),
+            ],
+            add_default_args=False,
         )
 
         submit_utils.submit_tx(
