@@ -1,6 +1,7 @@
-"""Unit tests for db-sync metadata checks without a database or cluster."""
+"""Unit tests for db-sync checks without a database or cluster."""
 
 import typing as tp
+from unittest import mock
 
 import pytest
 from packaging import version
@@ -157,3 +158,144 @@ class TestUrlDrepImage:
                 image_hash="wrong",
                 expected_hash=IMAGE_HASH,
             )
+
+
+@pytest.fixture
+def epoch_stake_query(monkeypatch: pytest.MonkeyPatch) -> mock.Mock:
+    """Return two stake rows per requested epoch and record the queries."""
+    monkeypatch.setattr(dbsync_utils.configuration, "HAS_DBSYNC", True)
+
+    def _query(
+        *, pool_id_bech32: str, epoch_number: int
+    ) -> tp.Iterator[dbsync_queries.EpochStakeDBRow]:
+        """Return epoch-specific amounts so incorrect epoch mappings cannot pass."""
+        assert pool_id_bech32 == "pool1"
+        assert epoch_number >= 1
+        return iter(
+            dbsync_queries.EpochStakeDBRow(
+                id=index,
+                hash=memoryview(b""),
+                view=pool_id_bech32,
+                amount=multiplier * epoch_number,
+                epoch_number=epoch_number,
+            )
+            for index, multiplier in enumerate((10, 20), start=1)
+        )
+
+    query = mock.Mock(side_effect=_query)
+    monkeypatch.setattr(dbsync_queries, "query_epoch_stake", query)
+    return query
+
+
+class TestPoolStakeSnapshot:
+    """Check snapshot comparisons at startup and after epoch history becomes available."""
+
+    def test_epoch_zero(self, epoch_stake_query: mock.Mock):
+        """Do not query nonexistent epochs 0 and -1, even for nonzero genesis stake."""
+        dbsync_utils.check_pool_stake_snapshot(
+            pool_id="pool1",
+            epoch_no=0,
+            pool_stake_snapshots={"stakeSet": 100, "stakeGo": 200},
+        )
+
+        epoch_stake_query.assert_not_called()
+
+    def test_epoch_one(self, epoch_stake_query: mock.Mock):
+        """Check set against epoch 1 but omit go, whose epoch 0 has no history."""
+        dbsync_utils.check_pool_stake_snapshot(
+            pool_id="pool1",
+            epoch_no=1,
+            pool_stake_snapshots={"stakeSet": 30, "stakeGo": 200},
+        )
+
+        epoch_stake_query.assert_called_once_with(pool_id_bech32="pool1", epoch_number=1)
+
+    @pytest.mark.parametrize("epoch_no", [2, 10])
+    def test_later_epochs(self, epoch_stake_query: mock.Mock, epoch_no: int):
+        """Sum all rows for set's current epoch and go's previous epoch."""
+        dbsync_utils.check_pool_stake_snapshot(
+            pool_id="pool1",
+            epoch_no=epoch_no,
+            pool_stake_snapshots={"stakeSet": 30 * epoch_no, "stakeGo": 30 * (epoch_no - 1)},
+        )
+
+        assert epoch_stake_query.call_args_list == [
+            mock.call(pool_id_bech32="pool1", epoch_number=epoch_no),
+            mock.call(pool_id_bech32="pool1", epoch_number=epoch_no - 1),
+        ]
+
+    @pytest.mark.parametrize(
+        ("epoch_no", "snapshots", "snapshot_name", "stake_epoch", "db_sum", "snapshot_sum"),
+        [
+            (1, {"stakeSet": 31, "stakeGo": 200}, "stakeSet", 1, 30, 31),
+            (2, {"stakeSet": 61, "stakeGo": 30}, "stakeSet", 2, 60, 61),
+            (2, {"stakeSet": 60, "stakeGo": 31}, "stakeGo", 1, 30, 31),
+        ],
+    )
+    def test_mismatch(
+        self,
+        epoch_stake_query: mock.Mock,
+        epoch_no: int,
+        snapshots: dict[str, int | None],
+        snapshot_name: str,
+        stake_epoch: int,
+        db_sum: int,
+        snapshot_sum: int,
+    ):
+        """Keep genuine mismatches failing and report their pool, epoch, and amounts."""
+        with pytest.raises(AssertionError, match=snapshot_name) as excinfo:
+            dbsync_utils.check_pool_stake_snapshot(
+                pool_id="pool1", epoch_no=epoch_no, pool_stake_snapshots=snapshots
+            )
+
+        assert "pool1" in str(excinfo.value)
+        assert f"node epoch {epoch_no}" in str(excinfo.value)
+        assert f"db-sync epoch {stake_epoch}): {db_sum} != {snapshot_sum}" in str(excinfo.value)
+        assert epoch_stake_query.call_count == min(epoch_no, 2)
+
+    def test_both_mismatches(self, epoch_stake_query: mock.Mock):
+        """Report both failed comparisons instead of stopping after the set snapshot."""
+        with pytest.raises(AssertionError, match="stakeSet") as excinfo:
+            dbsync_utils.check_pool_stake_snapshot(
+                pool_id="pool1",
+                epoch_no=2,
+                pool_stake_snapshots={"stakeSet": 61, "stakeGo": 31},
+            )
+
+        assert "stakeGo" in str(excinfo.value)
+        assert epoch_stake_query.call_count == 2
+
+    @pytest.mark.parametrize("snapshot_sum", [0, None])
+    def test_zero_stake(self, epoch_stake_query: mock.Mock, snapshot_sum: int | None):
+        """An empty query is valid when the corresponding pool snapshot has no stake."""
+        epoch_stake_query.side_effect = lambda **_kwargs: iter(())
+        dbsync_utils.check_pool_stake_snapshot(
+            pool_id="pool1",
+            epoch_no=2,
+            pool_stake_snapshots={"stakeSet": snapshot_sum, "stakeGo": snapshot_sum},
+        )
+
+        assert epoch_stake_query.call_count == 2
+
+    def test_missing_stake(self, epoch_stake_query: mock.Mock):
+        """Do not silently omit missing data once the requested epoch should exist."""
+        epoch_stake_query.side_effect = lambda **_kwargs: iter(())
+        with pytest.raises(AssertionError, match="0 != 30"):
+            dbsync_utils.check_pool_stake_snapshot(
+                pool_id="pool1",
+                epoch_no=1,
+                pool_stake_snapshots={"stakeSet": 30, "stakeGo": 200},
+            )
+
+        epoch_stake_query.assert_called_once_with(pool_id_bech32="pool1", epoch_number=1)
+
+    def test_no_dbsync(self, epoch_stake_query: mock.Mock, monkeypatch: pytest.MonkeyPatch):
+        """Leave the optional check disabled when db-sync is not available."""
+        monkeypatch.setattr(dbsync_utils.configuration, "HAS_DBSYNC", False)
+        dbsync_utils.check_pool_stake_snapshot(
+            pool_id="pool1",
+            epoch_no=10,
+            pool_stake_snapshots={"stakeSet": 300, "stakeGo": 270},
+        )
+
+        epoch_stake_query.assert_not_called()

@@ -656,6 +656,50 @@ def check_pool_deregistration(
     return db_pool_data
 
 
+def check_pool_stake_snapshot(
+    *,
+    pool_id: str,
+    epoch_no: int,
+    pool_stake_snapshots: dict[str, int | None],
+) -> None:
+    """Compare a pool's set/go snapshots with available db-sync epoch history.
+
+    Db-sync stores each mark snapshot for the following epoch, starting at epoch 1
+    on a genesis-started chain. The current set snapshot can therefore be checked
+    from epoch 1, and the go snapshot from epoch 2. Earlier comparisons are omitted
+    without waiting for an epoch boundary. Return early when db-sync is unavailable.
+    """
+    if not configuration.HAS_DBSYNC:
+        return
+
+    errors = []
+    for snapshot_name, stake_epoch in (("stakeSet", epoch_no), ("stakeGo", epoch_no - 1)):
+        if stake_epoch < 1:
+            LOGGER.info(
+                "Not comparing %s with db-sync epoch %s: epoch stake history starts at epoch 1.",
+                snapshot_name,
+                stake_epoch,
+            )
+            continue
+
+        db_stake_sum = sum(
+            r.amount
+            for r in dbsync_queries.query_epoch_stake(
+                pool_id_bech32=pool_id, epoch_number=stake_epoch
+            )
+        )
+        snapshot_sum = pool_stake_snapshots[snapshot_name] or 0
+        if db_stake_sum != snapshot_sum:
+            errors.append(
+                f"The epoch stake distribution in db-sync doesn't match '{snapshot_name}' "
+                f"snapshot for pool {pool_id} (node epoch {epoch_no}, "
+                f"db-sync epoch {stake_epoch}): {db_stake_sum} != {snapshot_sum}"
+            )
+
+    if errors:
+        raise AssertionError("\n".join(errors))
+
+
 def check_pool_data(  # noqa: C901
     *,
     ledger_pool_data: dict,
