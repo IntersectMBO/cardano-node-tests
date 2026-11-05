@@ -8,6 +8,7 @@ import time
 import typing as tp
 
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_check_tx
@@ -15,6 +16,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1398,9 +1400,10 @@ def check_off_chain_drep_registration(  # noqa: C901
     expected_metadata = metadata["body"]
 
     # For the image rules refer to: https://cips.cardano.org/cip/CIP-0119
-    # off_chain_drep_data.image_url includes the image base64 with the data uri
-    # header prefix stripped and the off_chain_drep_data.image_sha256 remains empty.
-    def _check_image() -> None:
+    # Since db-sync 13.8.0.0, image_url preserves the full data URI (#1966).
+    # Older releases strip the prefix. Inline images have no image_hash in either format.
+    def _check_image() -> None:  # noqa: C901
+        """Check image content and hash against the db-sync version's storage format."""
         if "image" not in expected_metadata:
             return
 
@@ -1415,13 +1418,19 @@ def check_off_chain_drep_registration(  # noqa: C901
                         "Invalid metadata: base64 encoded image should start with 'data:image/'"
                     )
                 if "base64" in content_url:
-                    base64_image_data = content_url.split("base64,")[1]
-                    if db_metadata.image_url != base64_image_data:
+                    expected_image_url = (
+                        content_url
+                        if VERSIONS.dbsync >= version.parse("13.8.0.0")
+                        else content_url.split("base64,", 1)[1]
+                    )
+                    if db_metadata.image_url != expected_image_url:
                         errors.append(
                             "'image_url' value is different than expected Base64 'contentUrl';"
                         )
                 else:
                     errors.append("Invalid metadata: image is not Base64 encoded")
+                if db_metadata.image_hash is not None:
+                    errors.append("'image_hash' must be empty for a Base64 encoded image;")
             case content_url:
                 if db_metadata.image_url != content_url:
                     errors.append("'image_url' value is different than expected 'contentUrl';")
