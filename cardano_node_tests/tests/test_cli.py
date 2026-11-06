@@ -25,7 +25,7 @@ from cardano_node_tests.tests import plutus_common
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import configuration
-from cardano_node_tests.utils import dbsync_queries
+from cardano_node_tests.utils import dbsync_utils
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import logfiles
 from cardano_node_tests.utils.versions import VERSIONS
@@ -1199,7 +1199,8 @@ class TestAdvancedQueries:
         pool_ids: list[str],
         option: str,
         temp_template: str,
-    ):
+    ) -> None:
+        """Validate CLI snapshots and compare available epoch history with db-sync."""
         stake_snapshot = {}
         try:
             if option == "single_pool":
@@ -1294,40 +1295,18 @@ class TestAdvancedQueries:
                     total_stake_errors.append(
                         f"active_go: {sum_go} < {stake_snapshot['total']['stakeGo']}"
                     )
-            # Check stake distribution on dbsync
-            # The stake distribution is extracted from the "set" snapshot of the ledger
+            # Compare only snapshots whose epoch history exists in db-sync.
             elif option == "single_pool" and configuration.HAS_DBSYNC:
                 current_epoch = cluster_obj.g_query.get_epoch()
-
                 pool_stake_snapshots = next(iter(stake_snapshot["pools"].values()))
-
-                # Check stake 'set' snapshot
-                db_set_sum = sum(
-                    r.amount
-                    for r in dbsync_queries.query_epoch_stake(
-                        pool_id_bech32=pool_ids[0], epoch_number=current_epoch
+                try:
+                    dbsync_utils.check_pool_stake_snapshot(
+                        pool_id=pool_ids[0],
+                        epoch_no=current_epoch,
+                        pool_stake_snapshots=pool_stake_snapshots,
                     )
-                )
-                snapshot_set_sum = pool_stake_snapshots["stakeSet"] or 0
-
-                if db_set_sum != snapshot_set_sum:
-                    errors.append(
-                        "The epoch stake distribution in dbsync doesn't match stake 'set' snapshot"
-                    )
-
-                # Check stake 'go' snapshot
-                db_go_sum = sum(
-                    r.amount
-                    for r in dbsync_queries.query_epoch_stake(
-                        pool_id_bech32=pool_ids[0], epoch_number=current_epoch - 1
-                    )
-                )
-                snapshot_go_sum = pool_stake_snapshots["stakeGo"] or 0
-
-                if db_go_sum != snapshot_go_sum:
-                    errors.append(
-                        "The epoch stake distribution in dbsync doesn't match stake 'go' snapshot"
-                    )
+                except AssertionError as exc:
+                    errors.append(str(exc))
         elif not {
             "activeStakeGo",
             "activeStakeMark",
@@ -1442,7 +1421,8 @@ class TestAdvancedQueries:
         * Execute `cardano-cli query stake-snapshot` with specified pool filter (option parameter)
         * Verify response contains expected snapshot fields (stakeMark, stakeSet, stakeGo)
         * Check pool stake totals match expected values
-        * (optional) Validate stake distribution against db-sync for single_pool option
+        * (optional) Validate stakeSet against db-sync from epoch 1 and stakeGo from epoch 2
+          for single_pool option, without waiting for epoch history
         """
         cluster, pool_ids = cluster_and_snapshot_pools
         temp_template = common.get_test_id(cluster)

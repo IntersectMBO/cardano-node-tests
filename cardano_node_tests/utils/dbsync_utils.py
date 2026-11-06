@@ -8,6 +8,7 @@ import time
 import typing as tp
 
 from cardano_clusterlib import clusterlib
+from packaging import version
 
 from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_check_tx
@@ -15,6 +16,7 @@ from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_types
 from cardano_node_tests.utils import governance_utils
 from cardano_node_tests.utils import helpers
+from cardano_node_tests.utils.versions import VERSIONS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -652,6 +654,50 @@ def check_pool_deregistration(
     )
 
     return db_pool_data
+
+
+def check_pool_stake_snapshot(
+    *,
+    pool_id: str,
+    epoch_no: int,
+    pool_stake_snapshots: dict[str, int | None],
+) -> None:
+    """Compare a pool's set/go snapshots with available db-sync epoch history.
+
+    Db-sync stores each mark snapshot for the following epoch, starting at epoch 1
+    on a genesis-started chain. The current set snapshot can therefore be checked
+    from epoch 1, and the go snapshot from epoch 2. Earlier comparisons are omitted
+    without waiting for an epoch boundary. Return early when db-sync is unavailable.
+    """
+    if not configuration.HAS_DBSYNC:
+        return
+
+    errors = []
+    for snapshot_name, stake_epoch in (("stakeSet", epoch_no), ("stakeGo", epoch_no - 1)):
+        if stake_epoch < 1:
+            LOGGER.info(
+                "Not comparing %s with db-sync epoch %s: epoch stake history starts at epoch 1.",
+                snapshot_name,
+                stake_epoch,
+            )
+            continue
+
+        db_stake_sum = sum(
+            r.amount
+            for r in dbsync_queries.query_epoch_stake(
+                pool_id_bech32=pool_id, epoch_number=stake_epoch
+            )
+        )
+        snapshot_sum = pool_stake_snapshots[snapshot_name] or 0
+        if db_stake_sum != snapshot_sum:
+            errors.append(
+                f"The epoch stake distribution in db-sync doesn't match '{snapshot_name}' "
+                f"snapshot for pool {pool_id} (node epoch {epoch_no}, "
+                f"db-sync epoch {stake_epoch}): {db_stake_sum} != {snapshot_sum}"
+            )
+
+    if errors:
+        raise AssertionError("\n".join(errors))
 
 
 def check_pool_data(  # noqa: C901
@@ -1398,9 +1444,10 @@ def check_off_chain_drep_registration(  # noqa: C901
     expected_metadata = metadata["body"]
 
     # For the image rules refer to: https://cips.cardano.org/cip/CIP-0119
-    # off_chain_drep_data.image_url includes the image base64 with the data uri
-    # header prefix stripped and the off_chain_drep_data.image_sha256 remains empty.
-    def _check_image() -> None:
+    # Since db-sync 13.8.0.0, image_url preserves the full data URI (#1966).
+    # Older releases strip the prefix. Inline images have no image_hash in either format.
+    def _check_image() -> None:  # noqa: C901
+        """Check image content and hash against the db-sync version's storage format."""
         if "image" not in expected_metadata:
             return
 
@@ -1415,13 +1462,19 @@ def check_off_chain_drep_registration(  # noqa: C901
                         "Invalid metadata: base64 encoded image should start with 'data:image/'"
                     )
                 if "base64" in content_url:
-                    base64_image_data = content_url.split("base64,")[1]
-                    if db_metadata.image_url != base64_image_data:
+                    expected_image_url = (
+                        content_url
+                        if VERSIONS.dbsync >= version.parse("13.8.0.0")
+                        else content_url.split("base64,", 1)[1]
+                    )
+                    if db_metadata.image_url != expected_image_url:
                         errors.append(
                             "'image_url' value is different than expected Base64 'contentUrl';"
                         )
                 else:
                     errors.append("Invalid metadata: image is not Base64 encoded")
+                if db_metadata.image_hash is not None:
+                    errors.append("'image_hash' must be empty for a Base64 encoded image;")
             case content_url:
                 if db_metadata.image_url != content_url:
                     errors.append("'image_url' value is different than expected 'contentUrl';")
