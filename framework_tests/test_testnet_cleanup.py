@@ -539,12 +539,14 @@ def _payment_inputs(names: list[str], *, per_address: int = 2) -> cleanup.TxInpu
     ]
 
 
-def _payment_sender(bad: set[str]) -> tp.Callable[..., mock.Mock]:
+def _payment_sender(
+    bad: set[str], *, reason: str = "MissingVKeyWitnessesUTXOW"
+) -> tp.Callable[..., mock.Mock]:
     """Reject any transaction containing a specified address, without submitting it."""
 
     def send(*, txins: list[clusterlib.UTXOData], **_kwargs: tp.Any) -> mock.Mock:
         if any(u.address in bad for u in txins):
-            msg = "ShelleyTxValidationError (MissingVKeyWitnessesUTXOW bad_key)"
+            msg = f"ShelleyTxValidationError ({reason} bad_key)"
             raise clusterlib.CLIError(msg)
         return mock.Mock(txins=txins)
 
@@ -590,6 +592,25 @@ def test_payment_rejection_recovers_unaffected(
     assert "tx_bad#0" in caplog.text
     assert "tx_bad#1" in caplog.text
     assert "MissingVKeyWitnessesUTXOW" in caplog.text
+    cluster.wait_for_new_block.assert_not_called()
+
+
+def test_missing_script_witness_recovers_normal_address(
+    cluster: mock.MagicMock, payment_check: mock.Mock, caplog: pytest.LogCaptureFixture
+):
+    """Isolate script-locked inputs without abandoning a normal address's funds."""
+    groups = _payment_inputs(["normal", "script_locked"])
+    original, _ = cleanup.flatten_tx_inputs(groups)
+    cluster.g_query.get_utxo.return_value = original
+    cluster.g_transaction.send_tx.side_effect = _payment_sender(
+        {"script_locked"}, reason="MissingScriptWitnessesUTXOW"
+    )
+    cleanup.return_funds_to_faucet(cluster_obj=cluster, tx_inputs=groups, faucet_address="f")
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert [c.kwargs["txins"] for c in calls] == [original, groups[0][0], groups[1][0]]
+    payment_check.assert_called_once_with(cluster_obj=cluster, txins=[groups[0][0][0]])
+    assert "addresses=['script_locked']" in caplog.text
+    assert "MissingScriptWitnessesUTXOW" in caplog.text
     cluster.wait_for_new_block.assert_not_called()
 
 

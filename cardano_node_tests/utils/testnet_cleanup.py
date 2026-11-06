@@ -318,6 +318,7 @@ def _payment_rejection_reason(error: clusterlib.CLIError) -> str:
     reasons = (
         "FeeTooSmallUTxO",
         "MissingVKeyWitnessesUTXOW",
+        "MissingScriptWitnessesUTXOW",
         "InvalidWitnessesUTXOW",
         "MaxTxSizeUTxO",
         "OutputTooSmallUTxO",
