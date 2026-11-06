@@ -77,12 +77,19 @@ def test_exponential_backoff(submission: types.SimpleNamespace) -> None:
     ]
 
 
-def test_retry_budget(submission: types.SimpleNamespace) -> None:
+def test_retry_budget(submission: types.SimpleNamespace, caplog: pytest.LogCaptureFixture) -> None:
     """Stop rather than sleep beyond the budget, retaining the last rejection."""
-    submission.post.return_value = _response(400, "MempoolTxTooSlow (last rejection)")
+    submission.post.side_effect = [
+        _response(400, "MempoolTxTooSlow (first rejection)"),
+        _response(400, "MempoolTxTooSlow (last rejection)"),
+        _response(400, "MempoolTxTooSlow (last rejection)"),
+    ]
     with pytest.raises(submit_api.SubmitApiError, match=r"3 attempts.*7s retry budget") as excinfo:
         submission.submit(retry_timeout=7)
     assert "last rejection" in str(excinfo.value)
+    assert "first rejection" not in str(excinfo.value)
+    assert "retrying submit-api in 2.00s: MempoolTxTooSlow (first rejection)" in caplog.text
+    assert "retrying submit-api in 4.00s: MempoolTxTooSlow (last rejection)" in caplog.text
     assert submission.sleep.call_args_list == [mock.call(2), mock.call(4)]
     assert submission.clock.now == 6
 
