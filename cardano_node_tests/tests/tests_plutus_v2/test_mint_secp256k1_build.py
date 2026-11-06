@@ -2,7 +2,6 @@
 
 import logging
 import pathlib as pl
-import typing as tp
 
 import allure
 import pytest
@@ -32,7 +31,7 @@ def payment_addrs(
     cluster_manager: cluster_management.ClusterManager,
     cluster: clusterlib.ClusterLib,
 ) -> list[clusterlib.AddressRecord]:
-    """Create new payment address."""
+    """Cache payment and issuer addresses per worker/cluster, refilling the source as needed."""
     addrs = addrs_common.get_payment_addrs(
         name_template=common.get_test_id(cluster),
         cluster_manager=cluster_manager,
@@ -40,44 +39,54 @@ def payment_addrs(
         num=2,
         fund_idx=[0],
         amount=3_000_000_000,
+        min_amount=300_000_000,
+        caching_key=helpers.get_current_line_str(),
     )
     return addrs
 
 
+@pytest.fixture
+def issuer_funding(
+    cluster: clusterlib.ClusterLib,
+    payment_addrs: list[clusterlib.AddressRecord],
+) -> tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]]:
+    """Fund fresh minting inputs and collateral before testing script rejection."""
+    minting_cost = plutus_common.compute_cost(
+        execution_cost=plutus_common.MINTING_V2_REF_COST,
+        protocol_params=cluster.g_query.get_protocol_params(),
+    )
+    mint_utxos, collateral_utxos, *_ = mint_build._fund_issuer(
+        cluster_obj=cluster,
+        temp_template=common.get_test_id(cluster),
+        payment_addr=payment_addrs[0],
+        issuer_addr=payment_addrs[1],
+        minting_cost=minting_cost,
+        amount=200_000_000,
+    )
+    return mint_utxos, collateral_utxos
+
+
 class TestSECP256k1:
-    def _fund_issuer_mint_token(
+    """Test SECP256k1 minting with valid and invalid signature vectors."""
+
+    def _mint_token(
         self,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
         payment_addrs: list[clusterlib.AddressRecord],
+        issuer_funding: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         script_file: pl.Path,
         redeemer_file: pl.Path,
-    ):
-        """Fund the token issuer and mint a token."""
-        __: tp.Any  # mypy workaround
+    ) -> None:
+        """Mint a token using previously funded inputs and collateral."""
         payment_addr = payment_addrs[0]
         issuer_addr = payment_addrs[1]
 
         lovelace_amount = 2_000_000
         token_amount = 5
-        script_fund = 200_000_000
+        mint_utxos, collateral_utxos = issuer_funding
 
-        minting_cost = plutus_common.compute_cost(
-            execution_cost=plutus_common.MINTING_V2_REF_COST,
-            protocol_params=cluster_obj.g_query.get_protocol_params(),
-        )
-
-        mint_utxos, collateral_utxos, __, __ = mint_build._fund_issuer(
-            cluster_obj=cluster_obj,
-            temp_template=temp_template,
-            payment_addr=payment_addr,
-            issuer_addr=issuer_addr,
-            minting_cost=minting_cost,
-            amount=script_fund,
-        )
-
-        # Step 2: mint the "qacoin"
-
+        # Build the script transaction using only this test's funding outputs.
         policyid = cluster_obj.g_transaction.get_policyid(script_file)
         asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
         token = f"{policyid}.{asset_name}"
@@ -139,6 +148,7 @@ class TestSECP256k1:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        issuer_funding: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         algorithm: str,
         plutus_version: str,
     ):
@@ -165,10 +175,11 @@ class TestSECP256k1:
         redeemer_file = redeemer_dir / "positive.redeemer"
 
         try:
-            self._fund_issuer_mint_token(
+            self._mint_token(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 payment_addrs=payment_addrs,
+                issuer_funding=issuer_funding,
                 script_file=script_file,
                 redeemer_file=redeemer_file,
             )
@@ -215,13 +226,14 @@ class TestSECP256k1:
         self,
         cluster: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
+        issuer_funding: tuple[list[clusterlib.UTXOData], list[clusterlib.UTXOData]],
         test_vector: str,
         algorithm: str,
         plutus_version: str,
     ):
-        """Try to mint a token with invalid test vectors.
+        """Reject invalid signature vectors after successfully funding the issuer.
 
-        Expect failure.
+        Funding failures must surface as setup errors, not expected script rejections.
         """
         temp_template = common.get_test_id(cluster)
 
@@ -241,16 +253,19 @@ class TestSECP256k1:
 
         before_pv8 = clusterlib_utils.get_protocol_version(cluster_obj=cluster) < 8
 
+        # Capture only the script operation, never the successful funding setup.
         with pytest.raises(clusterlib.CLIError) as excinfo:
-            self._fund_issuer_mint_token(
+            self._mint_token(
                 cluster_obj=cluster,
                 temp_template=temp_template,
                 payment_addrs=payment_addrs,
+                issuer_funding=issuer_funding,
                 script_file=script_file,
                 redeemer_file=redeemer_file,
             )
 
         exc_value = str(excinfo.value)
+        assert "MempoolTxTooSlow" not in exc_value, exc_value
 
         # Before protocol version 8 the SECP256k1 is blocked.
         # After that the usage is limited by high cost model.
@@ -269,7 +284,8 @@ class TestSECP256k1:
         )
 
         if before_pv8:
-            assert is_forbidden or is_overspending, exc_value
+            with common.allow_unstable_error_messages():
+                assert is_forbidden or is_overspending, exc_value
         # From protocol version 8 the SECP256k1 functions are allowed and
         # when we provide wrong data meaningful error messages are expected.
         elif plutus_version == "v2":
@@ -282,18 +298,24 @@ class TestSECP256k1:
                 "no_pubkey": "Invalid verification key",
                 "no_sig": "Invalid signature",
             }
-            assert expected_error_messages[test_vector] in exc_value, exc_value
+            with common.allow_unstable_error_messages():
+                assert expected_error_messages[test_vector] in exc_value, exc_value
         elif plutus_version == "v3":
-            # PT5: PlutusTx.Prelude.check: input is 'False'. The untyped script we use for
-            # PlutusV3 is different from the PlutusV2 script, and doesn't produce the same error
-            # messages.
+            # These untyped V3 scripts fail in the CEK machine, rather than emitting
+            # PlutusTx.Prelude.check's PT5 trace. Malformed inputs also report builtin logs.
+            validation_error = (
+                "The machine terminated because of an error, "
+                "either from a built-in function or from an explicit use of 'error'."
+            )
             expected_error_messages = {
-                "invalid_sig": "PT5",
-                "invalid_pubkey": "PT5",
-                "no_msg": ("Invalid message hash" if algorithm == "ecdsa" else "PT5"),
-                "no_pubkey": "PT5",
-                "no_sig": "PT5",
+                "invalid_sig": validation_error,
+                "invalid_pubkey": validation_error,
+                "no_msg": ("Invalid message hash" if algorithm == "ecdsa" else validation_error),
+                "no_pubkey": "Invalid verification key",
+                "no_sig": "Invalid signature",
             }
+            with common.allow_unstable_error_messages():
+                assert expected_error_messages[test_vector] in exc_value, exc_value
         else:
             _msg = f"Unsupported plutus version: {plutus_version}"
             raise ValueError(_msg)
