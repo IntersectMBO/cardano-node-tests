@@ -534,6 +534,10 @@ def cleanup_addresses(
         except ValueError as exc:
             LOGGER.debug(f"Skipping: {exc}")
             continue
+        # The supplied faucet may appear under any artifact filename. Its inputs
+        # must not be cached here because worker funding spends them below.
+        if address.address == faucet_payment.address:
+            continue
         if fpath.name.endswith("_stake.addr"):
             stake_addrs.append(address)
         else:

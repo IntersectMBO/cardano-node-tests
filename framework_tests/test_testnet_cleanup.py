@@ -331,6 +331,56 @@ def test_payment_only_cleanup_no_funding(cluster: mock.MagicMock, tmp_path: pl.P
     cluster.g_transaction.send_tx.assert_not_called()
 
 
+@pytest.mark.parametrize("with_stake", [False, True])
+def test_actual_faucet_excluded_from_discovery(
+    cluster: mock.MagicMock,
+    tmp_path: pl.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    with_stake: bool,
+):
+    """Exclude a renamed faucet before caching inputs that worker funding spends."""
+    artifacts = [("funding-wallet", "faucet_address"), ("payment", "payment")]
+    if with_stake:
+        artifacts.append(("account_stake", "stake"))
+    for name, address in artifacts:
+        for suffix, content in [("addr", address), ("vkey", "key"), ("skey", "key")]:
+            (tmp_path / f"{name}.{suffix}").write_text(content)
+
+    payment_input = clusterlib.UTXOData(
+        utxo_hash="payment_tx", utxo_ix=0, amount=10_000_000, address="payment"
+    )
+    worker_input = dataclasses.replace(
+        payment_input, utxo_hash="funding_tx", address="addrs_cleanup0"
+    )
+    faucet_input = dataclasses.replace(
+        payment_input, utxo_hash="faucet_tx", address="faucet_address"
+    )
+    available = {u.address: [u] for u in [payment_input, worker_input, faucet_input]}
+    cluster.g_query.get_utxo.side_effect = lambda address: [
+        u for a in address for u in available[a]
+    ]
+    monkeypatch.setattr(cleanup, "_cleanup_stake_addresses", mock.Mock())
+    return_funds = mock.Mock()
+    monkeypatch.setattr(cleanup, "return_funds_to_faucet", return_funds)
+
+    cleanup.cleanup_addresses(
+        cluster_obj=cluster, location=tmp_path, faucet_payment=_address("faucet_address")
+    )
+
+    expected_inputs = [([payment_input], tmp_path / "payment.skey")]
+    if with_stake:
+        expected_inputs.append(([worker_input], pl.Path("addrs_cleanup0.skey")))
+        cluster.g_transaction.send_tx.assert_called_once()
+    else:
+        cluster.g_transaction.send_tx.assert_not_called()
+    return_funds.assert_called_once_with(
+        cluster_obj=cluster, tx_inputs=expected_inputs, faucet_address="faucet_address"
+    )
+    assert all(
+        "faucet_address" not in c.kwargs["address"] for c in cluster.g_query.get_utxo.call_args_list
+    )
+
+
 def _write_drep(directory: pl.Path, name: str, identity: str) -> pl.Path:
     """Write the artifacts used to locate and deduplicate DRep keys."""
     (directory / f"{name}_drep_reg.cert").write_text("certificate")
