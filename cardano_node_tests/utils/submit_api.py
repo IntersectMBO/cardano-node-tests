@@ -4,6 +4,7 @@ import binascii
 import dataclasses
 import json
 import logging
+import math
 import pathlib as pl
 import random
 import shutil
@@ -56,39 +57,71 @@ def tx2cbor(*, tx_file: clusterlib.FileType, destination_dir: clusterlib.FileTyp
     return out_file
 
 
-def post_cbor(*, cbor_file: clusterlib.FileType, url: str) -> requests.Response:
-    """Post binary CBOR representation of Tx to `cardano-submit-api` service on `url`."""
+def post_cbor(
+    *,
+    cbor_file: clusterlib.FileType,
+    url: str,
+    retry_timeout: float = 180,
+    retry_max_delay: float = 30,
+) -> requests.Response:
+    """Post a transaction, retrying only explicit `MempoolTxTooSlow` rejections.
+
+    Request timeouts use the remaining budget, capped at 300 seconds. Requests applies
+    that timeout to connection/read inactivity, not strictly to total request duration.
+    Transport errors propagate because the transaction might already have been accepted.
+
+    Args:
+        cbor_file: File containing the binary CBOR transaction.
+        url: Submit API endpoint.
+        retry_timeout: Elapsed-time budget in seconds for requests and backoff.
+        retry_max_delay: Maximum exponential backoff delay in seconds. Delays start at
+            1-2 seconds and use jitter. Both settings must be finite and positive.
+
+    Returns:
+        The first response that is not a `MempoolTxTooSlow` rejection.
+
+    """
+    if not math.isfinite(retry_timeout) or retry_timeout <= 0:
+        msg = "retry_timeout must be finite and positive"
+        raise ValueError(msg)
+    if not math.isfinite(retry_max_delay) or retry_max_delay <= 0:
+        msg = "retry_max_delay must be finite and positive"
+        raise ValueError(msg)
+
     headers = {"Content-Type": "application/cbor"}
     with open(cbor_file, "rb") as in_fp:
         cbor_binary = in_fp.read()
 
-    # Retry only on `MempoolTxTooSlow`, which is a wallclock soft-timeout in the node's
-    # mempool. It is transient when caused by GC pauses, snapshot writes, or CPU spikes;
-    # backoff must outlast those. If it persists after a few retries, the cause is not
-    # transient (expensive tx or overloaded node) and further retries won't help.
-    attempts = 6
-    for r in range(1, attempts + 1):
-        if r > 1:
-            LOGGER.warning(f"Resubmitting transaction to submit-api. Attempt {r}/{attempts}.")
-
+    deadline = time.monotonic() + retry_timeout
+    delay_cap = min(2.0, retry_max_delay)
+    attempts = 0
+    last_rejection = ""
+    while (remaining := deadline - time.monotonic()) > 0:
+        attempts += 1
         response = http_client.get_session().post(
-            url, headers=headers, data=cbor_binary, timeout=300
+            url, headers=headers, data=cbor_binary, timeout=min(300.0, remaining)
         )
 
-        if response.status_code == 400 and "MempoolTxTooSlow" in response.text:
-            if r < attempts:
-                time.sleep(random.uniform(2, 10))
-                continue
-            err = (
-                f"Failed to submit the tx after {attempts} attempts due to "
-                f"`MempoolTxTooSlow`: {response.text}"
-            )
-            raise SubmitApiError(err)
+        if response.status_code != 400 or "MempoolTxTooSlow" not in response.text:
+            return response
 
-        return response
+        last_rejection = response.text
+        delay = random.uniform(delay_cap / 2, delay_cap)
+        if delay >= deadline - time.monotonic():
+            break
+        LOGGER.warning(
+            f"MempoolTxTooSlow on attempt {attempts}; retrying submit-api in {delay:.2f}s: "
+            f"{last_rejection}"
+        )
+        time.sleep(delay)
+        delay_cap = min(delay_cap * 2, retry_max_delay)
 
-    msg = f"Unreachable: loop exited without return after {attempts} attempts."
-    raise RuntimeError(msg)
+    msg = (
+        f"Failed to submit the tx after {attempts} attempts within the "
+        f"{retry_timeout:g}s retry budget due to MempoolTxTooSlow errors. "
+        f"Last rejection: {last_rejection}"
+    )
+    raise SubmitApiError(msg)
 
 
 def submit_tx_bare(*, tx_file: clusterlib.FileType) -> SubmitApiOut:

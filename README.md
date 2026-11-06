@@ -192,6 +192,7 @@ You can fine-tune test runs using these environment variables:
 | `TX_FIREHOSE_REV`   | `tx-firehose` version (default: `leios-prototype`).      |
 | `PYTEST_ARGS`       | Extra options passed to pytest.                          |
 | `TEST_THREADS`      | Number of pytest workers (default: `20`).                |
+| `MONITOR_INTERVAL`  | Resource snapshot interval in seconds (default: `60`).   |
 | `TIME_DRIFT_POOL`   | Pool (1-3) for libfaketime clock skew; unset = off.      |
 | `TIME_DRIFT_SPEC`   | libfaketime `FAKETIME` string, e.g. `+0 x1.008`.         |
 | `LIBFAKETIME_PATH`  | Override path to `libfaketimeMT.so.1`.                   |
