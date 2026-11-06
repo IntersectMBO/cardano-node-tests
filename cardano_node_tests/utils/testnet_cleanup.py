@@ -7,17 +7,22 @@
 """
 
 import concurrent.futures
+import dataclasses
 import functools
 import itertools
+import json
 import logging
 import pathlib as pl
 import random
+import re
+import subprocess
 import time
 import typing as tp
 
 from cardano_clusterlib import clusterlib
 
 from cardano_node_tests.utils import cluster_nodes
+from cardano_node_tests.utils import clusterlib_utils
 from cardano_node_tests.utils import defragment_utxos
 from cardano_node_tests.utils import helpers
 from cardano_node_tests.utils import tx_view
@@ -26,19 +31,92 @@ LOGGER = logging.getLogger(__name__)
 
 TxInputGroup = list[tuple[list[clusterlib.UTXOData], pl.Path]]
 
+# Leave ample room for transaction overhead and payment inputs. Oversized or stale
+# certificate batches are split further on submission failure.
+CERT_BATCH_SIZE = 20
+QUERY_BATCH_SIZE = 100
 
-def reregister_stake_addr(
+
+@dataclasses.dataclass
+class _CertificateAction:
+    """Certificates, witnesses and balance changes for one cleanup credential."""
+
+    address: str
+    certificates: list[pl.Path]
+    signing_keys: list[pl.Path]
+    deposit: int = 0
+    withdrawals: list[clusterlib.TxOut] = dataclasses.field(default_factory=list)
+
+
+def _submit_certificate_batches(
     *,
     cluster_obj: clusterlib.ClusterLib,
     payment_addr: clusterlib.AddressRecord,
+    actions: list[_CertificateAction],
+    name_template: str,
+) -> list[_CertificateAction]:
+    """Submit bounded certificate batches, isolating rejected actions by splitting.
+
+    Keep confirmation enabled: subsequent batches spend the funding address's change.
+    Do not split after an uncertain confirmation failure, since the original transaction
+    might still be applied. Return only actions whose transactions were confirmed.
+    """
+    successful = []
+
+    def _submit(batch: list[_CertificateAction], name: str) -> None:
+        tx_files = clusterlib.TxFiles(
+            certificate_files=list(itertools.chain.from_iterable(a.certificates for a in batch)),
+            signing_key_files=list(
+                dict.fromkeys(
+                    [
+                        payment_addr.skey_file,
+                        *itertools.chain.from_iterable(a.signing_keys for a in batch),
+                    ]
+                )
+            ),
+        )
+        try:
+            cluster_obj.g_transaction.send_tx(
+                src_address=payment_addr.address,
+                tx_name=name,
+                tx_files=tx_files,
+                withdrawals=list(itertools.chain.from_iterable(a.withdrawals for a in batch)),
+                deposit=sum(a.deposit for a in batch),
+                witness_count_add=2,
+            )
+        except clusterlib.CLIError as exc:
+            uncertain = "didn't make it to the chain" in str(exc) or "Failed to resubmit" in str(
+                exc
+            )
+            if len(batch) == 1 or uncertain:
+                LOGGER.exception(f"Failed cleanup batch '{name}': {[a.address for a in batch]}")
+                return
+            LOGGER.warning(f"Splitting rejected cleanup batch '{name}' ({len(batch)} credentials)")
+            midpoint = len(batch) // 2
+            _submit(batch[:midpoint], f"{name}_0")
+            _submit(batch[midpoint:], f"{name}_1")
+        else:
+            successful.extend(batch)
+            LOGGER.info(f"Confirmed cleanup batch '{name}' ({len(batch)} credentials)")
+
+    for i, batch in enumerate(itertools.batched(actions, CERT_BATCH_SIZE, strict=False)):
+        _submit(list(batch), f"rf_{name_template}_batch{i}")
+    LOGGER.info(f"{name_template}: confirmed {len(successful)}/{len(actions)} credential actions")
+    return successful
+
+
+def _stake_registration_action(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
     stake_addr: clusterlib.AddressRecord,
     stake_addr_info: clusterlib.StakeAddrInfo,
     name_template: str,
     deposit_amt: int,
-) -> clusterlib.StakeAddrInfo:
-    """Re-register stake address.
+) -> _CertificateAction | None:
+    """Prepare re-registration and vote delegation when needed.
 
-    The address needs to be registered and delegated to a DRep to be able to withdraw rewards.
+    Preserve re-registration of unqueryable accounts so any remaining rewards can be
+    discovered after registration. Rewards require vote delegation before withdrawal.
     """
     rereg_certs = []
     rereg_deposit = 0
@@ -65,46 +143,25 @@ def reregister_stake_addr(
         )
         rereg_certs.append(deleg_cert)
 
-    if rereg_certs:
-        tx_files_register = clusterlib.TxFiles(
-            certificate_files=rereg_certs,
-            signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
-        )
-        try:
-            cluster_obj.g_transaction.send_tx(
-                src_address=payment_addr.address,
-                tx_name=f"rf_{name_template}_rereg_stake",
-                tx_files=tx_files_register,
-                deposit=rereg_deposit,
-            )
-        except clusterlib.CLIError:
-            LOGGER.exception(
-                f"Failed to submit stake address re-registration '{stake_addr.address}'"
-            )
-        else:
-            for ch in range(3):
-                if ch > 0:
-                    cluster_obj.wait_for_new_block()
-                stake_addr_info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
-                if stake_addr_info:
-                    LOGGER.debug(f"Re-registered stake address '{stake_addr.address}'")
-                    break
-            else:
-                LOGGER.exception(f"Failed to re-register stake address '{stake_addr.address}'")
-
-    return stake_addr_info
+    if not rereg_certs:
+        return None
+    return _CertificateAction(
+        address=stake_addr.address,
+        certificates=rereg_certs,
+        signing_keys=[stake_addr.skey_file],
+        deposit=rereg_deposit,
+    )
 
 
-def deregister_stake_addr(
+def _stake_deregistration_action(
     *,
     cluster_obj: clusterlib.ClusterLib,
-    payment_addr: clusterlib.AddressRecord,
     stake_addr: clusterlib.AddressRecord,
     stake_addr_info: clusterlib.StakeAddrInfo,
     name_template: str,
     deposit_amt: int,
-) -> None:
-    """Deregister stake address."""
+) -> _CertificateAction:
+    """Prepare a reward withdrawal and stake deregistration."""
     withdrawals = []
     if stake_addr_info.reward_account_balance:
         withdrawals = [
@@ -119,56 +176,34 @@ def deregister_stake_addr(
         deposit_amt=deposit_amt,
         stake_vkey_file=stake_addr.vkey_file,
     )
-    tx_files_deregister = clusterlib.TxFiles(
-        certificate_files=[stake_addr_dereg_cert],
-        signing_key_files=[payment_addr.skey_file, stake_addr.skey_file],
+    return _CertificateAction(
+        address=stake_addr.address,
+        certificates=[stake_addr_dereg_cert],
+        signing_keys=[stake_addr.skey_file],
+        withdrawals=withdrawals,
+        deposit=-deposit_amt,
     )
 
-    try:
-        cluster_obj.g_transaction.send_tx(
-            src_address=payment_addr.address,
-            tx_name=f"rf_{name_template}_dereg_withdraw_stake",
-            tx_files=tx_files_deregister,
-            withdrawals=withdrawals,
-            deposit=-deposit_amt,
-        )
-    except clusterlib.CLIError:
-        LOGGER.exception(f"Failed to deregister stake address '{stake_addr.address}'")
-    else:
-        LOGGER.debug(f"Deregistered stake address '{stake_addr.address}'")
 
-
-def retire_drep(
+def _drep_retirement_action(
     *,
     cluster_obj: clusterlib.ClusterLib,
-    payment_addr: clusterlib.AddressRecord,
     drep_keys: clusterlib.KeyPair,
     name_template: str,
     deposit_amt: int,
-) -> None:
-    """Retire a DRep."""
+) -> _CertificateAction:
+    """Prepare a DRep retirement and deposit refund."""
     ret_cert = cluster_obj.g_governance.drep.gen_retirement_cert(
         cert_name=f"rf_{name_template}",
         deposit_amt=deposit_amt,
         drep_vkey_file=drep_keys.vkey_file,
     )
-    tx_files = clusterlib.TxFiles(
-        certificate_files=[ret_cert],
-        signing_key_files=[payment_addr.skey_file, drep_keys.skey_file],
+    return _CertificateAction(
+        address=name_template,
+        certificates=[ret_cert],
+        signing_keys=[drep_keys.skey_file],
+        deposit=-deposit_amt,
     )
-
-    try:
-        cluster_obj.g_transaction.send_tx(
-            src_address=payment_addr.address,
-            tx_name=f"rf_{name_template}_retire_drep",
-            tx_files=tx_files,
-            deposit=-deposit_amt,
-        )
-    except clusterlib.CLIError as excp:
-        if "ConwayDRepNotRegistered" not in str(excp):
-            LOGGER.exception(f"Failed to retire a DRep '{name_template}'")
-    else:
-        LOGGER.debug(f"Retired a DRep '{name_template}'")
 
 
 def get_tx_inputs(
@@ -180,15 +215,19 @@ def get_tx_inputs(
     Don't exclude UTxOs with datum. All the UTxOs here has 'skey', and so the UTxOs with datum
     are spendable reference inputs.
     """
-    recs = []
-    for a in src_addrs:
-        utxos = cluster_obj.g_query.get_utxo(address=a.address)
+    recs: TxInputGroup = []
+    for addresses in itertools.batched(src_addrs, QUERY_BATCH_SIZE, strict=False):
+        utxos = cluster_obj.g_query.get_utxo(address=[a.address for a in addresses])
         utxos_ids_excluded = {
             f"{u.utxo_hash}#{u.utxo_ix}" for u in utxos if u.coin != clusterlib.DEFAULT_COIN
         }
-        txins_ok = [u for u in utxos if f"{u.utxo_hash}#{u.utxo_ix}" not in utxos_ids_excluded]
-        if txins_ok:
-            recs.append((txins_ok, a.skey_file))
+        by_address: dict[str, list[clusterlib.UTXOData]] = {}
+        for utxo in utxos:
+            if f"{utxo.utxo_hash}#{utxo.utxo_ix}" not in utxos_ids_excluded:
+                by_address.setdefault(utxo.address, []).append(utxo)
+        recs.extend(
+            (by_address[a.address], a.skey_file) for a in addresses if a.address in by_address
+        )
 
     return recs
 
@@ -245,6 +284,160 @@ def flatten_tx_inputs(
     return list(itertools.chain.from_iterable(utxo_lists)), list(skeys)
 
 
+def _payment_rejection_reason(error: clusterlib.CLIError) -> str:
+    """Recognize only stateless ledger failures that cannot follow acceptance.
+
+    `send_tx(verify_tx=False)` uses `submit_tx_bare`, which retries MempoolTxTooSlow;
+    `cli` also retries resource-exhausted/vanished connections. Consequently BadInputsUTxO
+    (including AllInputsAreSpent) is ambiguous: an earlier attempt may have succeeded.
+    Unknown, transport and timeout failures must never trigger rebuilding or splitting.
+    """
+    messages = []
+    current: BaseException | None = error
+    seen = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (subprocess.TimeoutExpired, OSError)):
+            return ""
+        messages.append(str(current))
+        current = current.__cause__ or current.__context__
+    message = "\n".join(messages)
+    uncertain = (
+        "MempoolTxTooSlow",
+        "timeout",
+        "timed out",
+        "resource exhausted",
+        "resource vanished",
+        "broken pipe",
+        "MuxError",
+        "Failed to submit",
+        "Failed to resubmit",
+    )
+    if any(marker.lower() in message.lower() for marker in uncertain):
+        return ""
+    reasons = (
+        "FeeTooSmallUTxO",
+        "MissingVKeyWitnessesUTXOW",
+        "MissingScriptWitnessesUTXOW",
+        "InvalidWitnessesUTXOW",
+        "MaxTxSizeUTxO",
+        "OutputTooSmallUTxO",
+        "BabbageOutputTooSmallUTxO",
+        "OutputTooBigUTxO",
+    )
+    return next((reason for reason in reasons if re.search(rf"\b{reason}\b", str(error))), "")
+
+
+def _retain_payment_inputs(tx_inputs: TxInputGroup, keep: set[str]) -> TxInputGroup:
+    """Retain original inputs by ID, dropping empty groups and duplicate inputs."""
+    retained = []
+    seen = set()
+    for utxos, path in tx_inputs:
+        group = []
+        for utxo in utxos:
+            identity = f"{utxo.utxo_hash}#{utxo.utxo_ix}"
+            if identity in keep and identity not in seen:
+                group.append(utxo)
+                seen.add(identity)
+        if group:
+            retained.append((group, path))
+    return retained
+
+
+def _send_payment_batch(
+    *, cluster_obj: clusterlib.ClusterLib, batch: TxInputGroup, faucet_address: str, tx_name: str
+) -> clusterlib.TxRawOutput:
+    """Submit one payment batch with at most three fee-adjustment attempts."""
+    txins, skeys = flatten_tx_inputs(tx_inputs=batch)
+    witness_count_add = max(2, len(skeys) // 20)
+    for attempt in range(1, 4):
+        try:
+            return cluster_obj.g_transaction.send_tx(
+                src_address=txins[0].address,
+                tx_name=f"{tx_name}_try{attempt}",
+                txins=txins,
+                txouts=[clusterlib.TxOut(address=faucet_address, amount=-1)],
+                tx_files=clusterlib.TxFiles(signing_key_files=skeys),
+                witness_count_add=witness_count_add,
+                verify_tx=False,
+            )
+        except clusterlib.CLIError as exc:
+            if _payment_rejection_reason(exc) != "FeeTooSmallUTxO" or attempt == 3:
+                raise
+            witness_count_add += 5
+    msg = "Unreachable payment retry state"
+    raise AssertionError(msg)  # pragma: no cover
+
+
+def _return_payment_batch(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    batch: TxInputGroup,
+    faucet_address: str,
+    tx_name: str,
+    submitted_inputs: list[clusterlib.UTXOData],
+    unavailable: set[str],
+) -> None:
+    """Isolate definite failures by address, quarantining unresolved submissions.
+
+    Each child contains strictly fewer addresses than its rejected parent, bounding
+    recursion. Never split a single address's UTxOs or retry systemic/unknown failures.
+    """
+    identities = {f"{u.utxo_hash}#{u.utxo_ix}" for utxos, _ in batch for u in utxos}
+    batch = _retain_payment_inputs(batch, identities - unavailable)
+    if not batch:
+        return
+    txins, _ = flatten_tx_inputs(tx_inputs=batch)
+    identities = {f"{u.utxo_hash}#{u.utxo_ix}" for u in txins}
+    addresses = list(dict.fromkeys(u.address for u in txins))
+    try:
+        tx_output = _send_payment_batch(
+            cluster_obj=cluster_obj, batch=batch, faucet_address=faucet_address, tx_name=tx_name
+        )
+    except (clusterlib.CLIError, subprocess.TimeoutExpired, OSError) as exc:
+        reason = _payment_rejection_reason(exc) if isinstance(exc, clusterlib.CLIError) else ""
+        if not reason or reason == "FeeTooSmallUTxO" or len(addresses) == 1:
+            # Reserve even unresolved inputs: querying them as unspent does not rule
+            # out acceptance in the mempool. Later batches must not reuse them.
+            unavailable.update(identities)
+            LOGGER.exception(
+                f"Skipping payment group '{tx_name}': addresses={addresses}, "
+                f"UTxOs={sorted(identities)}"
+            )
+            return
+        LOGGER.warning(f"Isolating rejected payment group '{tx_name}': {exc}")
+    else:
+        unavailable.update(identities)
+        submitted_inputs.append(tx_output.txins[0])
+        LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
+        return
+
+    # Query exactly this group's original inputs, not its addresses. Intersect with
+    # the original set even if the query returns unexpected/new outputs.
+    try:
+        unspent = cluster_obj.g_query.get_utxo(txin=sorted(identities))
+    except (clusterlib.CLIError, subprocess.TimeoutExpired, OSError):
+        unavailable.update(identities)
+        LOGGER.exception(f"Failed to refresh rejected payment group '{tx_name}'")
+        return
+    keep = {f"{u.utxo_hash}#{u.utxo_ix}" for u in unspent} - unavailable
+    remaining = _retain_payment_inputs(batch, keep)
+    midpoint = len(addresses) // 2
+    left_addresses = set(addresses[:midpoint])
+    left_inputs = {f"{u.utxo_hash}#{u.utxo_ix}" for u in txins if u.address in left_addresses}
+    for suffix, group_ids in [("0", left_inputs), ("1", identities - left_inputs)]:
+        group = _retain_payment_inputs(remaining, group_ids)
+        if group:
+            _return_payment_batch(
+                cluster_obj=cluster_obj,
+                batch=group,
+                faucet_address=faucet_address,
+                tx_name=f"{tx_name}_{suffix}",
+                submitted_inputs=submitted_inputs,
+                unavailable=unavailable,
+            )
+
+
 def return_funds_to_faucet(
     *,
     cluster_obj: clusterlib.ClusterLib,
@@ -252,51 +445,36 @@ def return_funds_to_faucet(
     faucet_address: str,
     tx_name: str = "",
 ) -> None:
-    """Send funds from `tx_inputs` to `faucet_address`."""
+    """Return funds in batches, isolating definitely rejected groups by address.
+
+    Confirm successful submissions collectively. Quarantine uncertain inputs for this
+    invocation rather than rebuilding transactions that may already be accepted.
+    """
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"rf_{tx_name}"
 
-    # The amount of "-1" means all available funds.
-    fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
-
     # Tx inputs deduplication is not strictly needed, as we are deduplicating the
     # address files. Keeping it here for separation of concerns.
-    batch_num = 1
-    for batch in batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)):
-        txins, skeys = flatten_tx_inputs(tx_inputs=batch)
-        fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
-        batch_tx_name = f"{tx_name}_batch{batch_num}"
-        witness_count_add = max(2, len(skeys) // 20)
+    submitted_inputs: list[clusterlib.UTXOData] = []
+    unavailable: set[str] = set()
+    for batch_num, batch in enumerate(
+        batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)), start=1
+    ):
+        _return_payment_batch(
+            cluster_obj=cluster_obj,
+            batch=batch,
+            faucet_address=faucet_address,
+            tx_name=f"{tx_name}_batch{batch_num}",
+            submitted_inputs=submitted_inputs,
+            unavailable=unavailable,
+        )
 
-        # Try to return funds
-        last_excp = None
-        for attempt in range(1, 4):
-            try:
-                cluster_obj.g_transaction.send_tx(
-                    src_address=txins[0].address,
-                    tx_name=f"{batch_tx_name}_try{attempt}",
-                    txins=txins,
-                    txouts=fund_dst,
-                    tx_files=fund_tx_files,
-                    witness_count_add=witness_count_add,
-                    verify_tx=False,
-                )
-            except clusterlib.CLIError as excp:
-                last_excp = excp
-                if "FeeTooSmallUTxO" in str(excp):
-                    witness_count_add += 5
-                    continue
-                LOGGER.exception(f"Failed to return funds from addresses for '{batch_tx_name}'")
-            else:
-                LOGGER.debug(f"Returned funds from addresses '{batch_tx_name}'")
-            break
-        else:
-            LOGGER.error(
-                f"Failed to return funds from addresses for '{batch_tx_name}'", exc_info=last_excp
-            )
-        batch_num += 1
-
-    cluster_obj.wait_for_new_block(new_blocks=3)
+    if submitted_inputs:
+        try:
+            clusterlib_utils.check_txins_spent(cluster_obj=cluster_obj, txins=submitted_inputs)
+        except AssertionError:
+            LOGGER.exception("Some return-funds transactions were not confirmed")
+    LOGGER.info(f"Returned funds: submitted {len(submitted_inputs)} transactions")
 
 
 def create_addr_record(*, addr_file: pl.Path) -> clusterlib.AddressRecord:
@@ -357,89 +535,208 @@ def dedup_addresses(
         yield fpath
 
 
+def _fund_cleanup_addresses(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    faucet_payment: clusterlib.AddressRecord,
+    count: int,
+    name_template: str,
+) -> list[clusterlib.AddressRecord]:
+    """Fund exactly the workers needed for certificate cleanup."""
+    if not count:
+        return []
+    fund_addrs = [
+        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"{name_template}{i}")
+        for i in range(count)
+    ]
+    cluster_obj.g_transaction.send_tx(
+        src_address=faucet_payment.address,
+        tx_name=f"fund_{name_template}",
+        txouts=[clusterlib.TxOut(address=f.address, amount=300_000_000) for f in fund_addrs],
+        tx_files=clusterlib.TxFiles(signing_key_files=[faucet_payment.skey_file]),
+    )
+    return fund_addrs
+
+
+def _query_registered_stake_addresses(
+    *, cluster_obj: clusterlib.ClusterLib, registered: list[_CertificateAction]
+) -> dict[str, clusterlib.StakeAddrInfo]:
+    """Query newly registered accounts, retrying lagging visibility checks together."""
+    pending = {a.address for a in registered}
+    stake_info = {}
+    for attempt in range(3):
+        if not pending:
+            break
+        if attempt:
+            cluster_obj.wait_for_new_block()
+        for address in sorted(pending):
+            info = cluster_obj.g_query.get_stake_addr_info(address)
+            if info and info.vote_delegation:
+                stake_info[address] = info
+                pending.remove(address)
+    return stake_info
+
+
+def _cleanup_stake_addresses(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    stake_addrs: list[clusterlib.AddressRecord],
+    payment_addr: clusterlib.AddressRecord,
+    deposit_amt: int,
+    name_template: str,
+) -> None:
+    """Re-register, discover rewards, then withdraw and deregister in batches."""
+    # Recycle registration deposits before starting another batch. Otherwise a large
+    # artifact directory could exhaust a worker's funding during re-registration.
+    if len(stake_addrs) > CERT_BATCH_SIZE:
+        for i, batch in enumerate(itertools.batched(stake_addrs, CERT_BATCH_SIZE, strict=False)):
+            _cleanup_stake_addresses(
+                cluster_obj=cluster_obj,
+                stake_addrs=list(batch),
+                payment_addr=payment_addr,
+                deposit_amt=deposit_amt,
+                name_template=f"{name_template}_part{i}",
+            )
+        return
+    stake_info = {}
+    registrations = []
+    for i, stake_addr in enumerate(stake_addrs):
+        # Limit concurrent node connections during discovery, not payment UTxO batching.
+        time.sleep(random.random() / 2)
+        info = cluster_obj.g_query.get_stake_addr_info(stake_addr.address)
+        stake_info[stake_addr.address] = info
+        action = _stake_registration_action(
+            cluster_obj=cluster_obj,
+            stake_addr=stake_addr,
+            stake_addr_info=info,
+            name_template=f"{name_template}_{i}",
+            deposit_amt=deposit_amt,
+        )
+        if action:
+            registrations.append(action)
+
+    registered = _submit_certificate_batches(
+        cluster_obj=cluster_obj,
+        payment_addr=payment_addr,
+        actions=registrations,
+        name_template=f"{name_template}_rereg",
+    )
+    # Previously unregistered accounts may now expose rewards.
+    registered_info = _query_registered_stake_addresses(
+        cluster_obj=cluster_obj, registered=registered
+    )
+    stake_info.update(registered_info)
+    needs_registration = {a.address for a in registrations}
+    deregistrations = []
+    for i, stake_addr in enumerate(stake_addrs):
+        if stake_addr.address in needs_registration and stake_addr.address not in registered_info:
+            LOGGER.error(f"Skipping unconfirmed stake registration '{stake_addr.address}'")
+            continue
+        info = stake_info[stake_addr.address]
+        refund = info.registration_deposit if info.registration_deposit >= 0 else deposit_amt
+        deregistrations.append(
+            _stake_deregistration_action(
+                cluster_obj=cluster_obj,
+                stake_addr=stake_addr,
+                stake_addr_info=info,
+                name_template=f"{name_template}_{i}",
+                deposit_amt=refund,
+            )
+        )
+    _submit_certificate_batches(
+        cluster_obj=cluster_obj,
+        payment_addr=payment_addr,
+        actions=deregistrations,
+        name_template=f"{name_template}_dereg",
+    )
+
+
 def cleanup_addresses(
     *,
     cluster_obj: clusterlib.ClusterLib,
     location: pl.Path,
     faucet_payment: clusterlib.AddressRecord,
 ) -> None:
-    """Cleanup addresses."""
+    """Discover payment inputs and clean stake accounts using bounded batches."""
+    started = time.monotonic()
     files_found = list(dedup_addresses(filter_addr_files(find_addr_files(location))))
-    num_threads = min(10, (len(files_found) // 200) + 1)
-    file_chunks = [files_found[i::num_threads] for i in range(num_threads)]
-
-    # Fund the addresses that will pay for fees
-    fund_addrs = [
-        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"addrs_cleanup{i}")
-        for i in range(num_threads)
-    ]
-    fund_dst = [clusterlib.TxOut(address=f.address, amount=300_000_000) for f in fund_addrs]
-    fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_payment.skey_file])
-    cluster_obj.g_transaction.send_tx(
-        src_address=faucet_payment.address,
-        tx_name="fund_addrs_cleanup",
-        txouts=fund_dst,
-        tx_files=fund_tx_files,
+    payment_addrs = []
+    stake_addrs = []
+    for fpath in files_found:
+        try:
+            address = create_addr_record(addr_file=fpath)
+        except ValueError as exc:
+            LOGGER.debug(f"Skipping: {exc}")
+            continue
+        # The supplied faucet may appear under any artifact filename. Its inputs
+        # must not be cached here because worker funding spends them below.
+        if address.address == faucet_payment.address:
+            continue
+        if fpath.name.endswith("_stake.addr"):
+            stake_addrs.append(address)
+        else:
+            payment_addrs.append(address)
+    LOGGER.info(
+        f"Address discovery: {len(payment_addrs)} payment, {len(stake_addrs)} stake accounts"
     )
+    tx_inputs = get_tx_inputs(cluster_obj=cluster_obj, src_addrs=payment_addrs)
+    LOGGER.info(f"Payment UTxO discovery finished in {time.monotonic() - started:.1f}s")
 
-    stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
-
-    def _run(files: list[pl.Path], f_addr: clusterlib.AddressRecord) -> TxInputGroup:
-        tx_inputs = []
-        for fpath in files:
-            f_name = fpath.name
-
-            # Add random sleep for < 0.5s to prevent
-            # "Network.Socket.connect: <socket: 11>: resource exhausted"
-            time.sleep(random.random() / 2)
-
-            if f_name.endswith("_stake.addr"):
-                try:
-                    stake_addr = create_addr_record(addr_file=fpath)
-                except ValueError as exc:
-                    LOGGER.debug(f"Skipping: {exc}")
-                    continue
-
-                stake_addr_info = reregister_stake_addr(
+    num_threads = min(10, (len(stake_addrs) + CERT_BATCH_SIZE - 1) // CERT_BATCH_SIZE)
+    fund_addrs = _fund_cleanup_addresses(
+        cluster_obj=cluster_obj,
+        faucet_payment=faucet_payment,
+        count=num_threads,
+        name_template="addrs_cleanup",
+    )
+    if stake_addrs:
+        stake_started = time.monotonic()
+        stake_deposit_amt = cluster_obj.g_query.get_address_deposit()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [
+                executor.submit(
+                    _cleanup_stake_addresses,
                     cluster_obj=cluster_obj,
-                    payment_addr=f_addr,
-                    stake_addr=stake_addr,
-                    stake_addr_info=cluster_obj.g_query.get_stake_addr_info(stake_addr.address),
-                    name_template=f_name,
+                    stake_addrs=stake_addrs[i::num_threads],
+                    payment_addr=addr,
                     deposit_amt=stake_deposit_amt,
+                    name_template=f"stake_cleanup{i}",
                 )
+                for i, addr in enumerate(fund_addrs)
+            ]
+            for future in futures:
+                future.result()
+        LOGGER.info(f"Stake cleanup finished in {time.monotonic() - stake_started:.1f}s")
 
-                deregister_stake_addr(
-                    cluster_obj=cluster_obj,
-                    payment_addr=f_addr,
-                    stake_addr=stake_addr,
-                    stake_addr_info=stake_addr_info,
-                    name_template=f_name,
-                    deposit_amt=stake_deposit_amt,
-                )
-            else:
-                try:
-                    payment_addr = create_addr_record(addr_file=fpath)
-                except ValueError as exc:
-                    LOGGER.debug(f"Skipping: {exc}")
-                    continue
-                tx_inputs.extend(get_tx_inputs(cluster_obj=cluster_obj, src_addrs=[payment_addr]))
-
-        return tx_inputs
-
-    # Run cleanup / discovery in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(_run, ch, fund_addrs[i]) for i, ch in enumerate(file_chunks)]
-    results = [f.result() for f in futures]
-
-    # Return funds from the collected UTxOs
-    tx_inputs = list(itertools.chain.from_iterable(results))
     tx_inputs.extend(get_tx_inputs(cluster_obj=cluster_obj, src_addrs=fund_addrs))
     return_funds_to_faucet(
         cluster_obj=cluster_obj,
         tx_inputs=tx_inputs,
         faucet_address=faucet_payment.address,
     )
+    LOGGER.info(f"Address cleanup finished in {time.monotonic() - started:.1f}s")
+
+
+def _find_drep_keys(location: pl.Path) -> list[clusterlib.KeyPair]:
+    """Find unique DRep keys, skipping missing or unreadable artifacts."""
+    keys = []
+    seen_keys = set()
+    for cert_file in find_cert_files(location):
+        vkey_file = cert_file.parent / cert_file.name.replace("_reg.cert", ".vkey")
+        skey_file = vkey_file.with_suffix(".skey")
+        if not (vkey_file.exists() and skey_file.exists()):
+            LOGGER.debug(f"Skipping DRep with missing keys: {cert_file}")
+            continue
+        try:
+            identity = json.loads(vkey_file.read_text())["cborHex"]
+        except (OSError, ValueError, KeyError):
+            LOGGER.exception(f"Skipping unreadable DRep key: {vkey_file}")
+            continue
+        if identity in seen_keys:
+            continue
+        seen_keys.add(identity)
+        keys.append(clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file))
+    return keys
 
 
 def cleanup_certs(
@@ -448,52 +745,61 @@ def cleanup_certs(
     location: pl.Path,
     faucet_payment: clusterlib.AddressRecord,
 ) -> None:
-    """Cleanup certificates."""
-    files_found = list(find_cert_files(location))
-    num_threads = min(10, (len(files_found) // 10) + 1)
-    file_chunks = [files_found[i::num_threads] for i in range(num_threads)]
+    """Retire registered DReps in batches, skipping duplicates and missing keys."""
+    started = time.monotonic()
+    keys = _find_drep_keys(location)
+    if not keys:
+        LOGGER.info("No DRep keys to clean up")
+        return
 
     drep_deposit_amt = cluster_obj.g_query.get_drep_deposit()
 
-    # Fund the addresses that will pay for fees
-    fund_addrs = [
-        cluster_obj.g_address.gen_payment_addr_and_keys(name=f"certs_cleanup{i}")
-        for i in range(num_threads + 1)
-    ]
-    fund_dst = [clusterlib.TxOut(address=f.address, amount=300_000_000) for f in fund_addrs]
-    fund_tx_files = clusterlib.TxFiles(signing_key_files=[faucet_payment.skey_file])
-    cluster_obj.g_transaction.send_tx(
-        src_address=faucet_payment.address,
-        tx_name="fund_certs_cleanup",
-        txouts=fund_dst,
-        tx_files=fund_tx_files,
+    def _discover(item: tuple[int, clusterlib.KeyPair]) -> _CertificateAction | None:
+        i, drep_keys = item
+        time.sleep(random.random() / 2)
+        try:
+            state = cluster_obj.g_query.get_drep_state(drep_vkey_file=drep_keys.vkey_file)
+        except clusterlib.CLIError:
+            LOGGER.exception(f"Failed to query DRep: {drep_keys.vkey_file}")
+            return None
+        if not state:
+            return None
+        return _drep_retirement_action(
+            cluster_obj=cluster_obj,
+            drep_keys=drep_keys,
+            name_template=f"drep_cleanup{i}",
+            deposit_amt=state[0][1].get("deposit", drep_deposit_amt),
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(keys))) as executor:
+        actions = [a for a in executor.map(_discover, enumerate(keys)) if a is not None]
+    LOGGER.info(
+        f"DRep discovery: {len(actions)}/{len(keys)} registered, "
+        f"finished in {time.monotonic() - started:.1f}s"
     )
+    if not actions:
+        return
 
-    def _run(files: list[pl.Path], payment_addr: clusterlib.AddressRecord) -> None:
-        for cert_file in files:
-            # Add random sleep for < 0.5s to prevent
-            # "Network.Socket.connect: <socket: 11>: resource exhausted"
-            time.sleep(random.random() / 2)
-
-            f_name = cert_file.name
-            f_dir = cert_file.parent
-            vkey_file = f_dir / cert_file.name.replace("_reg.cert", ".vkey")
-            skey_file = vkey_file.with_suffix(".skey")
-            drep_keys = clusterlib.KeyPair(vkey_file=vkey_file, skey_file=skey_file)
-
-            retire_drep(
-                cluster_obj=cluster_obj,
-                payment_addr=payment_addr,
-                drep_keys=drep_keys,
-                name_template=f_name,
-                deposit_amt=drep_deposit_amt,
-            )
-            # We don't need to deregister pools, because all tests clean the pools they created
-
-    # Run cleanup in parallel
+    num_threads = min(10, (len(actions) + CERT_BATCH_SIZE - 1) // CERT_BATCH_SIZE)
+    fund_addrs = _fund_cleanup_addresses(
+        cluster_obj=cluster_obj,
+        faucet_payment=faucet_payment,
+        count=num_threads,
+        name_template="certs_cleanup",
+    )
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(_run, f, fund_addrs[i]) for i, f in enumerate(file_chunks)]
-        concurrent.futures.wait(futures)
+        futures = [
+            executor.submit(
+                _submit_certificate_batches,
+                cluster_obj=cluster_obj,
+                payment_addr=addr,
+                actions=actions[i::num_threads],
+                name_template=f"drep_cleanup{i}_retire",
+            )
+            for i, addr in enumerate(fund_addrs)
+        ]
+        for future in futures:
+            future.result()
 
     # Return funds from the addresses that paid for fees
     tx_inputs = get_tx_inputs(cluster_obj=cluster_obj, src_addrs=fund_addrs)
@@ -503,6 +809,7 @@ def cleanup_certs(
         faucet_address=faucet_payment.address,
         tx_name="certs_cleanup_return",
     )
+    LOGGER.info(f"Certificate cleanup finished in {time.monotonic() - started:.1f}s")
 
 
 def is_framework_testnet() -> bool:
@@ -607,6 +914,7 @@ def cleanup(
     faucet_skey_file: clusterlib.FileType = "",
 ) -> None:
     """Cleanup a testnet with the help of testing artifacts."""
+    started = time.monotonic()
     location = pl.Path(location).expanduser().resolve()
     faucet_payment = _get_faucet_payment_rec(address=faucet_address, skey_file=faucet_skey_file)
 
@@ -617,9 +925,12 @@ def cleanup(
     cleanup_certs(cluster_obj=cluster_obj, location=location, faucet_payment=faucet_payment)
 
     # Defragment faucet address UTxOs
+    defrag_started = time.monotonic()
     defragment_utxos.defragment(
         cluster_obj=cluster_obj, address=faucet_payment.address, skey_file=faucet_payment.skey_file
     )
+    LOGGER.info(f"Faucet defragmentation finished in {time.monotonic() - defrag_started:.1f}s")
 
     final_faucet_balance = cluster_obj.g_query.get_address_balance(address=faucet_payment.address)
     LOGGER.info(f"Final faucet balance: {final_faucet_balance}")
+    LOGGER.info(f"Cleanup finished in {time.monotonic() - started:.1f}s")
