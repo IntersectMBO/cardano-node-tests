@@ -18,6 +18,7 @@ from cardano_node_tests.tests import issues
 from cardano_node_tests.tests import markers
 from cardano_node_tests.utils import cluster_nodes
 from cardano_node_tests.utils import clusterlib_utils
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import dbsync_queries
 from cardano_node_tests.utils import dbsync_service_manager
 from cardano_node_tests.utils import dbsync_snapshot_service
@@ -345,6 +346,8 @@ class TestDBSync:
         )
 
     @allure.link(helpers.get_vcs_link())
+    # With one instance, run late so shared tests finish before the exclusive lock is needed.
+    @pytest.mark.order(-10 if configuration.CLUSTERS_COUNT < 2 else None)
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.testnets
     def test_reconnect_dbsync(

@@ -10,6 +10,7 @@ from cardano_node_tests.cluster_management import cluster_management
 from cardano_node_tests.tests import addrs_common
 from cardano_node_tests.tests import common
 from cardano_node_tests.tests import markers
+from cardano_node_tests.utils import configuration
 from cardano_node_tests.utils import helpers
 
 LOGGER = logging.getLogger(__name__)
@@ -36,6 +37,8 @@ class TestMempool:
         return addrs
 
     @allure.link(helpers.get_vcs_link())
+    # With one instance, run late so shared tests finish before the exclusive lock is needed.
+    @pytest.mark.order(-10 if configuration.CLUSTERS_COUNT < 2 else None)
     @pytest.mark.xdist_split(markers.XdSplits.heavy)
     @pytest.mark.testnets
     def test_query_mempool_txin(
