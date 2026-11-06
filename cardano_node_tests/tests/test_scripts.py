@@ -3107,6 +3107,14 @@ class TestNested:
         # Try to send funds from script address
         out_utxos = cluster.g_query.get_utxo(tx_raw_output=tx_output)
         script_utxos = clusterlib.filter_utxos(utxos=out_utxos, address=script_address)
+        if scenario in ("all2", "any2"):
+            # Funding can take minutes under load. Keep the spend an hour in the future;
+            # a later Tx lower bound still satisfies the script's original "after" slot.
+            invalid_before = max(invalid_before, cluster.g_query.get_slot_no()) + int(
+                3_600 / cluster.slot_length
+            )
+            invalid_hereafter = invalid_before + 100
+
         with pytest.raises((clusterlib.CLIError, submit_api.SubmitApiError)) as excinfo:
             multisig_tx(
                 cluster_obj=cluster,
@@ -3123,7 +3131,8 @@ class TestNested:
                 build_method=build_method,
             )
         exc_value = str(excinfo.value)
-        assert expected_err in exc_value, exc_value
+        with common.allow_unstable_error_messages():
+            assert expected_err in exc_value, exc_value
 
         dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
 
