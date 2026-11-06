@@ -3,6 +3,8 @@
 import dataclasses
 import json
 import pathlib as pl
+import subprocess
+import typing as tp
 from unittest import mock
 
 import pytest
@@ -463,6 +465,10 @@ def test_return_funds_shared_verification(cluster: mock.MagicMock, monkeypatch: 
         cluster_obj=cluster, tx_inputs=[(inputs, pl.Path("payment.skey"))], faucet_address="f"
     )
     check.assert_called_once_with(cluster_obj=cluster, txins=[inputs[0], inputs[100]])
+    assert [len(c.kwargs["txins"]) for c in cluster.g_transaction.send_tx.call_args_list] == [
+        100,
+        1,
+    ]
     assert all(not c.kwargs["verify_tx"] for c in cluster.g_transaction.send_tx.call_args_list)
     cluster.wait_for_new_block.assert_not_called()
 
@@ -483,6 +489,8 @@ def test_return_funds_fee_retry(cluster: mock.MagicMock, monkeypatch: pytest.Mon
         c.kwargs["witness_count_add"] for c in cluster.g_transaction.send_tx.call_args_list
     ] == [2, 7]
     check.assert_called_once_with(cluster_obj=cluster, txins=[utxo])
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert len({c.kwargs["tx_name"] for c in calls}) == len(calls)
 
 
 def test_failed_returns_no_wait(cluster: mock.MagicMock, monkeypatch: pytest.MonkeyPatch):
@@ -513,3 +521,262 @@ def test_unconfirmed_returns_logged(
         cluster_obj=cluster, tx_inputs=[([utxo], pl.Path("payment.skey"))], faucet_address="f"
     )
     assert "Some return-funds transactions were not confirmed" in caplog.text
+
+
+def _payment_inputs(names: list[str], *, per_address: int = 2) -> cleanup.TxInputGroup:
+    """Create multiple original UTxOs per payment address."""
+    return [
+        (
+            [
+                clusterlib.UTXOData(
+                    utxo_hash=f"tx_{name}", utxo_ix=i, amount=10_000_000, address=name
+                )
+                for i in range(per_address)
+            ],
+            pl.Path(f"{name}.skey"),
+        )
+        for name in names
+    ]
+
+
+def _payment_sender(bad: set[str]) -> tp.Callable[..., mock.Mock]:
+    """Reject any transaction containing a specified address, without submitting it."""
+
+    def send(*, txins: list[clusterlib.UTXOData], **_kwargs: tp.Any) -> mock.Mock:
+        if any(u.address in bad for u in txins):
+            msg = "ShelleyTxValidationError (MissingVKeyWitnessesUTXOW bad_key)"
+            raise clusterlib.CLIError(msg)
+        return mock.Mock(txins=txins)
+
+    return send
+
+
+@pytest.fixture
+def payment_check(monkeypatch: pytest.MonkeyPatch) -> mock.Mock:
+    """Record collective confirmation without making node queries or waiting."""
+    check = mock.Mock()
+    monkeypatch.setattr(cleanup.clusterlib_utils, "check_txins_spent", check)
+    return check
+
+
+def test_payment_rejection_recovers_unaffected(
+    cluster: mock.MagicMock, payment_check: mock.Mock, caplog: pytest.LogCaptureFixture
+):
+    """Recursively isolate one bad address without separating its original UTxOs."""
+    groups = _payment_inputs(["a", "bad", "c", "d"])
+    original, _ = cleanup.flatten_tx_inputs(groups)
+    cluster.g_query.get_utxo.return_value = original
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"bad"})
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=groups, faucet_address="f", tx_name="isolate"
+    )
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert len(calls) == 5
+    successful = [
+        c.kwargs["txins"] for c in calls if all(u.address != "bad" for u in c.kwargs["txins"])
+    ]
+    assert {u.address for txins in successful for u in txins} == {"a", "c", "d"}
+    for call in calls:
+        txins = call.kwargs["txins"]
+        for address in {u.address for u in txins}:
+            assert [u for u in txins if u.address == address] == [
+                u for u in original if u.address == address
+            ]
+    assert len({c.kwargs["tx_name"] for c in calls}) == len(calls)
+    payment_check.assert_called_once_with(
+        cluster_obj=cluster, txins=[txins[0] for txins in successful]
+    )
+    assert "addresses=['bad']" in caplog.text
+    assert "tx_bad#0" in caplog.text
+    assert "tx_bad#1" in caplog.text
+    assert "MissingVKeyWitnessesUTXOW" in caplog.text
+    cluster.wait_for_new_block.assert_not_called()
+
+
+def test_payment_rejection_continues_subsequent_batches(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """A failing single-address batch does not prevent the next batch succeeding."""
+    groups = _payment_inputs(["bad", "good"], per_address=100)
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"bad"})
+    cleanup.return_funds_to_faucet(cluster_obj=cluster, tx_inputs=groups, faucet_address="f")
+    assert cluster.g_transaction.send_tx.call_count == 2
+    cluster.g_query.get_utxo.assert_not_called()
+    payment_check.assert_called_once_with(cluster_obj=cluster, txins=[groups[1][0][0]])
+
+
+def test_payment_refresh_preserves_original_set(cluster: mock.MagicMock, payment_check: mock.Mock):
+    """Remove stale inputs without sweeping new outputs returned by a refresh query."""
+    groups = _payment_inputs(["stale", "good", "bad"])
+    original, _ = cleanup.flatten_tx_inputs(groups)
+    extra = dataclasses.replace(groups[1][0][0], utxo_hash="new_output")
+    still_unspent = [groups[1][0][0], *groups[2][0], extra]
+    cluster.g_query.get_utxo.return_value = still_unspent
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"bad"})
+    cleanup.return_funds_to_faucet(cluster_obj=cluster, tx_inputs=groups, faucet_address="f")
+    for call in cluster.g_query.get_utxo.call_args_list:
+        assert "address" not in call.kwargs
+        assert set(call.kwargs["txin"]) <= {f"{u.utxo_hash}#{u.utxo_ix}" for u in original}
+    successful = [
+        c.kwargs["txins"]
+        for c in cluster.g_transaction.send_tx.call_args_list
+        if all(u.address != "bad" for u in c.kwargs["txins"])
+    ]
+    assert successful == [[groups[1][0][0]]]
+    assert all(extra not in c.kwargs["txins"] for c in cluster.g_transaction.send_tx.call_args_list)
+    payment_check.assert_called_once_with(cluster_obj=cluster, txins=[groups[1][0][0]])
+
+
+def test_payment_refresh_drops_empty_groups(cluster: mock.MagicMock, payment_check: mock.Mock):
+    """Do not submit empty children after all original inputs disappear."""
+    groups = _payment_inputs(["a", "b"])
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"a"})
+    cluster.g_query.get_utxo.return_value = []
+    cleanup.return_funds_to_faucet(cluster_obj=cluster, tx_inputs=groups, faucet_address="f")
+    cluster.g_transaction.send_tx.assert_called_once()
+    payment_check.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        subprocess.TimeoutExpired("transaction submit", 300),
+        TimeoutError("submission timed out"),
+        clusterlib.CLIError("MempoolTxTooSlow retry budget exhausted"),
+        clusterlib.CLIError("BadInputsUTxO"),
+        clusterlib.CLIError("AllInputsAreSpent"),
+        clusterlib.CLIError("Transaction didn't make it to the chain"),
+        clusterlib.CLIError("Failed to resubmit the transaction"),
+        clusterlib.CLIError("MuxError resource vanished (Broken pipe)"),
+        clusterlib.CLIError("Network.Socket.connect: resource exhausted"),
+        clusterlib.CLIError("socket connection refused"),
+        OSError("socket closed"),
+        clusterlib.CLIError("ValueNotConservedUTxO"),
+        clusterlib.CLIError("unknown submission failure"),
+        clusterlib.CLIError("MempoolTxTooSlow; Last rejection: FeeTooSmallUTxO"),
+    ],
+)
+def test_payment_uncertain_or_systemic_no_split(
+    cluster: mock.MagicMock, payment_check: mock.Mock, error: Exception
+):
+    """Never recursively retry infrastructure, ambiguous or systemic failures."""
+    cluster.g_transaction.send_tx.side_effect = error
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=_payment_inputs(["a", "b", "c"]), faucet_address="f"
+    )
+    cluster.g_transaction.send_tx.assert_called_once()
+    cluster.g_query.get_utxo.assert_not_called()
+    payment_check.assert_not_called()
+
+
+def test_payment_chained_timeout_no_retry(cluster: mock.MagicMock, payment_check: mock.Mock):
+    """A wrapper mentioning a ledger failure cannot hide an uncertain timeout cause."""
+    error = clusterlib.CLIError("FeeTooSmallUTxO")
+    error.__cause__ = subprocess.TimeoutExpired("transaction submit", 300)
+    cluster.g_transaction.send_tx.side_effect = error
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=_payment_inputs(["a", "b"]), faucet_address="f"
+    )
+    cluster.g_transaction.send_tx.assert_called_once()
+    payment_check.assert_not_called()
+
+
+def test_payment_unknown_wrapper_not_definite_rejection(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """Do not classify an unknown wrapper using an earlier rejection in its cause."""
+    error = clusterlib.CLIError("unknown submission outcome")
+    error.__cause__ = clusterlib.CLIError("FeeTooSmallUTxO")
+    cluster.g_transaction.send_tx.side_effect = error
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=_payment_inputs(["a", "b"]), faucet_address="f"
+    )
+    cluster.g_transaction.send_tx.assert_called_once()
+    payment_check.assert_not_called()
+
+
+def test_payment_fee_retries_bounded(cluster: mock.MagicMock, payment_check: mock.Mock):
+    """Exhaust fee retries once, rather than multiplying systemic failures by address."""
+    cluster.g_transaction.send_tx.side_effect = clusterlib.CLIError("FeeTooSmallUTxO")
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=_payment_inputs(["a", "b", "c"]), faucet_address="f"
+    )
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert [c.kwargs["witness_count_add"] for c in calls] == [2, 7, 12]
+    assert len({c.kwargs["tx_name"] for c in calls}) == len(calls)
+    cluster.g_query.get_utxo.assert_not_called()
+    payment_check.assert_not_called()
+
+
+def test_payment_fee_retries_and_splits_have_unique_names(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """Preserve bounded fee adjustments independently for parent and child groups."""
+    groups = _payment_inputs(["good", "bad"])
+    original, _ = cleanup.flatten_tx_inputs(groups)
+    cluster.g_query.get_utxo.return_value = original
+    cluster.g_transaction.send_tx.side_effect = [
+        clusterlib.CLIError("FeeTooSmallUTxO"),
+        clusterlib.CLIError("MissingVKeyWitnessesUTXOW"),
+        clusterlib.CLIError("FeeTooSmallUTxO"),
+        mock.Mock(txins=groups[0][0]),
+        clusterlib.CLIError("MissingVKeyWitnessesUTXOW"),
+    ]
+    cleanup.return_funds_to_faucet(cluster_obj=cluster, tx_inputs=groups, faucet_address="f")
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert [c.kwargs["witness_count_add"] for c in calls] == [2, 7, 2, 7, 2]
+    assert len({c.kwargs["tx_name"] for c in calls}) == len(calls)
+    payment_check.assert_called_once_with(cluster_obj=cluster, txins=[groups[0][0][0]])
+
+
+def test_payment_no_reuse_after_uncertain_submission(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """Quarantine original IDs even when another signing-key group repeats them."""
+    groups = _payment_inputs(["a"], per_address=100)
+    repeated = (groups[0][0], pl.Path("alias.skey"))
+    good = _payment_inputs(["good"])
+    cluster.g_transaction.send_tx.side_effect = [
+        subprocess.TimeoutExpired("submit", 300),
+        mock.Mock(txins=good[0][0]),
+    ]
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=[*groups, repeated, *good], faucet_address="f"
+    )
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert len(calls) == 2
+    assert calls[1].kwargs["txins"] == good[0][0]
+    payment_check.assert_called_once_with(cluster_obj=cluster, txins=[good[0][0][0]])
+
+
+def test_payment_refresh_does_not_reintroduce_submitted_inputs(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """An overbroad refresh cannot bring inputs from an earlier submitted batch back."""
+    first = _payment_inputs(["first"], per_address=100)
+    later = _payment_inputs(["good", "bad"])
+    all_inputs, _ = cleanup.flatten_tx_inputs([*first, *later])
+    cluster.g_query.get_utxo.return_value = all_inputs
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"bad"})
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=[*first, *later], faucet_address="f"
+    )
+    calls = cluster.g_transaction.send_tx.call_args_list
+    assert all(u.address != "first" for c in calls[1:] for u in c.kwargs["txins"])
+    payment_check.assert_called_once_with(
+        cluster_obj=cluster, txins=[first[0][0][0], later[0][0][0]]
+    )
+
+
+def test_payment_refresh_infrastructure_failure_stops_branch(
+    cluster: mock.MagicMock, payment_check: mock.Mock
+):
+    """A failed refresh stops isolation rather than triggering recursive retry storms."""
+    cluster.g_transaction.send_tx.side_effect = _payment_sender({"bad"})
+    cluster.g_query.get_utxo.side_effect = clusterlib.CLIError("connection refused")
+    cleanup.return_funds_to_faucet(
+        cluster_obj=cluster, tx_inputs=_payment_inputs(["good", "bad"]), faucet_address="f"
+    )
+    cluster.g_transaction.send_tx.assert_called_once()
+    cluster.g_query.get_utxo.assert_called_once()
+    payment_check.assert_not_called()

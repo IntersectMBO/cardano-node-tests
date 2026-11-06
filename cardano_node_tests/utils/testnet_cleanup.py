@@ -14,6 +14,8 @@ import json
 import logging
 import pathlib as pl
 import random
+import re
+import subprocess
 import time
 import typing as tp
 
@@ -282,6 +284,159 @@ def flatten_tx_inputs(
     return list(itertools.chain.from_iterable(utxo_lists)), list(skeys)
 
 
+def _payment_rejection_reason(error: clusterlib.CLIError) -> str:
+    """Recognize only stateless ledger failures that cannot follow acceptance.
+
+    `send_tx(verify_tx=False)` uses `submit_tx_bare`, which retries MempoolTxTooSlow;
+    `cli` also retries resource-exhausted/vanished connections. Consequently BadInputsUTxO
+    (including AllInputsAreSpent) is ambiguous: an earlier attempt may have succeeded.
+    Unknown, transport and timeout failures must never trigger rebuilding or splitting.
+    """
+    messages = []
+    current: BaseException | None = error
+    seen = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, (subprocess.TimeoutExpired, OSError)):
+            return ""
+        messages.append(str(current))
+        current = current.__cause__ or current.__context__
+    message = "\n".join(messages)
+    uncertain = (
+        "MempoolTxTooSlow",
+        "timeout",
+        "timed out",
+        "resource exhausted",
+        "resource vanished",
+        "broken pipe",
+        "MuxError",
+        "Failed to submit",
+        "Failed to resubmit",
+    )
+    if any(marker.lower() in message.lower() for marker in uncertain):
+        return ""
+    reasons = (
+        "FeeTooSmallUTxO",
+        "MissingVKeyWitnessesUTXOW",
+        "InvalidWitnessesUTXOW",
+        "MaxTxSizeUTxO",
+        "OutputTooSmallUTxO",
+        "BabbageOutputTooSmallUTxO",
+        "OutputTooBigUTxO",
+    )
+    return next((reason for reason in reasons if re.search(rf"\b{reason}\b", str(error))), "")
+
+
+def _retain_payment_inputs(tx_inputs: TxInputGroup, keep: set[str]) -> TxInputGroup:
+    """Retain original inputs by ID, dropping empty groups and duplicate inputs."""
+    retained = []
+    seen = set()
+    for utxos, path in tx_inputs:
+        group = []
+        for utxo in utxos:
+            identity = f"{utxo.utxo_hash}#{utxo.utxo_ix}"
+            if identity in keep and identity not in seen:
+                group.append(utxo)
+                seen.add(identity)
+        if group:
+            retained.append((group, path))
+    return retained
+
+
+def _send_payment_batch(
+    *, cluster_obj: clusterlib.ClusterLib, batch: TxInputGroup, faucet_address: str, tx_name: str
+) -> clusterlib.TxRawOutput:
+    """Submit one payment batch with at most three fee-adjustment attempts."""
+    txins, skeys = flatten_tx_inputs(tx_inputs=batch)
+    witness_count_add = max(2, len(skeys) // 20)
+    for attempt in range(1, 4):
+        try:
+            return cluster_obj.g_transaction.send_tx(
+                src_address=txins[0].address,
+                tx_name=f"{tx_name}_try{attempt}",
+                txins=txins,
+                txouts=[clusterlib.TxOut(address=faucet_address, amount=-1)],
+                tx_files=clusterlib.TxFiles(signing_key_files=skeys),
+                witness_count_add=witness_count_add,
+                verify_tx=False,
+            )
+        except clusterlib.CLIError as exc:
+            if _payment_rejection_reason(exc) != "FeeTooSmallUTxO" or attempt == 3:
+                raise
+            witness_count_add += 5
+    msg = "Unreachable payment retry state"
+    raise AssertionError(msg)  # pragma: no cover
+
+
+def _return_payment_batch(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    batch: TxInputGroup,
+    faucet_address: str,
+    tx_name: str,
+    submitted_inputs: list[clusterlib.UTXOData],
+    unavailable: set[str],
+) -> None:
+    """Isolate definite failures by address, quarantining unresolved submissions.
+
+    Each child contains strictly fewer addresses than its rejected parent, bounding
+    recursion. Never split a single address's UTxOs or retry systemic/unknown failures.
+    """
+    identities = {f"{u.utxo_hash}#{u.utxo_ix}" for utxos, _ in batch for u in utxos}
+    batch = _retain_payment_inputs(batch, identities - unavailable)
+    if not batch:
+        return
+    txins, _ = flatten_tx_inputs(tx_inputs=batch)
+    identities = {f"{u.utxo_hash}#{u.utxo_ix}" for u in txins}
+    addresses = list(dict.fromkeys(u.address for u in txins))
+    try:
+        tx_output = _send_payment_batch(
+            cluster_obj=cluster_obj, batch=batch, faucet_address=faucet_address, tx_name=tx_name
+        )
+    except (clusterlib.CLIError, subprocess.TimeoutExpired, OSError) as exc:
+        reason = _payment_rejection_reason(exc) if isinstance(exc, clusterlib.CLIError) else ""
+        if not reason or reason == "FeeTooSmallUTxO" or len(addresses) == 1:
+            # Reserve even unresolved inputs: querying them as unspent does not rule
+            # out acceptance in the mempool. Later batches must not reuse them.
+            unavailable.update(identities)
+            LOGGER.exception(
+                f"Skipping payment group '{tx_name}': addresses={addresses}, "
+                f"UTxOs={sorted(identities)}"
+            )
+            return
+        LOGGER.warning(f"Isolating rejected payment group '{tx_name}': {exc}")
+    else:
+        unavailable.update(identities)
+        submitted_inputs.append(tx_output.txins[0])
+        LOGGER.debug(f"Returned funds from addresses '{tx_name}'")
+        return
+
+    # Query exactly this group's original inputs, not its addresses. Intersect with
+    # the original set even if the query returns unexpected/new outputs.
+    try:
+        unspent = cluster_obj.g_query.get_utxo(txin=sorted(identities))
+    except (clusterlib.CLIError, subprocess.TimeoutExpired, OSError):
+        unavailable.update(identities)
+        LOGGER.exception(f"Failed to refresh rejected payment group '{tx_name}'")
+        return
+    keep = {f"{u.utxo_hash}#{u.utxo_ix}" for u in unspent} - unavailable
+    remaining = _retain_payment_inputs(batch, keep)
+    midpoint = len(addresses) // 2
+    left_addresses = set(addresses[:midpoint])
+    left_inputs = {f"{u.utxo_hash}#{u.utxo_ix}" for u in txins if u.address in left_addresses}
+    for suffix, group_ids in [("0", left_inputs), ("1", identities - left_inputs)]:
+        group = _retain_payment_inputs(remaining, group_ids)
+        if group:
+            _return_payment_batch(
+                cluster_obj=cluster_obj,
+                batch=group,
+                faucet_address=faucet_address,
+                tx_name=f"{tx_name}_{suffix}",
+                submitted_inputs=submitted_inputs,
+                unavailable=unavailable,
+            )
+
+
 def return_funds_to_faucet(
     *,
     cluster_obj: clusterlib.ClusterLib,
@@ -289,51 +444,29 @@ def return_funds_to_faucet(
     faucet_address: str,
     tx_name: str = "",
 ) -> None:
-    """Send funds from `tx_inputs` to `faucet_address`."""
+    """Return funds in batches, isolating definitely rejected groups by address.
+
+    Confirm successful submissions collectively. Quarantine uncertain inputs for this
+    invocation rather than rebuilding transactions that may already be accepted.
+    """
     tx_name = tx_name or helpers.get_timestamped_rand_str()
     tx_name = f"rf_{tx_name}"
 
-    # The amount of "-1" means all available funds.
-    fund_dst = [clusterlib.TxOut(address=faucet_address, amount=-1)]
-
     # Tx inputs deduplication is not strictly needed, as we are deduplicating the
     # address files. Keeping it here for separation of concerns.
-    submitted_inputs = []
-    batch_num = 1
-    for batch in batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)):
-        txins, skeys = flatten_tx_inputs(tx_inputs=batch)
-        fund_tx_files = clusterlib.TxFiles(signing_key_files=skeys)
-        batch_tx_name = f"{tx_name}_batch{batch_num}"
-        witness_count_add = max(2, len(skeys) // 20)
-
-        # Try to return funds
-        last_excp = None
-        for attempt in range(1, 4):
-            try:
-                tx_output = cluster_obj.g_transaction.send_tx(
-                    src_address=txins[0].address,
-                    tx_name=f"{batch_tx_name}_try{attempt}",
-                    txins=txins,
-                    txouts=fund_dst,
-                    tx_files=fund_tx_files,
-                    witness_count_add=witness_count_add,
-                    verify_tx=False,
-                )
-            except clusterlib.CLIError as excp:
-                last_excp = excp
-                if "FeeTooSmallUTxO" in str(excp):
-                    witness_count_add += 5
-                    continue
-                LOGGER.exception(f"Failed to return funds from addresses for '{batch_tx_name}'")
-            else:
-                submitted_inputs.append(tx_output.txins[0])
-                LOGGER.debug(f"Returned funds from addresses '{batch_tx_name}'")
-            break
-        else:
-            LOGGER.error(
-                f"Failed to return funds from addresses for '{batch_tx_name}'", exc_info=last_excp
-            )
-        batch_num += 1
+    submitted_inputs: list[clusterlib.UTXOData] = []
+    unavailable: set[str] = set()
+    for batch_num, batch in enumerate(
+        batch_tx_inputs(tx_inputs=dedup_tx_inputs(tx_inputs=tx_inputs)), start=1
+    ):
+        _return_payment_batch(
+            cluster_obj=cluster_obj,
+            batch=batch,
+            faucet_address=faucet_address,
+            tx_name=f"{tx_name}_batch{batch_num}",
+            submitted_inputs=submitted_inputs,
+            unavailable=unavailable,
+        )
 
     if submitted_inputs:
         try:
