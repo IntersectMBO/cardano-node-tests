@@ -12,7 +12,9 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 - `{RUN_DIR}/errors_all.log` — output of `runner/grep_errors.sh`: case-insensitive grep for `:error:|failed|failure` in `*.stdout`/`*.stderr` files under `testing_artifacts/`, with paths relative to that dir. Rotated logs (`*.stdout.<n>`, `*.stderr.<n>`) are **not** grepped, so a thin or empty `errors_all.log` doesn't prove there were no errors - grep the rotated logs directly when an early crash is suspected
 - `{RUN_DIR}/scheduling.log` — cluster instance manager log
 - `{RUN_DIR}/testrun-report.xml` — junit XML
-- `{RUN_DIR}/monitor.log` — system resource snapshots every 10 min
+- `{RUN_DIR}/monitor.log` - resource snapshots at the configured interval (60 seconds by default
+  in current regression runs; older runs used 10 minutes), including host usage, node thread
+  scheduling counters, visible cgroup CPU throttling, and available node GC/CPU metrics
 - `{RUN_DIR}/testing_artifacts/pytest-*/cm-status.db` — cluster-management SQLite status database ("test running", resource and flag records as they were at the end of the run); query with `sqlite3 -readonly -header <db_file> 'SELECT * FROM overview ORDER BY instance_num, kind'`
 
 Counting tests (IMPORTANT):

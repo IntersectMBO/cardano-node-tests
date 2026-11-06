@@ -44,6 +44,13 @@ fi
 # there.
 assert_deselect_file || exit 3
 
+# Validate before stopping clusters or clearing artifacts.
+MONITOR_INTERVAL="${MONITOR_INTERVAL:-60}"
+if ! [[ "$MONITOR_INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
+  echo "MONITOR_INTERVAL must be a positive integer number of seconds." >&2
+  exit 3
+fi
+
 # Categorize `.bin` entries. Usable executables take priority on PATH. Entries
 # that PATH lookup cannot use (no exec bit, directories, dangling symlinks)
 # are merely ignored. An executable regular file that is not a usable binary
@@ -345,7 +352,7 @@ echo "::endgroup::"  # end group for "Script setup"
 echo "::group::Nix env setup"
 printf "start: %(%H:%M:%S)T\n" -1
 
-# Function to monitor system resources and log them every 10 minutes
+# Function to monitor host/node resources at the configured sampling interval.
 monitor_system() {
   # Drop the inherited workdir lock FD so this background subshell does not
   # keep the lock held if it outlives the parent script.
@@ -359,6 +366,9 @@ monitor_system() {
   set +e  # don't exit on error in this monitoring loop, just log the error and keep going
   trap - ERR EXIT SIGINT # reset traps in this subshell so they don't interfere with the main script's traps
 
+  # shellcheck disable=SC1091
+  . runner/monitor_resources.sh
+
   while true; do
     {
       echo "===== $(date) ====="
@@ -368,10 +378,11 @@ monitor_system() {
       free -h
       echo "--- DISK ---"
       df -h .
+      monitor_node_resources "$WORKDIR"
       echo
     } >> "$monitor_log" 2>&1
 
-    sleep 600 # 10 minutes
+    sleep "$MONITOR_INTERVAL"
   done
 }
 
