@@ -788,6 +788,81 @@ FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V4 = tuple(
 )
 
 
+class ValueBuiltinScripts(tp.NamedTuple):
+    """CIP-0168 minting policies and state validator for one ledger/Core combination."""
+
+    succeeding: tuple[PlutusScriptData, ...]
+    failing: tuple[PlutusScriptData, ...]
+    state: PlutusScriptData
+
+
+_SUCCEEDING_VALUE_BUILTIN_NAMES = (
+    *(f"succeedingValuePolicies{name}PolicyScript" for name in ("Empty", "Ada", "Sorted")),
+    "succeedingValueAssetCountPolicyScript",
+    *(
+        f"succeedingValue{operation}{name}PolicyScript"
+        for operation in ("Keep", "Drop")
+        for name in (
+            "EmptyValue",
+            "EmptyIds",
+            "All",
+            "Subset",
+            "Ada",
+            "DuplicateAbsentOverlong",
+            "Duplicate256",
+            "Absent256Empty",
+            "Overlong256Empty",
+            "Limit256",
+        )
+    ),
+    *(
+        f"succeedingValueSize{shape}{count}PolicyScript"
+        for shape in ("SamePolicy", "MultiPolicy")
+        for count in (1, 16, 64)
+    ),
+)
+_FAILING_VALUE_BUILTIN_NAMES = tuple(
+    f"failingValue{operation}{name}PolicyScript"
+    for operation in ("Keep", "Drop")
+    for name in ("Duplicate257", "Absent257Empty", "Overlong257Empty")
+)
+
+
+def _get_value_builtin_script(name: str, ledger: str, core_version: str) -> PlutusScriptData:
+    """Locate a CIP-0168 envelope without conflating its ledger and Core versions."""
+    core_suffix = core_version.replace(".", "")
+    return PlutusScriptData(
+        script_file=PLUTUS_DIR
+        / ledger
+        / "batch7"
+        / core_version
+        / f"{name}_{ledger.upper()}_{core_suffix}.plutus",
+        script_type=(
+            clusterlib.ScriptTypes.PLUTUS_V3 if ledger == "v3" else clusterlib.ScriptTypes.PLUTUS_V4
+        ),
+        execution_cost=UNDETERMINED_COST,
+    )
+
+
+VALUE_BUILTIN_SCRIPTS = {
+    f"{ledger}_{core_version.replace('.', '')}": ValueBuiltinScripts(
+        succeeding=tuple(
+            _get_value_builtin_script(name=n, ledger=ledger, core_version=core_version)
+            for n in _SUCCEEDING_VALUE_BUILTIN_NAMES
+        ),
+        failing=tuple(
+            _get_value_builtin_script(name=n, ledger=ledger, core_version=core_version)
+            for n in _FAILING_VALUE_BUILTIN_NAMES
+        ),
+        state=_get_value_builtin_script(
+            name="valueStateValidator", ledger=ledger, core_version=core_version
+        ),
+    )
+    for ledger in ("v3", "v4")
+    for core_version in ("1.1.0", "1.2.0")
+}
+
+
 @dataclasses.dataclass(frozen=True, order=True)
 class PlutusOp:
     script_file: clusterlib.FileType
