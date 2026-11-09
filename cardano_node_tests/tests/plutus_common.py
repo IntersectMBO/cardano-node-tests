@@ -732,8 +732,14 @@ OVERSPENDING_MINTING_BATCH6_SCRIPTS_V3 = tuple(
 
 
 # ------ Batch 7: multiIndexArray (PV12) ------ #
-SCRIPTS_V3_BATCH7_110_DIR = SCRIPTS_V3_DIR / "batch7" / "1.1.0"
-SCRIPTS_V4_BATCH7_110_DIR = SCRIPTS_V4_DIR / "batch7" / "1.1.0"
+class MultiIndexArrayScripts(tp.NamedTuple):
+    """multiIndexArray policies for one ledger language and Plutus Core version."""
+
+    cost_model: str
+    succeeding: tuple[PlutusScriptData, ...]
+    failing: tuple[PlutusScriptData, ...]
+
+
 _SUCCEEDING_MULTI_INDEX_ARRAY_NAMES = (
     "Policy",
     "DataPolicy",
@@ -750,42 +756,47 @@ _FAILING_MULTI_INDEX_ARRAY_NAMES = (
     "HugeNegative",
     "OverLimit",
 )
-SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH7_110_DIR
-        / f"succeedingMultiIndexArray{name}Script_V3_110.plutus",
-        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
+
+
+def _get_multi_index_array_script(name: str, ledger: str, core_version: str) -> PlutusScriptData:
+    """Locate a multiIndexArray envelope for a ledger and Core version pair."""
+    return PlutusScriptData(
+        script_file=PLUTUS_DIR
+        / ledger
+        / "batch7"
+        / core_version
+        / f"{name}_{ledger.upper()}_{core_version.replace('.', '')}.plutus",
+        script_type={
+            "v3": clusterlib.ScriptTypes.PLUTUS_V3,
+            "v4": clusterlib.ScriptTypes.PLUTUS_V4,
+        }[ledger],
         execution_cost=UNDETERMINED_COST,
     )
-    for name in _SUCCEEDING_MULTI_INDEX_ARRAY_NAMES
-)
-FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V3_BATCH7_110_DIR
-        / f"failingMultiIndexArray{name}PolicyScript_V3_110.plutus",
-        script_type=clusterlib.ScriptTypes.PLUTUS_V3,
-        execution_cost=UNDETERMINED_COST,
+
+
+MULTI_INDEX_ARRAY_SCRIPTS = {
+    f"{ledger}_{core_version.replace('.', '')}": MultiIndexArrayScripts(
+        cost_model=f"Plutus{ledger.upper()}",
+        succeeding=tuple(
+            _get_multi_index_array_script(
+                name=f"succeedingMultiIndexArray{name}Script",
+                ledger=ledger,
+                core_version=core_version,
+            )
+            for name in _SUCCEEDING_MULTI_INDEX_ARRAY_NAMES
+        ),
+        failing=tuple(
+            _get_multi_index_array_script(
+                name=f"failingMultiIndexArray{name}PolicyScript",
+                ledger=ledger,
+                core_version=core_version,
+            )
+            for name in _FAILING_MULTI_INDEX_ARRAY_NAMES
+        ),
     )
-    for name in _FAILING_MULTI_INDEX_ARRAY_NAMES
-)
-SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V4 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V4_BATCH7_110_DIR
-        / f"succeedingMultiIndexArray{name}Script_V4_110.plutus",
-        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
-        execution_cost=UNDETERMINED_COST,
-    )
-    for name in _SUCCEEDING_MULTI_INDEX_ARRAY_NAMES
-)
-FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V4 = tuple(
-    PlutusScriptData(
-        script_file=SCRIPTS_V4_BATCH7_110_DIR
-        / f"failingMultiIndexArray{name}PolicyScript_V4_110.plutus",
-        script_type=clusterlib.ScriptTypes.PLUTUS_V4,
-        execution_cost=UNDETERMINED_COST,
-    )
-    for name in _FAILING_MULTI_INDEX_ARRAY_NAMES
-)
+    for ledger in ("v3", "v4")
+    for core_version in ("1.1.0", "1.2.0")
+}
 
 
 @dataclasses.dataclass(frozen=True, order=True)

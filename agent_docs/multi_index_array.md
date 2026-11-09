@@ -2,9 +2,10 @@
 
 Issue: [plutus-private#2261](https://github.com/IntersectMBO/plutus-private/issues/2261).
 The builtin takes the array first, unlike the older signature in the issue.
-The tests target PV12 with PlutusV3 and PlutusV4 / PLC 1.1.0. The node and CLI
-must both use a Plutus revision that activates batch7 at PV12 in both languages;
-a development version number alone does not establish that activation.
+The tests target PV12 with PlutusV3 and PlutusV4, each compiled for PLC 1.1.0 and
+1.2.0. The node and CLI must both use a Plutus revision that activates batch7 at
+PV12 in both languages; a development version number alone does not establish
+that activation.
 
 ## Established practice
 
@@ -19,16 +20,20 @@ the complete conformance suite or its golden budgets.
 The test reuses the chunked funding/subtest runner, caches funded addresses, and
 checks confirmed transaction outputs and optional db-sync records. Its fixture locks
 governance and Plutus resources and uses the cluster pools. When necessary, it
-enacts one cost-model update for every tested language, then marks the cluster for
-respin. The update can require three epochs; the fixture skips this setup on
-long-epoch testnets before doing any governance work. All PlutusV3 scenarios and
-then all PlutusV4 scenarios run as subtests of one test, so both languages share
-this setup. Separate parametrized tests would each pay for the update and a respin.
+marks the cluster for respin before proposing one cost-model update for every
+tested language. The update can require three epochs; the fixture skips this
+setup on long-epoch testnets before doing any governance work. All four ledger/Core
+combinations run as subtests of one test and share this setup. Each combination
+reuses the same scenario runner, budget-growth checks and raw budget tests.
+Separate parametrized tests would each pay for the update and a respin.
 
 The PlutusV4 policies have the same code as the PlutusV3 ones, because the
-policies don't read the script context. Only the envelope `type` differs. The
-PlutusV4 scenarios are skipped, without skipping PlutusV3, when the transaction
-era is older than Dijkstra or the CLI cannot decode the PlutusV4 policies.
+policies don't read the script context. Only the envelope `type` differs between
+languages for a given Core version. The scenario definitions are shared between
+both Core versions and compiled separately with their respective target versions.
+Known batch7 decoding incompatibilities produce skips per combination; both
+PlutusV4 variants are skipped when the transaction era is older than Dijkstra.
+Other decoder errors, including missing artifacts, fail setup.
 
 ## Scenario selection
 
