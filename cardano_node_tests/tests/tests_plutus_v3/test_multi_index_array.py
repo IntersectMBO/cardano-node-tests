@@ -27,27 +27,7 @@ LOGGER = logging.getLogger(__name__)
 MULTI_INDEX_ARRAY_COST_MODEL_LEN = 355
 
 
-class VersionScripts(tp.NamedTuple):
-    """multiIndexArray policies compiled for one Plutus version."""
-
-    cost_model: str
-    succeeding: tuple[plutus_common.PlutusScriptData, ...]
-    failing: tuple[plutus_common.PlutusScriptData, ...]
-
-
-# The policies don't read the script context, so both versions share the same code
-SCRIPTS = {
-    "v3": VersionScripts(
-        cost_model="PlutusV3",
-        succeeding=plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3,
-        failing=plutus_common.FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V3,
-    ),
-    "v4": VersionScripts(
-        cost_model="PlutusV4",
-        succeeding=plutus_common.SUCCEEDING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V4,
-        failing=plutus_common.FAILING_MINTING_MULTI_INDEX_ARRAY_SCRIPTS_V4,
-    ),
-}
+SCRIPTS = plutus_common.MULTI_INDEX_ARRAY_SCRIPTS
 
 pytestmark = [
     # Skip before the fixture locks governance and Plutus resources
@@ -63,15 +43,15 @@ pytestmark = [
 
 
 class MultiIndexArraySetup(tp.NamedTuple):
-    """Cluster with multiIndexArray costing for all Plutus versions that are tested."""
+    """Cluster with multiIndexArray costing for all tested ledger/Core combinations."""
 
     cluster: clusterlib.ClusterLib
-    # Reasons to skip Plutus versions, keyed like `SCRIPTS`
+    # Reasons to skip ledger/Core combinations, keyed like `SCRIPTS`
     skip_reasons: dict[str, str]
 
 
 def _get_decode_skip_reason(cluster_obj: clusterlib.ClusterLib, script_file: pl.Path) -> str:
-    """Return the reason to skip a Plutus version if the CLI cannot decode its policy."""
+    """Return a skip reason for known batch7 decoding incompatibilities."""
     try:
         cluster_obj.g_transaction.get_policyid(script_file)
     except clusterlib.CLIError as exc:
@@ -93,32 +73,35 @@ def multi_index_array_setup(
     """Enable multiIndexArray costing while locking governance and Plutus resources.
 
     Update the PlutusV3 and PlutusV4 cost models in a single governance action, unless
-    the cost models of all tested Plutus versions already price multiIndexArray. Skip
-    the whole test when PlutusV3 cannot be tested, and only the PlutusV4 scenarios
-    when PlutusV4 cannot be tested.
+    the cost models of all tested languages already price multiIndexArray. Both Core
+    versions reuse these models. Skip the whole test when the PlutusV3/PLC 1.1.0
+    baseline has a known batch7 decoding incompatibility. Check the same decoding
+    incompatibilities separately for the other ledger/Core combinations.
     """
     cluster = cluster_plutus
     pparams = cluster.g_query.get_protocol_params()
     if pparams["protocolVersion"]["major"] < 12:
         pytest.skip("multiIndexArray requires protocol version 12 or later")
 
-    # Fail before governance setup if the CLI cannot decode PV12 scripts
+    # Check CLI batch7 activation before governance setup
     skip_reason_v3 = _get_decode_skip_reason(
-        cluster_obj=cluster, script_file=SCRIPTS["v3"].succeeding[0].script_file
+        cluster_obj=cluster, script_file=SCRIPTS["v3_110"].succeeding[0].script_file
     )
     if skip_reason_v3:
         pytest.skip(skip_reason_v3)
     skip_reasons = {}
-    if VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST:
-        skip_reasons["v4"] = "Plutus V4 is available only in Dijkstra+ eras"
-    else:
-        skip_reason_v4 = _get_decode_skip_reason(
-            cluster_obj=cluster, script_file=SCRIPTS["v4"].succeeding[0].script_file
-        )
-        if skip_reason_v4:
-            skip_reasons["v4"] = skip_reason_v4
+    for variant, scripts in SCRIPTS.items():
+        if scripts.cost_model == "PlutusV4" and VERSIONS.transaction_era < VERSIONS.DIJKSTRA_FIRST:
+            skip_reasons[variant] = "Plutus V4 is available only in Dijkstra+ eras"
+            continue
 
-    tested_cost_models = [s.cost_model for v, s in SCRIPTS.items() if v not in skip_reasons]
+        skip_reason = _get_decode_skip_reason(
+            cluster_obj=cluster, script_file=scripts.succeeding[0].script_file
+        )
+        if skip_reason:
+            skip_reasons[variant] = skip_reason
+
+    tested_cost_models = {s.cost_model for v, s in SCRIPTS.items() if v not in skip_reasons}
 
     def _is_costing_enabled(cost_models: dict) -> bool:
         return all(
@@ -174,10 +157,11 @@ class TestMultiIndexArray:
     ):
         """Mint with valid selections and reject invalid requests while building transactions.
 
-        Run all scenarios with the PlutusV3 policies, then with the same policies compiled
-        for PlutusV4. Both versions reuse a single cost-model setup. Skip the PlutusV4
-        scenarios when the transaction era is older than Dijkstra or when the CLI cannot
-        decode the PlutusV4 policies.
+        Run the existing scenarios for PlutusV3 and PlutusV4, each compiled for PLC
+        1.1.0 and 1.2.0. All four combinations reuse a single cost-model setup and
+        minting/budget helpers. Skip known batch7 decoding incompatibilities for each
+        combination and both PlutusV4 variants before the Dijkstra transaction era.
+        Other decoder errors fail setup.
 
         Check ordering, duplicate indices, empty selections, heterogeneous Data, and
         repeated selections of 1, 64 and 1,024 elements. The Data policy selects
@@ -193,32 +177,32 @@ class TestMultiIndexArray:
         setup = multi_index_array_setup
         temp_template = common.get_test_id(setup.cluster)
 
-        for plutus_version, scripts in SCRIPTS.items():
-            skip_reason = setup.skip_reasons.get(plutus_version)
+        for variant, scripts in SCRIPTS.items():
+            skip_reason = setup.skip_reasons.get(variant)
             if skip_reason:
-                with subtests.test(plutus_version=plutus_version):
+                with subtests.test(variant=variant):
                     pytest.skip(skip_reason)
                 continue
 
-            self._check_plutus_version(
+            self._check_variant(
                 cluster_manager=cluster_manager,
                 cluster_obj=setup.cluster,
-                temp_template=f"{temp_template}_{plutus_version}",
-                plutus_version=plutus_version,
+                temp_template=f"{temp_template}_{variant}",
+                variant=variant,
                 scripts=scripts,
                 subtests=subtests,
             )
 
-    def _check_plutus_version(
+    def _check_variant(
         self,
         cluster_manager: cluster_management.ClusterManager,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        plutus_version: str,
-        scripts: VersionScripts,
+        variant: str,
+        scripts: plutus_common.MultiIndexArrayScripts,
         subtests: pytest_subtests.SubTests,
     ) -> None:
-        """Run the minting and budget scenarios with the policies of one Plutus version."""
+        """Run minting and budget scenarios for one ledger/Core combination."""
         cluster = cluster_obj
         over_limit_stem = next(
             s.script_file.stem for s in scripts.failing if "OverLimitPolicy" in s.script_file.stem
@@ -229,7 +213,7 @@ class TestMultiIndexArray:
             cluster_manager=cluster_manager,
             cluster_obj=cluster,
             temp_template=temp_template,
-            variant=f"multi_index_array_{plutus_version}",
+            variant=f"multi_index_array_{variant}",
             success_scripts=scripts.succeeding,
             fail_scripts=scripts.failing,
             overspend_scripts=(),
@@ -265,7 +249,7 @@ class TestMultiIndexArray:
                         redeemer_records=db_record.redeemers, cost_records=minted.plutus_costs
                     )
 
-        with subtests.test(plutus_version=plutus_version, check="policy_budget_growth"):
+        with subtests.test(variant=variant, check="policy_budget_growth"):
             assert len(repeated_costs) == 3, (
                 "Expected budgets for requests of 1, 64 and 1024 indices"
             )
@@ -276,12 +260,12 @@ class TestMultiIndexArray:
                     < repeated_costs["1024"][resource]
                 ), f"Policy execution {resource} did not grow with request size: {repeated_costs}"
 
-        with subtests.test(plutus_version=plutus_version, check="execution_budget"):
+        with subtests.test(variant=variant, check="execution_budget"):
             self._check_execution_budget(
                 cluster_manager=cluster_manager,
                 cluster_obj=cluster,
                 temp_template=f"{temp_template}_budget",
-                plutus_version=plutus_version,
+                variant=variant,
                 script=next(
                     s for s in scripts.succeeding if "Repeated1024Policy" in s.script_file.stem
                 ),
@@ -293,7 +277,7 @@ class TestMultiIndexArray:
         cluster_manager: cluster_management.ClusterManager,
         cluster_obj: clusterlib.ClusterLib,
         temp_template: str,
-        plutus_version: str,
+        variant: str,
         script: plutus_common.PlutusScriptData,
         subtests: pytest_subtests.SubTests,
     ) -> None:
@@ -314,7 +298,7 @@ class TestMultiIndexArray:
             cluster_obj=cluster,
             num=2,
             fund_idx=[0],
-            caching_key=helpers.get_current_line_str(),
+            caching_key=f"{helpers.get_current_line_str()}_{variant}",
             amount=1_000_000_000,
             min_amount=100_000_000,
         )
@@ -367,7 +351,7 @@ class TestMultiIndexArray:
             ("memory", (units["steps"], units["memory"] - 1)),
             ("sufficient", (units["steps"], units["memory"])),
         ):
-            with subtests.test(plutus_version=plutus_version, budget=name):
+            with subtests.test(variant=variant, budget=name):
                 tx_name = f"{temp_template}_{name}"
                 tx_output = cluster.g_transaction.build_raw_tx(
                     src_address=issuer_addr.address,
