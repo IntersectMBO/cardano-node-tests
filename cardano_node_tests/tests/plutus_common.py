@@ -817,11 +817,10 @@ MULTI_INDEX_ARRAY_SCRIPTS = {
 
 
 class ValueBuiltinScripts(tp.NamedTuple):
-    """CIP-0168 minting policies and state validator for one ledger/Core combination."""
+    """CIP-0168 minting policies for one ledger/Core combination."""
 
     succeeding: tuple[PlutusScriptData, ...]
     failing: tuple[PlutusScriptData, ...]
-    state: PlutusScriptData
 
 
 _SUCCEEDING_VALUE_BUILTIN_NAMES = (
@@ -881,9 +880,6 @@ VALUE_BUILTIN_SCRIPTS = {
         failing=tuple(
             _get_value_builtin_script(name=n, ledger=ledger, core_version=core_version)
             for n in _FAILING_VALUE_BUILTIN_NAMES
-        ),
-        state=_get_value_builtin_script(
-            name="valueStateValidator", ledger=ledger, core_version=core_version
         ),
     )
     for ledger in ("v3", "v4")
