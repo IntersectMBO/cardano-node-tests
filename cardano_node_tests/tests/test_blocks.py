@@ -3,8 +3,10 @@
 Other block production checks may be present in `test_staking.py`.
 """
 
+import json
 import logging
 import os
+import pathlib as pl
 import random
 import re
 import shutil
@@ -419,10 +421,53 @@ class TestDynamicBlockProd:
     producing_node_name = "pool1"
     backup_node_name = "pool2"
 
+    @pytest.fixture
+    def cluster_dynamic(
+        self,
+        cluster_manager: cluster_management.ClusterManager,
+        cluster_singleton: clusterlib.ClusterLib,
+    ) -> clusterlib.ClusterLib:
+        """Lock the cluster and skip unsafe forecast windows before funding addresses.
+
+        Taking the backup pool's forging identity offline reduces the live stake. Require
+        the probability of no leader in one forecast window to be at most 1e-9, using the
+        Praos empty-slot probability `(1 - f) ** live_stake`. Otherwise one unlucky gap
+        can exhaust the forecast and permanently stop this isolated cluster's forging.
+        """
+        cluster = cluster_singleton
+        # Up to 1.5 epochs to reach the reconfiguration interval, its remainder,
+        # and three full observation epochs.
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
+        backup_pool_id = delegation.get_pool_id(
+            cluster_obj=cluster,
+            addrs_data=cluster_manager.cache.addrs_data,
+            pool_name=f"node-{self.backup_node_name}",
+        )
+        stake_distribution = cluster.g_query.get_stake_distribution()
+        # Bootstrap delegations may not be active yet. The local cluster gives each
+        # pool an equal stake share; do not underestimate the stake lost later on.
+        backup_stake = max(stake_distribution[backup_pool_id], 1 / configuration.NUM_POOLS)
+        live_stake = 1 - backup_stake
+        forecast_slots = clusterlib_utils.get_stability_window(cluster_obj=cluster)
+        empty_window_probability = (1 - float(cluster.genesis["activeSlotsCoeff"])) ** (
+            live_stake * forecast_slots
+        )
+        if empty_window_probability > 1e-9:
+            pytest.skip(
+                f"Unsafe forecast window for dynamic block production: {forecast_slots} slots, "
+                f"{live_stake:.1%} producing stake, probability of no leader "
+                f"{empty_window_probability:.3g} exceeds 1e-9"
+            )
+        return cluster
+
     def reconf_for_dynamic(self) -> None:
         """Reconfigure cluster for dynamic block production.
 
         Reconfigure nodeX to be backup block production node for nodeY.
+        On Leios, retain both pools' BLS voting keys on the backup so taking either
+        forging process offline does not remove a committee seat.
+        Pause firehose across the restart and move its submission socket off the node
+        that will be stopped during failover.
         Stop all nodes before applying the Supervisor configuration, then start them once.
         """
         state_dir = cluster_nodes.get_cluster_env().state_dir
@@ -434,10 +479,26 @@ class TestDynamicBlockProd:
 
         LOGGER.info(
             f"Reconfiguring node '{self.backup_node_name}' to be non-producing backup node"
-            f"for '{self.producing_node_name}'."
+            f" for '{self.producing_node_name}'."
         )
         shutil.move(backup_node_dir, backup_node_dir_orig)
         shutil.copytree(producing_node_dir, backup_node_dir)
+
+        # Voting runs independently of forging and is not reloaded by SIGHUP. Load both
+        # identities at restart, preserving any existing rotation-key bundles as well.
+        bls_skey = backup_node_dir / "bls.skey"
+        original_bls_skey = backup_node_dir_orig / "bls.skey"
+        if bls_skey.exists() and original_bls_skey.exists():
+            voting_keys: list[dict[str, str]] = []
+            for key_file in (bls_skey, original_bls_skey):
+                with open(key_file, encoding="utf-8") as in_fp:
+                    keys = json.load(in_fp)
+                for key in keys if isinstance(keys, list) else [keys]:
+                    if key not in voting_keys:
+                        voting_keys.append(key)
+            with open(bls_skey, "w", encoding="utf-8") as out_fp:
+                json.dump(voting_keys, out_fp, indent=4)
+                out_fp.write("\n")
 
         with open(supervisor_conf, encoding="utf-8") as fp_in:
             supervisor_conf_content = fp_in.read()
@@ -450,6 +511,18 @@ class TestDynamicBlockProd:
         with open(supervisor_conf, "w", encoding="utf-8") as fp_out:
             fp_out.write(supervisor_conf_content)
 
+        # Firehose cannot stay connected across the restart or the permanent stop of
+        # the producing node. Keep the load running through failover via the relay.
+        if configuration.ENABLE_TX_FIREHOSE:
+            cluster_nodes.services_action(service_names=["tx_firehose"], action="stop")
+            firehose_config_file = state_dir / "tx-firehose-config.json"
+            with open(firehose_config_file, encoding="utf-8") as in_fp:
+                firehose_config = json.load(in_fp)
+            socket_path = pl.Path(firehose_config["socket_path"])
+            if socket_path.name == f"{self.producing_node_name}.socket":
+                firehose_config["socket_path"] = str(socket_path.with_name("bft1.socket"))
+                helpers.write_json(out_file=firehose_config_file, content=firehose_config)
+
         # All nodes must restart together on local testnets. Updating a running group
         # and then restarting it would interrupt the nodes during startup.
         cluster_nodes.stop_nodes(["*"])
@@ -457,15 +530,17 @@ class TestDynamicBlockProd:
         # Nodes auto-started by update are left running, not restarted by start.
         cluster_nodes.start_nodes(["*"])
         time.sleep(configuration.TX_SUBMISSION_DELAY)
+        if configuration.ENABLE_TX_FIREHOSE:
+            cluster_nodes.services_action(service_names=["tx_firehose"], action="start")
 
     @pytest.fixture
     def payment_addrs(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_singleton: clusterlib.ClusterLib,
+        cluster_dynamic: clusterlib.ClusterLib,
     ) -> list[clusterlib.AddressRecord]:
         """Create new payment addresses."""
-        cluster = cluster_singleton
+        cluster = cluster_dynamic
         addrs = addrs_common.get_payment_addrs(
             name_template=common.get_test_id(cluster),
             cluster_manager=cluster_manager,
@@ -480,7 +555,7 @@ class TestDynamicBlockProd:
     def test_dynamic_block_production(
         self,
         cluster_manager: cluster_management.ClusterManager,
-        cluster_singleton: clusterlib.ClusterLib,
+        cluster_dynamic: clusterlib.ClusterLib,
         payment_addrs: list[clusterlib.AddressRecord],
         worker_id: str,
     ):
@@ -488,13 +563,12 @@ class TestDynamicBlockProd:
 
         * Check that blocks are produced by both nodeX and nodeY pools
         * Reconfigure a nodeX to be non-producing backup node for nodeY pool
+        * Preserve both pools' Leios voting identities, when present
         * Terminate nodeY and send SIGHUP to nodeX so it starts producing blocks on behalf of nodeY
+        * Target each epoch explicitly and fail if an observation epoch is missed
         * Check that nodeX has replaced nodeY and is producing blocks on its behalf
         """
-        cluster = cluster_singleton
-        # Waits for up to 5 epochs: up to 1.5 to reach the second half of an epoch in
-        # epoch 1+, the rest of that epoch, and `num_epochs` more epochs
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
+        cluster = cluster_dynamic
         temp_template = common.get_test_id(cluster)
         num_epochs = 3
 
@@ -519,6 +593,10 @@ class TestDynamicBlockProd:
                 cluster_obj=cluster,
                 state_name=f"{temp_template}_epoch{curr_epoch}",
                 ledger_state=ledger_state,
+            )
+            assert ledger_state["lastEpoch"] == curr_epoch, (
+                f"Missed observation epoch {curr_epoch}: ledger is in epoch "
+                f"{ledger_state['lastEpoch']}"
             )
             blocks_before: dict[str, int] = ledger_state["blocksBefore"]
             return blocks_before
@@ -550,78 +628,74 @@ class TestDynamicBlockProd:
             "Failed to finish reconfiguration in single epoch, it would affect other checks"
         )
 
-        epoch_end = cluster.time_to_epoch_end(tip)
-        curr_time = time.monotonic()
-        epoch_end_deadline = curr_time + epoch_end
-        test_end_deadline = epoch_end_deadline + (num_epochs * cluster.epoch_length_sec)
-
-        blocks_db = {}
+        # Leave a transaction-sized margin before boundaries. A slow submission may
+        # still cross one, so wait for absolute targets rather than "the next epoch".
+        stop_buffer = common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
+        blocks_before: dict[str, int] = {}
         LOGGER.info(f"Checking blocks for {num_epochs} epochs.")
-        while curr_time < test_end_deadline:
-            epoch_end = epoch_end_deadline - curr_time
-            if epoch_end < 15:
-                LOGGER.info(f"End of epoch {curr_epoch}, saving data.")
-                blocks_db[curr_epoch] = _save_state(curr_epoch)
-
-                if curr_epoch == reconf_epoch:
-                    assert backup_pool_id in blocks_db[curr_epoch], (
-                        "The original pool should have forged blocks before it became backup node."
-                    )
-                    assert producing_pool_id in blocks_db[curr_epoch], (
-                        "Producing pool should forge blocks."
-                    )
-
-                curr_epoch = cluster.wait_for_new_epoch(padding_seconds=5)
-                epoch_end_deadline = cluster.time_to_epoch_end() + time.monotonic()
-
-                # Replace the node
-                if curr_epoch == reconf_epoch + 1:
-                    LOGGER.info(
-                        f"Replacing node '{self.producing_node_name}' "
-                        f"with '{self.backup_node_name}'."
-                    )
-                    backup_node_status = cluster_nodes.services_status(
-                        service_names=[f"nodes:{self.backup_node_name}"]
-                    )[0]
-                    if not backup_node_status.pid:
-                        msg = "Replacement node is not running."
-                        raise AssertionError(msg)
-                    # Sending `SIGHUP` triggers the node's RPC configuration reload, which
-                    # re-parses the node config file and fails with
-                    # "Error while updating RPC configuration: Missing YAML config file".
-                    # The reload re-validates the whole config from the file alone, but the
-                    # config file path itself is only supplied via the `--config` CLI argument
-                    # and is never stored in the file, so the validation always fails. The
-                    # failure is non-fatal (the reload is simply skipped), so ignore the error.
-                    # See https://github.com/IntersectMBO/cardano-node/issues/6589
-                    logfiles.add_ignore_rule(
-                        files_glob=f"{self.backup_node_name}.stdout",
-                        regex="RpcConfigUpdateError",
-                        ignore_file_id=worker_id,
-                    )
-                    cluster_nodes.stop_nodes(node_names=[self.producing_node_name])
-                    os.kill(backup_node_status.pid, signal.SIGHUP)
-
-            # Send tx
-            src_addr, dst_addr = random.sample(payment_addrs, 2)
-            txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
-            tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
-
-            cluster.g_transaction.send_tx(
-                src_address=src_addr.address,
-                tx_name=f"{temp_template}_{int(time.time())}",
-                txouts=txouts,
-                tx_files=tx_files,
+        for observed_epoch in range(reconf_epoch, reconf_epoch + num_epochs + 1):
+            tip = cluster.g_query.get_tip()
+            assert cluster.g_query.get_epoch(tip=tip) == observed_epoch, (
+                f"Missed observation epoch {observed_epoch}: tip is {tip}"
             )
+            epoch_end_deadline = time.monotonic() + cluster.time_to_epoch_end(tip)
+            tx_no = 0
+            while time.monotonic() < epoch_end_deadline + stop_buffer:
+                src_addr, dst_addr = random.sample(payment_addrs, 2)
+                txouts = [clusterlib.TxOut(address=dst_addr.address, amount=1_000_000)]
+                tx_files = clusterlib.TxFiles(signing_key_files=[src_addr.skey_file])
 
-            time.sleep(2)
-            curr_time = time.monotonic()
+                cluster.g_transaction.send_tx(
+                    src_address=src_addr.address,
+                    tx_name=f"{temp_template}_epoch{observed_epoch}_tx{tx_no}",
+                    txouts=txouts,
+                    tx_files=tx_files,
+                )
+                tx_no += 1
+                if cluster.g_query.get_epoch() != observed_epoch:
+                    break
+                time.sleep(2)
 
-        # Save also data for the last epoch
-        curr_epoch = cluster.g_query.get_epoch()
-        blocks_db[curr_epoch] = _save_state(curr_epoch)
+            # blocksBefore describes the completed epoch, not the current one. Save
+            # after the boundary so delayed queries cannot silently relabel a snapshot.
+            curr_epoch = cluster.wait_for_epoch(
+                epoch_no=observed_epoch + 1, padding_seconds=5, future_is_ok=False
+            )
+            LOGGER.info(f"Epoch {observed_epoch} finished, saving data in epoch {curr_epoch}.")
+            blocks_before = _save_state(curr_epoch)
 
-        assert backup_pool_id not in blocks_db[curr_epoch], (
+            # Replace the node exactly once, after observing the reconfiguration epoch.
+            if observed_epoch == reconf_epoch:
+                assert backup_pool_id in blocks_before, (
+                    "The original pool should have forged blocks before it became backup node."
+                )
+                assert producing_pool_id in blocks_before, "Producing pool should forge blocks."
+                LOGGER.info(
+                    f"Replacing node '{self.producing_node_name}' with '{self.backup_node_name}'."
+                )
+                backup_node_status = cluster_nodes.services_status(
+                    service_names=[f"nodes:{self.backup_node_name}"]
+                )[0]
+                if not backup_node_status.pid:
+                    msg = "Replacement node is not running."
+                    raise AssertionError(msg)
+                # Sending `SIGHUP` triggers the node's RPC configuration reload, which
+                # re-parses the node config file and fails with
+                # "Error while updating RPC configuration: Missing YAML config file".
+                # The reload re-validates the whole config from the file alone, but the
+                # config file path itself is only supplied via the `--config` CLI argument
+                # and is never stored in the file, so the validation always fails. The
+                # failure is non-fatal (the reload is simply skipped), so ignore the error.
+                # See https://github.com/IntersectMBO/cardano-node/issues/6589
+                logfiles.add_ignore_rule(
+                    files_glob=f"{self.backup_node_name}.stdout",
+                    regex="RpcConfigUpdateError",
+                    ignore_file_id=worker_id,
+                )
+                cluster_nodes.stop_nodes(node_names=[self.producing_node_name])
+                os.kill(backup_node_status.pid, signal.SIGHUP)
+
+        assert backup_pool_id not in blocks_before, (
             "The original pool should NOT forge blocks after it became backup node."
         )
-        assert producing_pool_id in blocks_db[curr_epoch], "Producing pool should forge blocks."
+        assert producing_pool_id in blocks_before, "Producing pool should forge blocks."
