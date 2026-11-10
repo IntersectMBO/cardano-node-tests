@@ -139,15 +139,17 @@ class TestCollateralOutput:
             ),
         ]
 
-        tx_output_redeem = cluster.g_transaction.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
-            txouts=txouts_redeem,
-            tx_files=tx_files_redeem,
-            fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
-            script_txins=plutus_txins,
-            script_valid=False,
-            return_collateral_txouts=txouts_return_collateral if use_return_collateral else (),
-            total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
+        tx_output_redeem = plutus_common.run_with_script_invalid_arg_check(
+            func=lambda: cluster.g_transaction.build_raw_tx_bare(
+                out_file=f"{temp_template}_step2_tx.body",
+                txouts=txouts_redeem,
+                tx_files=tx_files_redeem,
+                fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
+                script_txins=plutus_txins,
+                script_valid=False,
+                return_collateral_txouts=txouts_return_collateral if use_return_collateral else (),
+                total_collateral_amount=redeem_cost.collateral if use_total_collateral else None,
+            )
         )
         tx_signed_redeem = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,
@@ -296,16 +298,18 @@ class TestCollateralOutput:
             ),
         ]
 
-        tx_output_redeem = cluster.g_transaction.build_raw_tx_bare(
-            out_file=f"{temp_template}_step2_tx.body",
-            txouts=txouts_redeem,
-            tx_files=tx_files_redeem,
-            fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
-            script_txins=plutus_txins,
-            script_valid=False,
-            return_collateral_txouts=txouts_return_collateral,
-            total_collateral_amount=redeem_cost.collateral,
-            join_txouts=False,
+        tx_output_redeem = plutus_common.run_with_script_invalid_arg_check(
+            func=lambda: cluster.g_transaction.build_raw_tx_bare(
+                out_file=f"{temp_template}_step2_tx.body",
+                txouts=txouts_redeem,
+                tx_files=tx_files_redeem,
+                fee=redeem_cost.fee + spend_raw.FEE_REDEEM_TXSIZE,
+                script_txins=plutus_txins,
+                script_valid=False,
+                return_collateral_txouts=txouts_return_collateral,
+                total_collateral_amount=redeem_cost.collateral,
+                join_txouts=False,
+            )
         )
         tx_signed_redeem = cluster.g_transaction.sign_tx(
             tx_body_file=tx_output_redeem.out_file,

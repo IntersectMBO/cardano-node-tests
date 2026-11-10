@@ -365,6 +365,23 @@ TIMERANGE_SLOTS_OFFSET = 300
 TIMERANGE_SLOTS_OFFSET_TESTNET = 3_000
 
 
+def run_with_script_invalid_arg_check[T](func: tp.Callable[[], T]) -> T:
+    """Run a build, handling only Dijkstra's unsupported script-invalid option.
+
+    Return the callable's result on success. Fail or xfail for node issue 6748
+    when the CLI rejects the option in Dijkstra. Re-raise any unrelated CLI error.
+    """
+    try:
+        return func()
+    except clusterlib.CLIError as exc:
+        if (
+            VERSIONS.cluster_era >= VERSIONS.DIJKSTRA_FIRST
+            and "Invalid option `--script-invalid'" in str(exc)
+        ):
+            issues.node_6748.finish_test()
+        raise
+
+
 def run_with_invalid_script_check[T](func: tp.Callable[[], T]) -> T:
     """Run a callable, handling known phase-2-invalid transaction errors.
 
