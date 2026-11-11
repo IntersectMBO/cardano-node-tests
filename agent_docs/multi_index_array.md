@@ -73,20 +73,20 @@ The batch7 modules use the common generator, updated to Plutus 1.72 by
 [PR #30](https://github.com/mkoura/plutus-scripts-e2e/pull/30). Keep builtin
 evaluation disabled in the compiler so the tested operation survives optimization.
 
-For PlutusV3, `cost_models_list_355_v3_v4.json` preserves the existing 350
+For PlutusV3, `cost_models_list_369_v3_v4.json` preserves the existing 350
 parameters from `cost_models_list_332_350_v2_v3.json` and appends the five
-`multiIndexArray` parameters in ledger `V3.ParamName` order: CPU c0/c1/c2
+`multiIndexArray` parameters followed by 14 Value builtin parameters. The
+`multiIndexArray` parameters follow ledger `V3.ParamName` order: CPU c0/c1/c2
 `326163/12304/2`, memory intercept/slope `4/3`, from Plutus's
-`plutus-core/cost-model/data/builtinCostModelE.json`. Other language models are
-unchanged by the proposal. These are test parameters, not proposed mainnet pricing.
+`plutus-core/cost-model/data/builtinCostModelE.json`. PlutusV1 and PlutusV2 models
+are unchanged by the proposal. These are test parameters, not proposed mainnet pricing.
 
-The file gives PlutusV4 the same 355 values. At PV12 the PlutusV4 parameters have
+The file gives PlutusV4 the same 369 values. At PV12 the PlutusV4 parameters have
 the same names and order as the PlutusV3 ones, and both languages use the same
 builtin semantics variant. The genesis from cardonnay gives PlutusV4 only 251
 parameters. Plutus sets the missing parameters to `maxBound`, so a PlutusV4
-policy that uses `multiIndexArray` exceeds any budget without this update. The
-shared setup now uses `cost_models_list_369_v3_v4.json`, which preserves those
-355 parameters and adds Value builtin costing. It proposes and checks both languages
+policy that uses `multiIndexArray` exceeds any budget without this update.
+The shared setup proposes and checks both languages
 at PV12+, or V3 alone at PV10/PV11, once for all builtin groups in the same test.
 At PV10/PV11 the test installs all 369 V3 parameters, then requires batch7
 protocol rejection: updated costing must not activate the builtins. PV9 keeps
