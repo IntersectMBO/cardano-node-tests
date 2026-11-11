@@ -52,7 +52,7 @@ Use `cluster_manager.cache_fixture()` to cache fixture values:
 Without a `key`, `cache_fixture()` uses the file name and line number of the fixture that calls it, so every fixture gets its own cache entry. Pass an explicit `key` only when the default doesn't fit:
 
 - Inside a helper called from several fixtures, the line number of the helper would be shared by all callers. The helper must take the key from the caller - this is why the address helpers in `cardano_node_tests/tests/addrs_common.py` take `caching_key`, and fixtures pass `caching_key=helpers.get_current_line_str()`.
-- When one fixture caches different values for different parameters, include the parameter in the key (e.g. `caching_key=f"plutusv3_builtins_batch_testing_{variant}"`), otherwise all variants get the value cached for the first one.
+- When one fixture caches different values for different parameters, include the parameter in the key (e.g. `caching_key=f"plutus_builtins_batch_testing_{variant}"`), otherwise all variants get the value cached for the first one.
 
 Prefer the `addrs_common` helpers (`get_payment_addrs`, `get_payment_addr`, etc.) over calling `cache_fixture` directly for funded addresses. With `caching_key`, they create the addresses once and re-fund them on later calls when the balance drops below `min_amount`. When only `amount` is passed, the addresses are funded once and never re-funded, so a cached address can run out of funds over a long run.
 
