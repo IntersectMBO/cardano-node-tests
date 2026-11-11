@@ -1,4 +1,4 @@
-"""Shared minting scenarios for PlutusV3+ builtin E2E tests."""
+"""Shared minting scenarios for Plutus builtin E2E tests across ledger languages."""
 
 import enum
 import logging
@@ -6,6 +6,7 @@ import math
 import pathlib as pl
 import typing as tp
 
+import pytest
 import pytest_subtests
 from cardano_clusterlib import clusterlib
 
@@ -102,6 +103,27 @@ class PendingMint(tp.NamedTuple):
     plutus_costs: list[dict]
 
 
+def _get_policyid(
+    cluster_obj: clusterlib.ClusterLib, script_file: pl.Path, is_prot_version_ok: bool
+) -> str:
+    """Return a policy ID, or an empty string for expected pre-activation rejection.
+
+    Skip unknown builtin tags separately: an older CLI decoder cannot establish
+    protocol rejection. Capable decoders must still report the availability error.
+    """
+    try:
+        return cluster_obj.g_transaction.get_policyid(script_file)
+    except clusterlib.CLIError as exc:
+        if is_prot_version_ok:
+            raise
+        exc_value = str(exc)
+        if "Failed to decode builtin tag" in exc_value:
+            pytest.skip(f"CLI cannot decode builtin tag in {script_file.name}: {exc_value}")
+        with common.allow_unstable_error_messages():
+            assert "not available" in exc_value and "protocol version" in exc_value, exc_value
+        return ""
+
+
 def run_scenario(
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
@@ -126,10 +148,12 @@ def run_scenario(
     A script expected to fail, or a script submitted with a protocol version that doesn't
     support it, must not be accepted. A script expected to succeed can be accepted with
     an old cost model, e.g. casing on constants doesn't use any new cost model parameters.
+    Before protocol activation, rejection can happen already during policy decoding.
+    Unknown builtin tags skip the scenario as a CLI incompatibility, not a pass.
 
     Returns:
         PendingMint | None: The submitted minting transaction, or None when the minting
-        failed as expected.
+            failed as expected.
     """
     lovelace_amount = 2_000_000
     token_amount = 5
@@ -138,7 +162,16 @@ def run_scenario(
 
     # Mint the "qacoin"
 
-    policyid = cluster_obj.g_transaction.get_policyid(plutus_v_record.script_file)
+    # New builtins can be rejected during policy decoding, before transaction
+    # construction. This is expected only before their protocol activation.
+    policyid = _get_policyid(
+        cluster_obj=cluster_obj,
+        script_file=plutus_v_record.script_file,
+        is_prot_version_ok=is_prot_version_ok,
+    )
+    if not policyid:
+        return None
+
     asset_name = f"qacoin{clusterlib.get_rand_str(4)}".encode().hex()
     token = f"{policyid}.{asset_name}"
     mint_txouts = [clusterlib.TxOut(address=issuer_addr.address, amount=token_amount, coin=token)]
@@ -198,7 +231,7 @@ def run_scenario(
     except clusterlib.CLIError as excp:
         str_excp = str(excp)
         if not is_prot_version_ok and (
-            "not available in language PlutusV3 at and protocol version" in str_excp
+            ("not available" in str_excp and "protocol version" in str_excp)
             or "Script evaluation error" in str_excp
         ):
             return None
@@ -290,7 +323,7 @@ def confirm_mints(
     return unconfirmed
 
 
-def run_plutusv3_builtins_test(
+def run_builtins_test(
     cluster_manager: cluster_management.ClusterManager,
     cluster_obj: clusterlib.ClusterLib,
     temp_template: str,
@@ -343,7 +376,7 @@ def run_plutusv3_builtins_test(
         cluster_obj=cluster_obj,
         num=2,
         fund_idx=[0],
-        caching_key=f"plutusv3_builtins_batch_testing_{variant}",
+        caching_key=f"plutus_builtins_batch_testing_{variant}",
         amount=max(1_000_000_000, total_amount),
         min_amount=total_amount,
     )

@@ -14,3 +14,18 @@ def cluster(
 ) -> clusterlib.ClusterLib:
     """Return instance of `clusterlib.ClusterLib`."""
     return cluster_manager.get(use_resources=[cluster_management.Resources.PLUTUS])
+
+
+@pytest.fixture
+def cluster_plutus(
+    cluster_manager: cluster_management.ClusterManager,
+) -> clusterlib.ClusterLib:
+    """Lock governance and Plutus while keeping cluster pools available for voting."""
+    return cluster_manager.get(
+        use_resources=cluster_management.Resources.ALL_POOLS,
+        lock_resources=[
+            cluster_management.Resources.COMMITTEE,
+            cluster_management.Resources.DREPS,
+            cluster_management.Resources.PLUTUS,
+        ],
+    )

@@ -819,6 +819,7 @@ MULTI_INDEX_ARRAY_SCRIPTS = {
 class ValueBuiltinScripts(tp.NamedTuple):
     """CIP-0168 minting policies for one ledger/Core combination."""
 
+    cost_model: str
     succeeding: tuple[PlutusScriptData, ...]
     failing: tuple[PlutusScriptData, ...]
 
@@ -873,6 +874,7 @@ def _get_value_builtin_script(name: str, ledger: str, core_version: str) -> Plut
 
 VALUE_BUILTIN_SCRIPTS = {
     f"{ledger}_{core_version.replace('.', '')}": ValueBuiltinScripts(
+        cost_model=f"Plutus{ledger.upper()}",
         succeeding=tuple(
             _get_value_builtin_script(name=n, ledger=ledger, core_version=core_version)
             for n in _SUCCEEDING_VALUE_BUILTIN_NAMES
