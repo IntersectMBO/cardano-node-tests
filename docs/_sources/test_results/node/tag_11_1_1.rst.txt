@@ -1,0 +1,209 @@
+11.1.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/11.1.1>
+
+
+What Was Tested
+---------------
+
+`cardano-node` 11.1.1 was tested in the Conway era at protocol version 11, both on local
+testnets started directly in Conway and on the public Preview network. Upgrade testing went
+from the previous release, 11.0.1, to 11.1.1; because both releases run at protocol version
+11, this was a binary upgrade only and no hard fork was performed. In addition, a local
+testnet was started in the Byron era and hard-forked through every intermediate era up to
+Conway protocol version 11, and a full Mainnet sync from genesis was measured.
+
+A |:heavy_check_mark:| means the activity finished with no unexpected failures. Tests that
+hit an already known and tracked issue are reported as *broken* rather than *failed*, and
+tests that do not apply to a given configuration are reported as *skipped*.
+
+
+Release Testing Checklists
+--------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.1-conway11_default_01/>`__
+     - |:heavy_check_mark:|
+   * - `LSM disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.1-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - `Genesis consensus mode <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.1-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - Testing on `Preview`
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (11.0.1 to 11.1.1)
+     - |:heavy_check_mark:|
+   * - Rollback testing
+     - |:heavy_check_mark:|
+   * - Reconnection testing
+     - |:heavy_check_mark:|
+   * - Block-production testing
+     - |:heavy_check_mark:|
+   * - Testing on Ubuntu, Debian, Mint
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C)
+     - |:heavy_check_mark:|
+   * - :doc:`Sync testing on Mainnet (Linux) <../sync_reports/mainnet_11_1_1>`
+     - |:x:|\ :sup:`1`
+   * - Byron to Conway 11 hard-fork testing
+     - |:heavy_check_mark:|
+   * - Check build instructions changes
+     - |:heavy_check_mark:|
+
+| \ :sup:`1` - Memory regression observed during sync testing on Mainnet, see `issue #3670 <https://github.com/IntersectMBO/cardano-node-tests/issues/3670>`__
+
+
+Regression Testsuite Results
+----------------------------
+
+Both regression configurations executed the same 2,165 tests with the same outcome - no
+failures, and the same ten tests reported as *broken* because they hit known issues.
+
+.. list-table::
+   :widths: 30 14 12 12 12 12
+   :header-rows: 1
+
+   * - Configuration
+     - Total
+     - Passed
+     - Broken
+     - Skipped
+     - Failed
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.1-conway11_default_01/>`__
+     - 2,165
+     - 1,905
+     - 10
+     - 250
+     - 0
+   * - `LSM disk UTxO backend, Genesis consensus mode <https://cardano-tests-reports-3-74-115-22.nip.io/01-regression-tests/11.1.1-conway11_disk_genesis_01/>`__
+     - 2,165
+     - 1,905
+     - 10
+     - 250
+     - 0
+
+The default-backend run took 1 h 18 min of wall-clock time, the disk-backend run 1 h 36 min.
+Both were executed with 20 parallel test workers spread over up to 9 local testnet cluster
+instances of 3 stake pools each. The disk backend also runs with a lower number of
+concurrent tests per cluster, which accounts for most of the longer runtime.
+
+The suite covers transactions and fees, native tokens and metadata, the mempool, Plutus V1,
+V2 and V3, staking, rewards and stake pool lifecycle, KES key rotation, Conway governance,
+`cardano-cli` behaviour, node metrics, node configuration and socket handling.
+
+Known issues hit by both runs (reported as *broken*):
+
+.. list-table::
+   :widths: 62 10
+   :header-rows: 1
+
+   * - Issue
+     - Tests
+   * - `cardano-ledger#4566 <https://github.com/IntersectMBO/cardano-ledger/issues/4566>`__ - repeated certificates stripped from a Conway transaction
+     - 4
+   * - `cardano-cli#1199 <https://github.com/IntersectMBO/cardano-cli/issues/1199>`__ - ``build-estimate`` fails to balance a transaction with no transaction outputs
+     - 3
+   * - `cardano-ledger#5788 <https://github.com/IntersectMBO/cardano-ledger/issues/5788>`__ - ``queryStakeSnapshots`` returns 1 for empty snapshots instead of 0
+     - 1
+   * - `cardano-node#4002 <https://github.com/IntersectMBO/cardano-node/issues/4002>`__ - ``PastHorizon`` error in ``query leadership-schedule``
+     - 1
+   * - `cardano-node#4488 <https://github.com/IntersectMBO/cardano-node/issues/4488>`__ - Plutus debug output does not return the evaluation error
+     - 1
+
+None of these are regressions in 11.1.1; all of them predate the release and are tracked as
+expected failures.
+
+
+What the Checklist Items Cover
+------------------------------
+
+**Default UTxO backend** - the whole end-to-end test suite against a local testnet in the
+Conway era, with the node keeping the UTxO set in memory, which is the node default.
+
+**LSM disk UTxO backend** - the same full suite, but the node keeps the UTxO set on disk.
+The on-disk backend changes how ledger state is accessed, so it can expose problems - query
+stalls, performance cliffs, corruption - that the in-memory backend hides.
+
+**Genesis consensus mode** - the same full suite with Ouroboros Genesis instead of the
+default Praos chain-selection mode. For this tag it was combined with the disk backend in a
+single run, which is why the two rows link to the same report.
+
+**Testing on Preview** - a subset of the suite run against the real, long-running Preview
+network instead of a local testnet, exercising the release against real peers, real traffic
+and a chain that cannot be reset.
+
+**Upgrade testing** - a simulation of a real network upgrade. A cluster is started on the
+previous release, then the nodes are upgraded to the tag one at a time so that the network
+temporarily runs mixed versions, and the sanity suite is re-run after each step. It catches
+problems that appear only across versions: configuration and genesis incompatibilities,
+block diffusion between old and new nodes, Plutus cost model updates and unexpected log
+errors.
+
+**Rollback testing** - the network is deliberately split in two, both halves accept
+conflicting transactions, and the halves are then reconnected. Two scenarios are checked:
+reconnecting after enough blocks that the fork must become permanent, and reconnecting
+early enough that global consensus must be restored and the losing branch rolled back.
+
+**Reconnection testing** - a block-producing node is stopped and restarted repeatedly; it
+must rejoin the network, re-synchronize and return its peer-connection metrics to their
+expected values without manual intervention.
+
+**Block-production testing** - a long run over many epochs in which pools with equal stake,
+half of them on the in-memory and half on the disk backend, must produce roughly the same
+number of blocks. A configuration that silently slows down forging shows up here as a
+skewed block distribution rather than as a failing assertion elsewhere.
+
+**Testing on Ubuntu, Debian, Mint** - a regression run inside a container based on a
+mainstream Linux distribution. The node binaries themselves are still built with Nix and are
+the same in every distribution; what varies is the surrounding environment - the system
+configuration, certificates, locale, shell utilities and filesystem behaviour the node and the
+test framework run on top of.
+
+**Shutdown testing** - the node is shut down through every supported mechanism (slot-based,
+block-based, inter-process communication, Ctrl+C) and must exit promptly, log a clean
+shutdown, and start again afterwards without replaying or corrupting its database.
+
+**Sync testing on Mainnet** - a full Mainnet sync from genesis, measuring sync time,
+per-era and per-epoch speed and CPU and memory usage against the previous releases. This is
+the only activity that measures resource consumption at Mainnet scale.
+
+**Byron to Conway hard-fork testing** - a local testnet started in the Byron era and
+hard-forked through every intermediate era up to the target Conway protocol version,
+exercising era translations and hard-fork paths that a testnet started directly in Conway
+never touches.
+
+**Check build instructions changes** - building the node from source in a clean container
+by following the published build instructions, to confirm those instructions are still
+correct for the tag.
+
+
+Scope and Limits
+----------------
+
+* **Preview runs only a subset of the suite.** A Preview epoch lasts 2 hours, so tests that
+  wait for an epoch boundary or span several reward cycles cannot be run there and are
+  excluded by construction. Preview also runs against a single node that joins the network,
+  and the cluster is never restarted during the run.
+
+* **Upgrade testing for this tag did not include a hard fork.** 11.0.1 and 11.1.1 both run
+  at protocol version 11, so only the binary upgrade and the mixed-version period were
+  exercised. Hard-fork handling itself is covered by the separate Byron to Conway item.
+
+* **The 250 skipped tests are not gaps in the release.** They are tests that do not apply to
+  the configuration under test - for example tests for other eras, for other UTxO backends,
+  or ones requiring a component not enabled in that run.
+
+* **Sync testing is the one item that did not pass.** Peak memory during a full Mainnet sync
+  recovered strongly against 11.1.0 (36.15 GiB down to 21.16 GiB, with the sawtooth
+  oscillation gone), and sync time improved to 110,606 s, but 11.1.1 still peaks 37% higher
+  on resident memory than the 11.0.1 baseline. That residual gap keeps
+  `issue #3670 <https://github.com/IntersectMBO/cardano-node-tests/issues/3670>`__ open; see
+  the :doc:`Mainnet sync report <../sync_reports/mainnet_11_1_1>` for the full comparison.

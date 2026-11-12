@@ -1,0 +1,260 @@
+11.2.1
+======
+
+* Release notes - <https://github.com/IntersectMBO/cardano-node/releases/tag/11.2.1>
+
+
+What Was Tested
+---------------
+
+``cardano-node`` 11.2.1 is a minor release focused on fixing several performance
+regressions. Most of the :doc:`11.2.0 testing <tag_11_2_0>` remains valid, so only the
+activities needed to validate the changes were repeated rather than the full release
+testing checklist.
+
+Fresh 11.2.1 runs covered the Conway regression suite at protocol version 11 with the
+default UTxO backend and with the LSM disk backend combined with Genesis consensus mode,
+the Dijkstra suite at protocol version 12, and a full Mainnet sync from genesis.
+The remaining checklist results are carried forward from 11.2.0, including Preview,
+the 11.1.3 to 11.2.0 binary upgrade, and Byron to Conway hard-fork testing. Rows labeled
+11.2.0 identify that retained coverage, not new runs against 11.2.1.
+
+A |:heavy_check_mark:| means the activity finished with no unexpected failures. Tests that
+hit an already known and tracked issue are reported as *broken* rather than *failed*, and
+tests that do not apply to a given configuration are reported as *skipped*.
+
+
+Release Testing Checklists
+--------------------------
+
+.. list-table:: Regression Testsuite
+   :widths: 64 7
+   :header-rows: 0
+
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-conway11_default_01/>`__
+     - |:heavy_check_mark:|
+   * - `LSM disk UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - `Genesis consensus mode <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-conway11_disk_genesis_01/>`__
+     - |:heavy_check_mark:|
+   * - `Dijkstra PV12 <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-dijkstra_default_01/>`__
+     - |:x:| [1]_
+   * - Testing on Preview (11.2.0)
+     - |:heavy_check_mark:|
+
+.. list-table:: Other Testing
+   :widths: 64 7
+   :header-rows: 0
+
+   * - Upgrade testing (11.1.3 to 11.2.0)
+     - |:heavy_check_mark:|
+   * - Rollback testing (11.2.0)
+     - |:heavy_check_mark:|
+   * - Reconnection testing (11.2.0)
+     - |:heavy_check_mark:|
+   * - Block-production testing (11.2.0)
+     - |:heavy_check_mark:|
+   * - Testing on Ubuntu, Debian, Mint (11.2.0)
+     - |:heavy_check_mark:|
+   * - Shutdown testing (IPC, block synced, slot synced, Ctrl+C; 11.2.0)
+     - |:heavy_check_mark:|
+   * - :doc:`Sync testing on Mainnet (Linux) <../sync_reports/mainnet_11_2_1>`
+     - |:heavy_check_mark:|
+   * - Byron to Conway 11 hard-fork testing (11.2.0)
+     - |:heavy_check_mark:|
+   * - Check build instructions changes (11.2.0)
+     - |:heavy_check_mark:|
+
+.. [1] The 11.2.1 Dijkstra run had two failed tests:
+
+   * Missing local-submission support for intentionally phase-2-invalid transactions,
+     see `node issue #6748 <https://github.com/IntersectMBO/cardano-node/issues/6748>`__.
+   * Guard-signature rejection closes the connection, likely fixed by
+     `ledger PR #6189 <https://github.com/IntersectMBO/cardano-ledger/pull/6189>`__.
+
+
+Regression Testsuite Results
+----------------------------
+
+Both 11.2.1 Conway regression configurations collected the same 2,414 tests with the same
+outcome: no failures, and nine tests reported as *broken* because they hit known issues.
+The Dijkstra run collected 2,414 tests too, but had two failures and 25 *broken* results.
+
+.. list-table::
+   :widths: 30 14 12 12 12 12
+   :header-rows: 1
+
+   * - Configuration
+     - Total
+     - Passed
+     - Broken
+     - Skipped
+     - Failed
+   * - `Default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-conway11_default_01/>`__
+     - 2,414
+     - 1,936
+     - 9
+     - 469
+     - 0
+   * - `LSM disk UTxO backend, Genesis consensus mode <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-conway11_disk_genesis_01/>`__
+     - 2,414
+     - 1,936
+     - 9
+     - 469
+     - 0
+   * - `Dijkstra PV12, default UTxO backend <https://cardano-tests-reports-3-74-115-22.nip.io/local/11.2.1-dijkstra_default_01/>`__
+     - 2,414
+     - 2,091
+     - 25
+     - 296
+     - 2
+
+The Conway default-backend run took approximately 1 h 16 min of wall-clock time, and the
+disk-backend run took 1 h 22 min. Both used local testnet clusters with three stake pools
+each. The disk-backend run limited concurrent tests per cluster to five, compared with
+eight for the default backend. The Dijkstra run took approximately 1 h 10 min.
+
+The suite covers transactions and fees, native tokens and metadata, the mempool, Plutus V1,
+V2 and V3, staking, rewards and stake pool lifecycle, KES key rotation, Conway governance,
+``cardano-cli`` behavior, node metrics, node configuration, and socket handling.
+
+Known issues hit by both Conway runs (reported as *broken*):
+
+.. list-table::
+   :widths: 62 10
+   :header-rows: 1
+
+   * - Issue
+     - Tests
+   * - `cardano-ledger#4566 <https://github.com/IntersectMBO/cardano-ledger/issues/4566>`__ - repeated certificates stripped from a Conway transaction
+     - 6
+   * - `cardano-ledger#6102 <https://github.com/IntersectMBO/cardano-ledger/issues/6102>`__ - genesis staking injection leaves ``psVRFKeyHashes`` empty
+     - 1
+   * - `cardano-node#4002 <https://github.com/IntersectMBO/cardano-node/issues/4002>`__ - ``PastHorizon`` error in ``query leadership-schedule``
+     - 1
+   * - `cardano-node#4488 <https://github.com/IntersectMBO/cardano-node/issues/4488>`__ - Plutus debug output does not return the evaluation error
+     - 1
+
+These tests are tracked as expected failures. The issue counts above describe the linked
+Conway runs. The Dijkstra run's 25 *broken* results comprise 19 tests affected by missing
+local-submission support for intentionally phase-2-invalid transactions
+(`node issue #6748 <https://github.com/IntersectMBO/cardano-node/issues/6748>`__), two
+awaiting the parent/child datum-allowance ledger fix ``846a63f764``, two affected by
+ledger issue #6102, and one each affected by node issues #4002 and #4488. Its two failed
+tests are described in footnote [1]_.
+
+
+Mainnet Sync Results
+--------------------
+
+The :doc:`11.2.1 Mainnet sync report <../sync_reports/mainnet_11_2_1>` shows substantial
+improvements over 11.2.0:
+
+* Peak resident memory fell from 22.08 to 16.98 GiB (-23.1%).
+* Peak garbage-collector live data fell from 18.03 to 11.00 GiB (-39.0%).
+* Sync time fell from 132,111 to 113,689 seconds (-13.9%), about five hours sooner,
+  despite syncing 1,090,011 more slots. Babbage accounted for most of the saving.
+* Total CPU time fell 9.6%, while mean CPU utilization rose from 112% to 118% of one core.
+
+These measurements support the performance fixes, but do not establish that every
+historical regression is resolved. See the comparison limits below and the full report.
+
+
+What the Checklist Items Cover
+------------------------------
+
+**Default UTxO backend** - the whole end-to-end test suite against a local testnet in the
+Conway era, with the node keeping the UTxO set in memory, which is the node default.
+
+**LSM disk UTxO backend** - the same full suite, but the node keeps the UTxO set on disk.
+The on-disk backend changes how ledger state is accessed, so it can expose problems such
+as query stalls, performance cliffs, and corruption that the in-memory backend hides.
+
+**Genesis consensus mode** - the same full suite with Ouroboros Genesis instead of the
+default Praos chain-selection mode. For this tag it was combined with the disk backend in a
+single run, which is why the two rows link to the same report.
+
+**Testing in Dijkstra PV12** - testing in the Dijkstra era at protocol version 12,
+separately from the Conway protocol version 11 regression runs. This activity exposed
+the local-submission and guard-signature issues described in footnote [1]_.
+
+**Testing on Preview** - a subset of the suite run against the real, long-running Preview
+network instead of a local testnet, exercising the release against real peers, real traffic,
+and a chain that cannot be reset.
+
+**Upgrade testing** - a simulation of a real network upgrade. A cluster is started on the
+base release, then nodes are upgraded in stages so that the network temporarily runs mixed
+versions, and the sanity suite is rerun after each step. It catches problems that appear
+only across versions: configuration and genesis incompatibilities, block diffusion between
+old and new nodes, Plutus cost model updates, and unexpected log errors.
+
+**Rollback testing** - the network is deliberately split in two, both halves accept
+conflicting transactions, and the halves are then reconnected. Two scenarios are checked:
+reconnecting after enough blocks that the fork must become permanent, and reconnecting
+early enough that global consensus must be restored and the losing branch rolled back.
+
+**Reconnection testing** - a block-producing node is stopped and restarted repeatedly; it
+must rejoin the network, resynchronize, and return its peer-connection metrics to their
+expected values without manual intervention.
+
+**Block-production testing** - a long run over many epochs in which pools with equal stake,
+half of them on the in-memory and half on the disk backend, must produce roughly the same
+number of blocks. A configuration that silently slows down forging shows up here as a
+skewed block distribution rather than as a failing assertion elsewhere.
+
+**Testing on Ubuntu, Debian, Mint** - a regression run inside a container based on a
+mainstream Linux distribution. The node binaries themselves are still built with Nix and are
+the same in every distribution; what varies is the surrounding environment: the system
+configuration, certificates, locale, shell utilities, and filesystem behavior the node and
+the test framework run on top of.
+
+**Shutdown testing** - the node is shut down through every supported mechanism (slot-based,
+block-based, inter-process communication, Ctrl+C) and must exit promptly, log a clean
+shutdown, and start again afterwards without replaying or corrupting its database.
+
+**Sync testing on Mainnet** - a full Mainnet sync from genesis, measuring sync time,
+per-era and per-epoch speed, and CPU and memory usage against previous releases. This is
+the activity that measures resource consumption at Mainnet scale.
+
+**Byron to Conway hard-fork testing** - a local testnet started in the Byron era and
+hard-forked through every intermediate era up to the target Conway protocol version,
+exercising era translations and hard-fork paths that a testnet started directly in Conway
+never touches.
+
+**Check build instructions changes** - building the node from source in a clean container
+by following the published build instructions, to confirm those instructions are still
+correct for the tag.
+
+
+Scope and Limits
+----------------
+
+* **Preview runs only a subset of the suite.** A Preview epoch lasts two hours, so tests
+  that wait for an epoch boundary or span several reward cycles are excluded. Preview
+  also runs against a single node that joins the network, and the cluster is never
+  restarted during the run.
+
+* **Retained coverage is not a fresh 11.2.1 result.** Preview, upgrade, rollback,
+  reconnection, block-production, distribution, shutdown, hard-fork, and build-instruction
+  results come from 11.2.0 and remain applicable for this limited performance-fix release.
+  Their checkmarks do not mean those activities were repeated against 11.2.1.
+
+* **The retained upgrade test did not include a hard fork.** The upgrade from 11.1.3
+  to 11.2.0 stayed at protocol version 11, exercising the binary upgrade and mixed-version
+  period. No separate upgrade to 11.2.1 is reported here. The retained Byron to Conway
+  activity covered hard-fork handling through protocol version 11, not a hard fork to
+  Dijkstra protocol version 12.
+
+* **The 469 skipped tests in each Conway run do not apply to those configurations.** Examples
+  include tests for other eras, other UTxO backends, or components not enabled in the run.
+  Their count should not be read as successful coverage of those other configurations.
+
+* **The passing Conway runs do not imply a passing Dijkstra result.** The 11.2.1 Dijkstra
+  checklist item remains unsuccessful because of the two failures in footnote [1]_.
+
+* **Mainnet sync improved, but the comparison is not fully controlled.** The 11.2.0 and
+  11.2.1 runs differ in maximum snapshot delay, kernel, CLI version, and chain endpoint.
+  Each build was measured once. Peak resident memory remains 10.0% above the historical
+  11.0.1 baseline, early-chain memory is not uniformly lower, and delays remain around
+  Babbage epochs 461-475. The :doc:`Mainnet sync report <../sync_reports/mainnet_11_2_1>`
+  details these limits and the supporting experimental fix-verification run.

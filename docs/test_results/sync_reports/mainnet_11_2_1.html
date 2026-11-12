@@ -1,0 +1,1268 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mainnet Sync Report - 11.2.1 &mdash; cardano-node-tests  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/copyright.css?v=45fba407" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/tables.css?v=78ac1f1e" />
+
+  
+    <link rel="shortcut icon" href="https://user-images.githubusercontent.com/2352619/223086153-522289f3-9902-4f63-ad7b-a7d9c5789db0.png"/>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Mainnet Sync Report - 11.2.0 Fix" href="mainnet_11_2_0_fix.html" />
+    <link rel="prev" title="Sync Tests" href="../sync_tests.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            cardano-node-tests
+              <img src="../../_static/Cardano-Crypto-Logo-128.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">cardano-node-tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#running-tests-with-github-actions">🚀 Running Tests with GitHub Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#running-tests-locally">🖥️ Running Tests Locally</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#analyzing-failures">Analyzing Failures</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#running-individual-tests-with-custom-binaries">🧪 Running Individual Tests with Custom Binaries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#persistent-local-testnet-for-repeated-testing">🔁 Persistent Local Testnet for Repeated Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#test-configuration-variables">⚙️ Test Configuration Variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#additional-for-regression-sh">Additional for <code class="docutils literal notranslate"><span class="pre">regression.sh</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#usage-examples">💡 Usage Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#local-development-for-test-authors">💻 Local Development for Test Authors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#set-up-python-environment">Set Up Python Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#activate-dev-environment">Activate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#validate-dev-environment">Validate Dev Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#start-development-testnet-cluster">Start Development Testnet Cluster</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#run-individual-tests">Run Individual Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#run-linters">Run Linters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#reinstall-cardano-clusterlib-in-editable-mode">Reinstall <code class="docutils literal notranslate"><span class="pre">cardano-clusterlib</span></code> in Editable Mode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#update-uv-lockfile">Update uv Lockfile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../readme.html#build-and-deploy-documentation">Build and Deploy Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../readme.html#contributing">🤝 Contributing</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../test_results.html">Test Results</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../nightly_system_tests.html">Nightly system tests pipelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../nightly_system_tests.html#test-statuses">Test statuses</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../nightly_system_tests.html#nightly-results">Nightly results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../nightly_system_tests.html#nightly-upgrade-testing">Nightly upgrade testing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../sync_tests.html">Sync Tests</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../sync_tests.html#sync-reports">Sync Reports</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">Mainnet Sync Report - 11.2.1</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mainnet_11_2_0_fix.html">Mainnet Sync Report - 11.2.0 Fix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mainnet_11_2_0.html">Mainnet Sync Report - 11.2.0</a></li>
+<li class="toctree-l4"><a class="reference internal" href="mainnet_11_1_1.html">Mainnet Sync Report - 11.1.1</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../tag_tests.html">Tag Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_11_2_1.html">11.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#what-was-tested">What Was Tested</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#regression-testsuite-results">Regression Testsuite Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#mainnet-sync-results">Mainnet Sync Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#what-the-checklist-items-cover">What the Checklist Items Cover</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_1.html#scope-and-limits">Scope and Limits</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_11_2_0.html">11.2.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_0.html#what-was-tested">What Was Tested</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_0.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_0.html#regression-testsuite-results">Regression Testsuite Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_0.html#what-the-checklist-items-cover">What the Checklist Items Cover</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_2_0.html#scope-and-limits">Scope and Limits</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_11_1_1.html">11.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_1.html#what-was-tested">What Was Tested</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_1.html#regression-testsuite-results">Regression Testsuite Results</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_1.html#what-the-checklist-items-cover">What the Checklist Items Cover</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_1.html#scope-and-limits">Scope and Limits</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_11_1_0.html">11.1.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_1_0.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_11_0_1.html">11.0.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_11_0_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_7_1.html">10.7.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_7_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_6_2.html">10.6.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_6_2.html#release-testing-checklists">Release Testing Checklists</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_6_1.html">10.6.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_6_1.html#release-testing-checklists">Release Testing Checklists</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_6_1.html#new-issues">New issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_5_1.html">10.5.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_5_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_5_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_5_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_5_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_5_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_4_1.html">10.4.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_4_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_4_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_4_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_4_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_4_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_3_1.html">10.3.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_3_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_3_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_3_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_3_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_3_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_2_1.html">10.2.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_2_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_2_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_2_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_2_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_2_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_1_2.html">10.1.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_10_1_1.html">10.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_10_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_9_0_0.html">9.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_9_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_11_0.html">8.11.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_11_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_9_3.html">8.9.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_9_1.html">8.9.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_9_0.html">8.9.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_9_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_8_0.html">8.8.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_8_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_7_3.html">8.7.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_3.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_7_2.html">8.7.2</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_7_2.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_6_0_pre.html">8.6.0-pre</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_6_0_pre.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_1_1.html">8.1.1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#known-issues">Known issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_1_1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_8_0_0.html">8.0.0</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_8_0_0.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_1_35_7.html">1.35.7</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_7.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_1_35_6.html">1.35.6</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_6.html#component-level-test-tracking">Component Level Test Tracking</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_1_35_5.html">1.35.5</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_5.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_1_35_4_rc1.html">1.35.4-rc1</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#secp256k1-iog-test-tracking">SECP256k1 IOG Test Tracking</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_4_rc1.html#breaking-changes">Breaking changes</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../node/tag_1_35_3.html">1.35.3</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#changelogs">Changelogs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#regression-testing-on-a-local-cluster">Regression testing on a local cluster</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#release-testing-checklist">Release testing checklist</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#new-functionalities-in-this-tag">New functionalities in this tag</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#new-issues">New issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#breaking-changes">Breaking changes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../node/tag_1_35_3.html#relevant-existing-issues">Relevant existing issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../chang_user_stories.html">Chang HF User Stories</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html">System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html#cli-user-stories">CLI User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html#cip1694-user-stories">CIP1694 User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html#governance-guardrails-user-stories">Governance guardrails User Stories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html#internal-test-cases">Internal Test Cases</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/chang_user_stories_system_tests.html#db-sync-conway-related-tables">DB Sync - Conway related tables</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../requirements/plutusV3_user_stories_system_tests.html">PlutusV3 System Tests Coverage</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../requirements/plutusV3_user_stories_system_tests.html#smart-contract-user-stories">Smart Contract User Stories</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../test_plans.html">Test Plans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../test-plans/100_conway_governance.html">Governance testing in Conway</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../test-plans/100_conway_governance.html#committee">Committee</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../test-plans/100_conway_governance.html#dreps">DReps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../test-plans/100_conway_governance.html#actions-voting-ratification-and-enactment">Actions, Voting, Ratification and Enactment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../test-plans/100_conway_governance.html#spos">SPOs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../test-plans/100_conway_governance.html#transactions">Transactions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../process.html">Process</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../process/100_test_types.html">Types and levels of tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../process/100_test_types.html#node-system-tests">Node system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#node-nightly-cli-tests">Node nightly CLI tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#node-cli-tests-on-demand">Node CLI tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#node-sync-tests">Node sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/100_test_types.html#db-sync-system-tests">DB Sync system tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#db-sync-nightly-tests">DB Sync nightly tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#db-sync-feature-tests-on-demand">DB Sync feature tests (on demand)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../process/100_test_types.html#db-sync-sync-tests">DB Sync sync tests</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/100_test_types.html#exploratory-testing">Exploratory testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../process/200_quality_control_strategy.html">Quality control strategy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../process/200_quality_control_strategy.html#scope-and-objectives">Scope and objectives</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/200_quality_control_strategy.html#key-principles">Key principles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/200_quality_control_strategy.html#quality-control-approach">Quality control approach</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/200_quality_control_strategy.html#quality-control-methodology">Quality control methodology</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../process/200_quality_control_strategy.html#active-quality-control">Active quality control</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../process/200_quality_control_strategy.html#passive-quality-control">Passive quality control</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../process/300_uat_strategy.html">User acceptance test strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../process/400_system_level_tag_testing.html">System-Level Tag Testing Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../process/400_system_level_tag_testing.html#what-we-do">What (We do)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/400_system_level_tag_testing.html#where-results">Where (Results)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/400_system_level_tag_testing.html#how-we-do-it">How (We do it)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../process/400_system_level_tag_testing.html#how-long-does-it-take">How long does it take?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../how-tos.html">How Tos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../how-tos/380_stake_credential_history_tool.html">Stake credential history tool</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/380_stake_credential_history_tool.html#documentation">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/380_stake_credential_history_tool.html#example-of-usage">Example of usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../how-tos/500_smash_faq.html">SMASH FAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html">SMASH - tests and debugging examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#checking-smash-status">Checking SMASH status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#fetching-of-the-metadata">Fetching of the metadata</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#delisting-pools">Delisting pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#reserving-a-ticker">Reserving a ticker</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#whitelisting">Whitelisting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#checking-pool-rejection-errors">Checking pool rejection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#pool-unregistrations">Pool unregistrations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#fetch-policies-from-another-smash-service">Fetch policies from another SMASH service</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/520_smash_tests_and_debugging_examples.html#an-example-of-debugging-an-issue-with-a-pool">An example of debugging an issue with a pool</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../how-tos/540_leios_tests.html">Running Leios Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/540_leios_tests.html#the-leios-setup">The Leios Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/540_leios_tests.html#running-in-ci">Running in CI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/540_leios_tests.html#running-locally">Running Locally</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../how-tos/540_leios_tests.html#full-leios-regression-run">Full Leios Regression Run</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../how-tos/540_leios_tests.html#analyzing-failures">Analyzing Failures</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../how-tos/540_leios_tests.html#locally">Locally</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../how-tos/540_leios_tests.html#in-ci">In CI</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../contribute/contributing.html">Contributing to the Cardano node tests repository</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../contribute/contributing.html#how-can-i-contribute">How can I contribute?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../contribute/contributing.html#reporting-an-issue">Reporting an issue</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../contribute/contributing.html#how-do-i-submit-a-good-issue-report">How do I submit a (good) issue report?</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../contribute/contributing.html#your-first-code-contribution">Your first code contribution</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../contribute/contributing.html#pull-requests">Pull requests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../contribute/contributing.html#style-guides">Style guides</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../contribute/contributing.html#git-commit-messages">Git commit messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../contribute/contributing.html#python-style-guide">Python style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../contribute/contributing.html#roles-and-responsibilities">Roles and Responsibilities</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">Source Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../cardano_node_tests.html">cardano_node_tests package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.cluster_management.html">cardano_node_tests.cluster_management package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.pytest_plugins.html">cardano_node_tests.pytest_plugins package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.tests.html">cardano_node_tests.tests package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.utils.html">cardano_node_tests.utils package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.block_production_graph">cardano_node_tests.block_production_graph module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_blocks_per_backend"><code class="docutils literal notranslate"><span class="pre">get_blocks_per_backend()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.block_production_graph.get_latest_run_id"><code class="docutils literal notranslate"><span class="pre">get_latest_run_id()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.block_production_graph.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.block_production_graph.parse_args"><code class="docutils literal notranslate"><span class="pre">parse_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.block_production_graph.plot_backend_blocks"><code class="docutils literal notranslate"><span class="pre">plot_backend_blocks()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.cardano_cli_coverage">cardano_node_tests.cardano_cli_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.cli"><code class="docutils literal notranslate"><span class="pre">cli()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_available_commands"><code class="docutils literal notranslate"><span class="pre">get_available_commands()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_badge_icon"><code class="docutils literal notranslate"><span class="pre">get_badge_icon()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_coverage"><code class="docutils literal notranslate"><span class="pre">get_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_log_coverage"><code class="docutils literal notranslate"><span class="pre">get_log_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.get_report"><code class="docutils literal notranslate"><span class="pre">get_report()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.merge_coverage"><code class="docutils literal notranslate"><span class="pre">merge_coverage()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.parse_cmd_output"><code class="docutils literal notranslate"><span class="pre">parse_cmd_output()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.cardano_cli_coverage.sanitize_coverage"><code class="docutils literal notranslate"><span class="pre">sanitize_coverage()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.chang_us_coverage">cardano_node_tests.chang_us_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.chang_us_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.defragment_utxos">cardano_node_tests.defragment_utxos module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.defragment_utxos.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.defragment_utxos.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.dump_requirements_coverage">cardano_node_tests.dump_requirements_coverage module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.dump_requirements_coverage.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.prepare_cluster_scripts">cardano_node_tests.prepare_cluster_scripts module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.prepare_cluster_scripts.prepare_scripts_files"><code class="docutils literal notranslate"><span class="pre">prepare_scripts_files()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.split_topology">cardano_node_tests.split_topology module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.split_topology.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.split_topology.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup">cardano_node_tests.testnet_cleanup module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.testnet_cleanup.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests.testnet_cleanup_info">cardano_node_tests.testnet_cleanup_info module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.get_args"><code class="docutils literal notranslate"><span class="pre">get_args()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../cardano_node_tests.html#cardano_node_tests.testnet_cleanup_info.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../cardano_node_tests.html#module-cardano_node_tests">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">cardano-node-tests</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../test_results.html">Test Results</a></li>
+          <li class="breadcrumb-item"><a href="../sync_tests.html">Sync Tests</a></li>
+      <li class="breadcrumb-item active">Mainnet Sync Report - 11.2.1</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/IntersectMBO/cardano-node-tests/blob/master/src_docs/source/test_results/sync_reports/mainnet_11_2_1.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="mainnet-sync-report-11-2-1">
+<h1>Mainnet Sync Report - 11.2.1<a class="headerlink" href="#mainnet-sync-report-11-2-1" title="Link to this heading"></a></h1>
+<p>Mainnet sync from genesis, comparing <code class="docutils literal notranslate"><span class="pre">cardano-node</span></code> 11.2.0 with the 11.2.1
+release. The main purpose of 11.2.1 is to address the performance regressions
+identified in the unreleased 11.2.0 build. This report evaluates the release’s
+sync time, memory consumption, and CPU utilization against that build.</p>
+<p>An intermediate experimental run verified the fixes before their inclusion in
+11.2.1; see the <a class="reference internal" href="mainnet_11_2_0_fix.html"><span class="doc">fix-verification report</span></a>. It provides
+supporting evidence, not the primary baseline for this release report.</p>
+<p>Most effective startup settings match between 11.2.0 and 11.2.1, but the
+maximum snapshot delay changes from six hours to one hour. The kernel and CLI
+versions also change, so this is not a fully controlled comparison.</p>
+<p><strong>Summary</strong></p>
+<ul class="simple">
+<li><p><strong>Memory consumption drops substantially.</strong> Peak RSS falls from 22.08 to
+16.98 GiB (-23.1%), and peak garbage-collector live data falls from 18.03 to
+11.00 GiB (-39.0%). The reduction remains over matching chain ranges.</p></li>
+<li><p><strong>Sync completes about five hours sooner.</strong> Reported sync time falls from
+132,111 to 113,689 seconds (-13.9%), despite reaching 1,090,011 more slots.
+Babbage takes 21.6% less time over the same chain range and accounts for
+72.4% of the whole-run saving.</p></li>
+<li><p><strong>CPU utilization improves without more aggregate CPU work.</strong> Mean CPU load
+rises from 112% to 118% of one core, while total CPU time falls 9.6%.</p></li>
+<li><p><strong>Snapshot scheduling changes substantially.</strong> Completed writes increase
+from nine to 179, and major collections increase 59.5%. Total allocation
+falls 2.4%. The changed maximum snapshot delay limits causal attribution.</p></li>
+<li><p><strong>The improvements are not uniform.</strong> Early-chain memory remains higher,
+and delays persist around Babbage epochs 461-475. Whole-run peak RSS is
+still 10.0% above the historical 11.0.1 baseline, which used different
+software and configuration.</p></li>
+</ul>
+<section id="key-metrics">
+<h2>Key Metrics<a class="headerlink" href="#key-metrics" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id1">
+<caption><span class="caption-text">Whole-run measurements</span><a class="headerlink" href="#id1" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 20.0%" />
+<col style="width: 20.0%" />
+<col style="width: 20.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Metric</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+<th class="head"><p>Change</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Reported sync time</p></td>
+<td><p>132,111 s</p></td>
+<td><p>113,689 s</p></td>
+<td><p>-13.9%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Peak RSS</p></td>
+<td><p>22.08 GiB</p></td>
+<td><p>16.98 GiB</p></td>
+<td><p>-23.1%</p></td>
+</tr>
+<tr class="row-even"><td><p>Mean RSS</p></td>
+<td><p>17.56 GiB</p></td>
+<td><p>14.17 GiB</p></td>
+<td><p>-19.3%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Peak GC live bytes</p></td>
+<td><p>18.03 GiB</p></td>
+<td><p>11.00 GiB</p></td>
+<td><p>-39.0%</p></td>
+</tr>
+<tr class="row-even"><td><p>Mean CPU load</p></td>
+<td><p>112%</p></td>
+<td><p>118%</p></td>
+<td><p>+5.2%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Total CPU time</p></td>
+<td><p>148,307 s</p></td>
+<td><p>134,084 s</p></td>
+<td><p>-9.6%</p></td>
+</tr>
+<tr class="row-even"><td><p>Last slot at sync completion</p></td>
+<td><p>201,746,270</p></td>
+<td><p>202,836,281</p></td>
+<td><p>+1,090,011</p></td>
+</tr>
+</tbody>
+</table>
+<p>CPU load is expressed as percent of a single core: 118% is approximately 1.18
+cores busy on average. Memory values use GiB (2**30 bytes). Percent changes use
+unrounded values; CPU-load changes are relative percentages, not percentage
+points.</p>
+</section>
+<section id="sync-performance">
+<h2>Sync Performance<a class="headerlink" href="#sync-performance" title="Link to this heading"></a></h2>
+<p>11.2.1 finishes 18,422 seconds (5 h 7 min) sooner than 11.2.0 while reaching
+1,090,011 more slots (+0.54%). Babbage saves 13,334 seconds over the same
+61.344 million-slot range, accounting for 72.4% of that whole-run saving.</p>
+<p>Alonzo saves a further 1,535 seconds (-7.3%). Conway completes 3,645 seconds
+sooner (-9.1%) while covering more chain. Improvements in these later eras
+outweigh the smaller differences in early-era timings.</p>
+<table class="docutils align-default" id="id2">
+<caption><span class="caption-text">Sync duration per era, seconds</span><a class="headerlink" href="#id2" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Era</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+<th class="head"><p>Change</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Byron</p></td>
+<td><p>4,402</p></td>
+<td><p>4,548</p></td>
+<td><p>+3.3%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Shelley</p></td>
+<td><p>1,110</p></td>
+<td><p>1,101</p></td>
+<td><p>-0.8%</p></td>
+</tr>
+<tr class="row-even"><td><p>Allegra</p></td>
+<td><p>794</p></td>
+<td><p>824</p></td>
+<td><p>+3.8%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Mary</p></td>
+<td><p>3,159</p></td>
+<td><p>3,084</p></td>
+<td><p>-2.4%</p></td>
+</tr>
+<tr class="row-even"><td><p>Alonzo</p></td>
+<td><p>21,018</p></td>
+<td><p>19,483</p></td>
+<td><p>-7.3%</p></td>
+</tr>
+<tr class="row-odd"><td><p>Babbage</p></td>
+<td><p>61,644</p></td>
+<td><p>48,310</p></td>
+<td><p>-21.6%</p></td>
+</tr>
+<tr class="row-even"><td><p>Conway</p></td>
+<td><p>39,985</p></td>
+<td><p>36,340</p></td>
+<td><p>-9.1%</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Total</strong></p></td>
+<td><p><strong>132,111</strong></p></td>
+<td><p><strong>113,689</strong></p></td>
+<td><p><strong>-13.9%</strong></p></td>
+</tr>
+</tbody>
+</table>
+<p>The total uses the recorded whole-sync duration. Individual era durations sum
+to one second more than that total in each run. The stacked graph uses the era
+sums, so its totals differ from the table’s whole-run totals by one second.</p>
+<p><strong>Byron timing boundaries differ from the original 11.2.0 result.</strong> That result
+first observes epoch 4 and counts 4,406,400 Byron slots. The 11.2.1 result
+records the launch boundary and counts all 4,492,800 slots from epoch 0. Both
+nodes actually sync from genesis. Measuring from the first logged chain
+extension at slot 0 to recorded sync completion gives approximately 132,171
+and 113,689 seconds, respectively, still a 14.0% reduction. The apparent
+Byron slowdown mixes different timing and counting boundaries.</p>
+<p>Conway’s recorded length increases from 68.256 million slots in 11.2.0 to
+69.552 million in 11.2.1. Recorded throughput rises from 1,707 to 1,913 slots/s
+(+12.1%). These era lengths use the recorded epoch boundaries, not the exact
+completion-slot differences.</p>
+<figure class="align-default" id="id3">
+<a class="reference internal image-reference" href="../../_images/time_per_era_11_2_1.png"><img alt="Stacked sync duration per era for node 11.2.0 and 11.2.1" src="../../_images/time_per_era_11_2_1.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Babbage accounts for most of the five-hour saving, with further improvements
+in Alonzo and Conway.</span><a class="headerlink" href="#id3" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>The Babbage improvement is not uniform. Epochs 400-460 take 19,329 seconds
+instead of 31,130 (-37.9%), but epochs 461-475 take 9,860 seconds instead of
+9,270 (+6.4%). The broader slowdown is reduced, not every local delay.</p>
+<figure class="align-default" id="id4">
+<a class="reference internal image-reference" href="../../_images/duration_per_epoch_11_2_1.png"><img alt="Sync duration per epoch for node 11.2.0 and 11.2.1" src="../../_images/duration_per_epoch_11_2_1.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">Much of the broad Babbage slowdown disappears, but delays remain around
+epochs 461-475. The large spike at epoch 493 also remains: 1,620 seconds
+in 11.2.0 and 1,581 seconds in 11.2.1.</span><a class="headerlink" href="#id4" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="memory-consumption">
+<h2>Memory Consumption<a class="headerlink" href="#memory-consumption" title="Link to this heading"></a></h2>
+<p>Peak RSS falls by 5.11 GiB and mean RSS by 3.39 GiB. The release uses more
+memory over some early-chain ranges, but the curves separate in its favor
+around slots 55-60 million. RSS stays near 15.95 GiB over much of the late
+chain, then rises to 16.98 GiB around slot 200.25 million. It never exceeds
+20 GiB, unlike 11.2.0.</p>
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-text">Heap shape and retained data</span><a class="headerlink" href="#id5" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Measure</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Nonzero heap samples with a recorded tip</p></td>
+<td><p>130,567</p></td>
+<td><p>112,107</p></td>
+</tr>
+<tr class="row-odd"><td><p>Peak RTS heap</p></td>
+<td><p>21.98 GiB</p></td>
+<td><p>16.80 GiB</p></td>
+</tr>
+<tr class="row-even"><td><p>Mean RTS heap</p></td>
+<td><p>17.45 GiB</p></td>
+<td><p>14.00 GiB</p></td>
+</tr>
+<tr class="row-odd"><td><p>p99 RTS heap</p></td>
+<td><p>21.98 GiB</p></td>
+<td><p>16.80 GiB</p></td>
+</tr>
+<tr class="row-even"><td><p>Heap decreases</p></td>
+<td><p>4</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>Heap samples &gt; 20 GiB</p></td>
+<td><p>31.9%</p></td>
+<td><p>0.0%</p></td>
+</tr>
+<tr class="row-even"><td><p>Peak GC live bytes</p></td>
+<td><p>18.03 GiB</p></td>
+<td><p>11.00 GiB</p></td>
+</tr>
+<tr class="row-odd"><td><p>Mean GC live bytes</p></td>
+<td><p>8.34 GiB</p></td>
+<td><p>6.76 GiB</p></td>
+</tr>
+<tr class="row-even"><td><p>Major GCs during the resource-log window</p></td>
+<td><p>812</p></td>
+<td><p>1,295</p></td>
+</tr>
+<tr class="row-odd"><td><p>Allocation during the resource-log window</p></td>
+<td><p>256.50 TB</p></td>
+<td><p>250.33 TB</p></td>
+</tr>
+</tbody>
+</table>
+<p>Peak live data falls by 7.03 GiB (-39.0%), and mean live data falls 18.9%.
+The improvement therefore includes less retained live data, not just reduced
+unused heap capacity. Major collections increase 59.5%, while total
+allocation falls 2.4%.</p>
+<p>The absence of heap decreases does not itself establish a leak: the release
+retains a substantially smaller heap while major collections continue. The
+late increase means this run should not be presented as proof of a permanent
+post-sync plateau or of behavior over longer periods at the chain tip.</p>
+<figure class="align-default" id="id6">
+<a class="reference internal image-reference" href="../../_images/rss_consumption_11_2_1.png"><img alt="RSS against slot number for node 11.2.0 and 11.2.1" src="../../_images/rss_consumption_11_2_1.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The release remains well below 11.2.0 after the early chain. RTS heap follows
+essentially the same shape, approximately 0.16 GiB below release RSS.</span><a class="headerlink" href="#id6" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="memory-over-matching-chain-ranges">
+<h2>Memory Over Matching Chain Ranges<a class="headerlink" href="#memory-over-matching-chain-ranges" title="Link to this heading"></a></h2>
+<p>Restricting both runs to slots &lt;= 188 million gives peak RSS of 22.08 GiB for
+11.2.0 and 15.95 GiB for 11.2.1 (-27.8%). Restricting 11.2.1 to 11.2.0’s exact
+completion slot includes its late increase, leaving its 16.98 GiB peak
+unchanged. The memory reduction is therefore not an artifact of comparing
+different chain endpoints.</p>
+<table class="docutils align-default" id="id7">
+<caption><span class="caption-text">Peak RSS by 10 million-slot band, GiB</span><a class="headerlink" href="#id7" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Slot band</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0-10 million</p></td>
+<td><p>5.67</p></td>
+<td><p>5.98</p></td>
+</tr>
+<tr class="row-odd"><td><p>20-30 million</p></td>
+<td><p>7.11</p></td>
+<td><p>8.39</p></td>
+</tr>
+<tr class="row-even"><td><p>40-50 million</p></td>
+<td><p>10.88</p></td>
+<td><p>11.55</p></td>
+</tr>
+<tr class="row-odd"><td><p>60-70 million</p></td>
+<td><p>15.89</p></td>
+<td><p>13.59</p></td>
+</tr>
+<tr class="row-even"><td><p>80-90 million</p></td>
+<td><p>18.53</p></td>
+<td><p>14.67</p></td>
+</tr>
+<tr class="row-odd"><td><p>100-110 million</p></td>
+<td><p>18.73</p></td>
+<td><p>15.34</p></td>
+</tr>
+<tr class="row-even"><td><p>120-130 million</p></td>
+<td><p>22.08</p></td>
+<td><p>15.68</p></td>
+</tr>
+<tr class="row-odd"><td><p>150-160 million</p></td>
+<td><p>20.36</p></td>
+<td><p>15.95</p></td>
+</tr>
+<tr class="row-even"><td><p>180-190 million</p></td>
+<td><p>20.36</p></td>
+<td><p>16.13</p></td>
+</tr>
+<tr class="row-odd"><td><p>190-200 million</p></td>
+<td><p>19.99</p></td>
+<td><p>16.23</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Early-chain memory is not improved.</strong> Before slot 10 million, peak RSS is
+5.98 GiB versus 5.67 GiB in 11.2.0. In the 20-30 million-slot band, peak RSS
+increases from 7.11 to 8.39 GiB. The whole-run memory improvement does not mean
+every chain range uses less memory.</p>
+<table class="docutils align-default" id="id8">
+<caption><span class="caption-text">Historical memory reference points</span><a class="headerlink" href="#id8" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Build</p></th>
+<th class="head"><p>Peak RSS</p></th>
+<th class="head"><p>Peak GC live bytes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>11.0.1</p></td>
+<td><p>15.43 GiB</p></td>
+<td><p>10.28 GiB</p></td>
+</tr>
+<tr class="row-odd"><td><p>11.1.1</p></td>
+<td><p>21.16 GiB</p></td>
+<td><p>15.94 GiB</p></td>
+</tr>
+<tr class="row-even"><td><p>11.2.1</p></td>
+<td><p>16.98 GiB</p></td>
+<td><p>11.00 GiB</p></td>
+</tr>
+</tbody>
+</table>
+<p>Whole-run peak RSS is 10.0% above 11.0.1 and 19.8% below 11.1.1. Peak live data
+is 7.0% above 11.0.1 and 31.0% below 11.1.1. The 11.0.1 RSS gap narrows to 3.4%
+when restricting the release to slots &lt;= 188 million. These are historical
+reference points with different software, configuration, and chain endpoints,
+not a controlled demonstration that the remaining differences share one cause.</p>
+</section>
+<section id="cpu-load">
+<h2>CPU Load<a class="headerlink" href="#cpu-load" title="Link to this heading"></a></h2>
+<p>Mean CPU utilization rises from 112% to 118% of one core. Total CPU time falls
+from 148,307 to 134,084 seconds (-9.6%), despite the release reaching more
+chain. The node finishes faster without spending more aggregate CPU time.</p>
+<table class="docutils align-default" id="id9">
+<caption><span class="caption-text">Mean CPU load, percent of one core</span><a class="headerlink" href="#id9" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Phase</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Slots 0-50 million</p></td>
+<td><p>142</p></td>
+<td><p>142</p></td>
+</tr>
+<tr class="row-odd"><td><p>Slots 50 million onward</p></td>
+<td><p>108</p></td>
+<td><p>114</p></td>
+</tr>
+<tr class="row-even"><td><p>Slots 90-140 million</p></td>
+<td><p>93</p></td>
+<td><p>105</p></td>
+</tr>
+<tr class="row-odd"><td><p>Whole sync</p></td>
+<td><p>112</p></td>
+<td><p>118</p></td>
+</tr>
+<tr class="row-even"><td><p>Peak sample</p></td>
+<td><p>357</p></td>
+<td><p>348</p></td>
+</tr>
+</tbody>
+</table>
+<p>The early-chain curves remain close. Over slots 90-140 million, mean CPU load
+rises from 93% to 105%. Much of the prolonged utilization loss in 11.2.0 is
+reduced, although a deep trough remains around slots 114-120 million, aligning
+with the delays around epochs 461-475. The narrower trough is consistent with
+less waiting overall; these measurements alone do not identify a bottleneck.</p>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="../../_images/cpu_consumption_smoothed_11_2_1.png"><img alt="Mean CPU load per one million-slot band for node 11.2.0 and 11.2.1" src="../../_images/cpu_consumption_smoothed_11_2_1.png" style="width: 100%;" />
+</a>
+<figcaption>
+<p><span class="caption-text">The release reduces the broad Babbage utilization trough, but a pronounced
+dip remains near slots 114-120 million.</span><a class="headerlink" href="#id10" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="configuration-and-snapshot-behavior">
+<h2>Configuration and Snapshot Behavior<a class="headerlink" href="#configuration-and-snapshot-behavior" title="Link to this heading"></a></h2>
+<p>Genesis and checkpoint hashes, peer targets, Genesis feature settings, and
+block-fetch concurrency match between the two startup records. The effective
+maximum snapshot delay does not: it is 3,600 seconds in 11.2.1 versus 21,600
+seconds in 11.2.0. The node’s snapshot-policy startup message also confirms
+the release’s one-hour maximum.</p>
+<table class="docutils align-default" id="id11">
+<caption><span class="caption-text">Effective settings from the node startup logs</span><a class="headerlink" href="#id11" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 40.0%" />
+<col style="width: 30.0%" />
+<col style="width: 30.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Setting</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Consensus mode</p></td>
+<td><p>GenesisMode</p></td>
+<td><p>GenesisMode</p></td>
+</tr>
+<tr class="row-odd"><td><p>Snapshot interval</p></td>
+<td><p>86,400 slots</p></td>
+<td><p>86,400 slots</p></td>
+</tr>
+<tr class="row-even"><td><p>Snapshot offset</p></td>
+<td><p>0</p></td>
+<td><p>0</p></td>
+</tr>
+<tr class="row-odd"><td><p>Snapshot minimum delay</p></td>
+<td><p>300 s</p></td>
+<td><p>300 s</p></td>
+</tr>
+<tr class="row-even"><td><p>Snapshot maximum delay</p></td>
+<td><p>21,600 s</p></td>
+<td><p>3,600 s</p></td>
+</tr>
+<tr class="row-odd"><td><p>Snapshot rate limit</p></td>
+<td><p>600 s</p></td>
+<td><p>600 s</p></td>
+</tr>
+<tr class="row-even"><td><p>Retained disk snapshots</p></td>
+<td><p>2</p></td>
+<td><p>2</p></td>
+</tr>
+<tr class="row-odd"><td><p>LedgerDB backend</p></td>
+<td><p>V2InMemory</p></td>
+<td><p>V2InMemory</p></td>
+</tr>
+<tr class="row-even"><td><p>Query batch size</p></td>
+<td><p>100,000</p></td>
+<td><p>100,000</p></td>
+</tr>
+<tr class="row-odd"><td><p>Block-fetch concurrency, bulk / deadline</p></td>
+<td><p>1 / 1</p></td>
+<td><p>1 / 1</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default" id="id12">
+<caption><span class="caption-text">Observed completed snapshot writes</span><a class="headerlink" href="#id12" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 25.0%" />
+<col style="width: 25.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Measure</p></th>
+<th class="head"><p>11.2.0</p></th>
+<th class="head"><p>11.2.1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Completed writes</p></td>
+<td><p>9</p></td>
+<td><p>179</p></td>
+</tr>
+<tr class="row-odd"><td><p>First completion after first chain extension</p></td>
+<td><p>19,434 s</p></td>
+<td><p>63 s</p></td>
+</tr>
+<tr class="row-even"><td><p>Median completion-to-completion interval</p></td>
+<td><p>14,747 s</p></td>
+<td><p>628 s</p></td>
+</tr>
+</tbody>
+</table>
+<p>The first snapshot completes more than five hours after the first chain
+extension in 11.2.0, but after about one minute in 11.2.1. Subsequent release
+writes complete approximately every 10 minutes. This substantial scheduling
+change accompanies lower retained data and more major collections, but the
+comparison does not isolate the contribution of each implementation or
+configuration change.</p>
+<p>This is one run per build, not a repeated benchmark. Peer availability,
+storage conditions, and other runtime effects are not controlled. The results
+show substantial improvements in the release relative to 11.2.0, not proof
+that every historical regression or local delay is resolved.</p>
+</section>
+<section id="supporting-evidence-from-fix-verification">
+<h2>Supporting Evidence From Fix Verification<a class="headerlink" href="#supporting-evidence-from-fix-verification" title="Link to this heading"></a></h2>
+<p>Before the release, an experimental build at revision
+<code class="docutils literal notranslate"><span class="pre">45aa403634fe2bb8817e65e7edf6b1d639a3bada</span></code> verified the fixes using the same
+effective startup settings as 11.2.0, including the six-hour maximum snapshot
+delay. The <a class="reference internal" href="mainnet_11_2_0_fix.html"><span class="doc">verification report</span></a> calls that build
+<code class="docutils literal notranslate"><span class="pre">11.2.0-fix</span></code>; it was a validation run, not a separate release baseline.</p>
+<p>That run supports the release findings in two ways:</p>
+<ul class="simple">
+<li><p>Peak RSS was 16.75 GiB and peak live data was 10.93 GiB, close to the
+release’s 16.98 and 11.00 GiB. The lower memory footprint was therefore
+already observed with the fixes before the release’s snapshot-setting change.</p></li>
+<li><p>It recorded 176 completed snapshot writes, close to the release’s 179,
+despite retaining 11.2.0’s maximum-delay setting. The change from sparse to
+frequent writes cannot be explained solely by the release’s shorter maximum.</p></li>
+</ul>
+<p>The verification run completed in 110,485 seconds. The release takes 2.9%
+longer while reaching 577,201 more slots. Its fixed-length Babbage era takes
+9.8% longer, with a deeper utilization trough around epochs 461-475, partly
+offset by faster syncing elsewhere. This variation limits claims of identical
+timing across the two fixed builds, but does not change the release’s 13.9%
+improvement over 11.2.0. Repeated,
+matched-setting runs would be needed to attribute that variation.</p>
+</section>
+<section id="system-configuration">
+<h2>System Configuration<a class="headerlink" href="#system-configuration" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id13">
+<caption><span class="caption-text">Recorded run environment</span><a class="headerlink" href="#id13" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 30.0%" />
+<col style="width: 70.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Environment</p></td>
+<td><p>mainnet, sync from genesis</p></td>
+</tr>
+<tr class="row-even"><td><p>CPU / RAM</p></td>
+<td><p>32 cores / 134 GB in both runs</p></td>
+</tr>
+<tr class="row-odd"><td><p>Host recorded in node logs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ci11</span></code> in both runs</p></td>
+</tr>
+<tr class="row-even"><td><p>Kernel</p></td>
+<td><p>6.18.34 for 11.2.0; 6.18.59 for 11.2.1</p></td>
+</tr>
+<tr class="row-odd"><td><p>Compiler reported by CLI</p></td>
+<td><p>ghc-9.6 in both runs</p></td>
+</tr>
+<tr class="row-even"><td><p>CLI version</p></td>
+<td><p>11.6.0.0 for 11.2.0; 11.7.0.0 for 11.2.1</p></td>
+</tr>
+<tr class="row-odd"><td><p>11.2.0</p></td>
+<td><p>October 28-30, 2026; node revision recorded as <code class="docutils literal notranslate"><span class="pre">11.2.0</span></code>;
+CLI revision <code class="docutils literal notranslate"><span class="pre">dac0d7ab2dfd</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>11.2.1</p></td>
+<td><p>November 10-11, 2026; node revision recorded as <code class="docutils literal notranslate"><span class="pre">11.2.1</span></code>;
+CLI revision <code class="docutils literal notranslate"><span class="pre">90bc1cd9380a</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Chain size</p></td>
+<td><p>239.67 -&gt; 240.32 GB, decimal bytes</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="methodology">
+<h2>Methodology<a class="headerlink" href="#methodology" title="Link to this heading"></a></h2>
+<p>RSS, RTS heap, and CPU statistics come from the result JSON files. Memory
+statistics exclude zero-valued fields, which represent missing resource
+samples, and require a recorded tip to match the graph script. This yields
+130,567 and 112,107 usable memory samples for 11.2.0 and 11.2.1, respectively.</p>
+<p>Whole-run means and threshold fractions are sample-weighted, not normalized
+to equal time spent at each slot. Different sync speeds can change those
+statistics. Matching-slot checks compare peaks without that weighting issue.
+Slot bands include their lower bound and exclude their upper bound.</p>
+<p>CPU means retain genuine zero-load samples and use stored values without
+rescaling. The smoothed figure averages samples into one million-slot bands,
+keeping bands with at least 20 samples. Total CPU time is the change in the
+node log’s cumulative CPU-tick counter divided by 100.</p>
+<p>GC live bytes, major collections, allocation, and completed snapshot writes
+come from the full node logs. They contain 130,576 and 112,114 resource samples,
+including samples without a recorded tip. Live-data means are arithmetic means
+of those samples. Major-GC and allocation totals are the last counter minus
+the first counter in each resource-log window, not
+process-lifetime maxima. Allocation uses decimal TB. Snapshot counts include
+only completed ‘Took ledger snapshot’ events, not the preceding ‘Taking’
+events.</p>
+<p>Heap decreases count successive decreases among nonzero, tip-associated heap
+samples in timestamp order. Threshold fractions refer to heap, not RSS. The
+timing-boundary cross-check uses the first logged chain extension at slot 0
+and the recorded sync-completion timestamp. Per-epoch timings use observed
+epochs: the series begin at epoch 4 for 11.2.0 and epoch 3 for 11.2.1, even
+though the release’s era summary counts Byron from epoch 0. The final observed
+epoch is partial and should not be compared as a full epoch.</p>
+<p>Graphs use <code class="docutils literal notranslate"><span class="pre">sync_tests/scripts/sync_static_graphs.py</span></code> with the two result
+files in table order, explicit labels <code class="docutils literal notranslate"><span class="pre">11.2.0</span></code> and <code class="docutils literal notranslate"><span class="pre">11.2.1</span></code>, node mode,
+and 150 dpi PNG output. The era graph’s legend is placed outside the bars to
+keep its totals visible.</p>
+<p>The supplementary verification measurements use the same calculation methods.
+Its JSON contains 108,891 usable memory samples, and its full log contains
+108,897 resource samples. The verification run took place on November 3-4, 2026.</p>
+</section>
+<section id="source-data">
+<h2>Source Data<a class="headerlink" href="#source-data" title="Link to this heading"></a></h2>
+<table class="docutils align-default" id="id14">
+<caption><span class="caption-text">Analysis inputs</span><a class="headerlink" href="#id14" title="Link to this table"></a></caption>
+<colgroup>
+<col style="width: 25.0%" />
+<col style="width: 75.0%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p>Result files</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cardano-node-11.2.0.json</span></code> and
+<code class="docutils literal notranslate"><span class="pre">cardano-node-11.2.1.json</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Node logs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">11.2.0/node_sync.log</span></code> and
+<code class="docutils literal notranslate"><span class="pre">11.2.1/node_sync.log</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Completion cross-check</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">11.2.1/sync_markers_mainnet.json</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Historical baselines</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">cardano-node-11.0.1.json</span></code> and <code class="docutils literal notranslate"><span class="pre">cardano-node-11.1.1.json</span></code>,
+with their archived resource logs; see the
+<a class="reference internal" href="mainnet_11_1_1.html"><span class="doc">11.1.1 report</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>Regression baseline report</p></td>
+<td><p><a class="reference internal" href="mainnet_11_2_0.html"><span class="doc">11.2.0 report</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>Supplementary fix verification</p></td>
+<td><p><a class="reference internal" href="mainnet_11_2_0_fix.html"><span class="doc">11.2.0 fix report</span></a>,
+<code class="docutils literal notranslate"><span class="pre">cardano-node-11.2.0-fix.json</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">11.2.0-fix/node_sync.log</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../sync_tests.html" class="btn btn-neutral float-left" title="Sync Tests" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mainnet_11_2_0_fix.html" class="btn btn-neutral float-right" title="Mainnet Sync Report - 11.2.0 Fix" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
