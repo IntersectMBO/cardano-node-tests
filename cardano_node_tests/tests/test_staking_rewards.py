@@ -1013,18 +1013,19 @@ class TestRewards:
         cluster_manager: cluster_management.ClusterManager,
         cluster_use_pool_and_rewards: tuple[clusterlib.ClusterLib, str],
     ):
-        """Check that rewards are gradually decreasing when funds are being transferred.
+        """Check that rewards drop after transferred funds leave the stake snapshots.
 
-        Even though nothing is staked and rewards are being transferred from reward address, there
-        are still some funds staked on the reward address at the time ledger snapshot is taken. For
-        that reason the reward amount received every epoch is gradually decreasing over the period
-        of several epochs until it is finally 0.
+        Rewards can initially fluctuate because they reflect older stake snapshots and pool block
+        production. After the payment funds are transferred and rewards are withdrawn each epoch,
+        only small reward balances remain in the snapshots, so later rewards should be much smaller
+        or zero.
 
         * Delegate stake address
         * Wait for first reward
         * Transfer all funds from payment address back to faucet, so no funds are staked
         * Keep withdrawing new rewards so reward balance is 0
-        * Check that reward amount is decreasing epoch after epoch
+        * Record every epoch's reward balance, including zero
+        * Check that rewards after four more epochs are less than a third of the initial balance
         """
         cluster, pool_name = cluster_use_pool_and_rewards
         common.skip_on_long_epochs(cluster_obj=cluster, epochs=8)
@@ -1082,24 +1083,29 @@ class TestRewards:
             f"Incorrect balance for source address `{delegation_out.pool_user.payment.address}`"
         )
 
-        rewards_rec: list[int] = []
+        withdrawal_epoch = cluster.g_query.get_epoch()
+        rewards_rec: dict[int, int] = {}
 
         # Keep withdrawing new rewards so reward balance is 0
-        def _withdraw():
+        def _withdraw(expected_epoch: int) -> None:
+            """Record the epoch's rewards, including zero, and withdraw any nonzero balance."""
             rewards = cluster.g_query.get_stake_addr_info(
                 delegation_out.pool_user.stake.address
             ).reward_account_balance
+            epoch = cluster.g_query.get_epoch()
+            assert epoch == expected_epoch, (
+                f"Expected rewards from epoch {expected_epoch}, got epoch {epoch}"
+            )
+            payment_balance = cluster.g_query.get_address_balance(
+                delegation_out.pool_user.payment.address
+            )
+            rewards_rec[epoch] = rewards
+            LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
+            # TODO - check ledger state wrt stake amount and expected reward
+            clusterlib_utils.save_ledger_state(
+                cluster_obj=cluster, state_name=f"{temp_template}_{epoch}"
+            )
             if rewards:
-                epoch = cluster.g_query.get_epoch()
-                payment_balance = cluster.g_query.get_address_balance(
-                    delegation_out.pool_user.payment.address
-                )
-                rewards_rec.append(rewards)
-                LOGGER.info(f"epoch {epoch} - reward: {rewards}, payment: {payment_balance}")
-                # TODO - check ledger state wrt stake amount and expected reward
-                clusterlib_utils.save_ledger_state(
-                    cluster_obj=cluster, state_name=f"{temp_template}_{epoch}"
-                )
                 # Withdraw rewards to destination address
                 tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
                     stake_addr_record=delegation_out.pool_user.stake,
@@ -1111,12 +1117,15 @@ class TestRewards:
                 )
 
         LOGGER.info("Withdrawing new rewards for next 4 epochs.")
-        _withdraw()
-        for __ in range(4):
-            cluster.wait_for_new_epoch(padding_seconds=10)
-            _withdraw()
+        _withdraw(expected_epoch=withdrawal_epoch)
+        for epoch in range(withdrawal_epoch + 1, withdrawal_epoch + 5):
+            cluster.wait_for_epoch(epoch_no=epoch, padding_seconds=10)
+            _withdraw(expected_epoch=epoch)
 
-        assert rewards_rec[-1] < rewards_rec[-2] // 3, "Rewards are not decreasing"
+        # Compare fixed epochs, not the last two nonzero rewards, which may precede the drop.
+        assert 3 * rewards_rec[withdrawal_epoch + 4] < rewards_rec[withdrawal_epoch], (
+            f"Rewards did not drop below a third of the initial balance: {rewards_rec}"
+        )
 
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.skipif(
