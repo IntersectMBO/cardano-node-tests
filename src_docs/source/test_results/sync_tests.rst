@@ -19,6 +19,7 @@ Sync Reports
 .. toctree::
    :maxdepth: 4
 
+   sync_reports/mainnet_11_2_1.rst
    sync_reports/mainnet_11_2_0_fix.rst
    sync_reports/mainnet_11_2_0.rst
    sync_reports/mainnet_11_1_1.rst
