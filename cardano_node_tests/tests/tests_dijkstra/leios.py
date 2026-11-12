@@ -488,7 +488,10 @@ def skip_if_no_ebs(*, cluster_obj: clusterlib.ClusterLib) -> None:
 
 
 def collect_vote_outcome_msgs(
-    *, pool_logs: list[pl.Path], deadline: float
+    *,
+    pool_logs: list[pl.Path],
+    deadline: float,
+    searches: dict[pl.Path, logfiles.LogCursor] | None = None,
 ) -> tuple[dict[pl.Path, set[str]], list[str]]:
     """Search the pool logs for votes, EB announcements and declined votes.
 
@@ -502,13 +505,16 @@ def collect_vote_outcome_msgs(
         pool_logs: Log files of the block producing nodes.
         deadline: A `time.monotonic()` value the search must not go past, so that the
             searched part of the logs stays inside the epoch the search started in.
+        searches: Optional caller-started cursors, recorded before an operation whose
+            log messages must be included. Otherwise start at each log's current end.
 
     Returns:
         The searched messages found in each pool log, and the problems that got in the
         way of the search - a log file that could not be searched. They explain a missing
         message, so they are reported only together with one.
     """
-    searches = logfiles.init_searches(pool_logs)
+    if searches is None:
+        searches = logfiles.init_searches(pool_logs)
     log_errors: dict[pl.Path, str] = {}
 
     while True:

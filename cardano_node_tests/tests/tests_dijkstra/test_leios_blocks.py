@@ -638,6 +638,7 @@ def _observe_committee_votes(
     pool_ids: dict[str, str],
     name_template: str,
     subtests: pytest_subtests.SubTests,
+    during_observation: tp.Callable[[], None] | None = None,
 ) -> None:
     """Check voting, exclusion, certification, and numeric own-vote weights in one epoch.
 
@@ -646,6 +647,8 @@ def _observe_committee_votes(
     negative voting checks search the full window, not just until the first refusal.
     Text VoteAcquired traces on the prototype do not expose numeric tally/threshold
     fields, so the numeric assertion uses the producer's own Voted weight instead.
+    An optional callback runs after both cursors start, allowing transactions that
+    do not affect this epoch's committee to overlap the full observation window.
     """
     assert cluster_obj.g_query.get_epoch() == state.epoch
     expected = _rank_snapshot(
@@ -655,8 +658,13 @@ def _observe_committee_votes(
     state_dir = cluster_nodes.get_cluster_env().state_dir
     pool_logs = {name: state_dir / f"{name.replace('node-', '')}.stdout" for name in pool_ids}
     weight_searches = logfiles.init_searches(pool_logs.values())
+    outcome_searches = logfiles.init_searches(pool_logs.values())
+    deadline = time.monotonic() + leios.MAX_SEARCH_SEC
+    if during_observation is not None:
+        during_observation()
+        assert time.monotonic() < deadline, "Transaction submission exceeded the voting window"
     found, search_problems = leios.collect_vote_outcome_msgs(
-        pool_logs=list(pool_logs.values()), deadline=time.monotonic() + leios.MAX_SEARCH_SEC
+        pool_logs=list(pool_logs.values()), deadline=deadline, searches=outcome_searches
     )
     assert cluster_obj.g_query.get_epoch() == state.epoch, "Voting search crossed an epoch boundary"
     assert not search_problems, search_problems
@@ -709,9 +717,9 @@ def _prepare_committee_change(
 ) -> dict[str, str]:
     """Gate epoch waits and obtain cluster-pool identities for an isolated transition test."""
     seated = leios.is_committee_seated_in_genesis(cluster_obj=cluster_obj)
-    # Four transition boundaries, initial interval alignment, and final observation.
+    # Three transition boundaries, initial interval alignment, and final observation.
     common.skip_on_long_epochs(
-        cluster_obj=cluster_obj, epochs=6 + (0 if seated else leios.VOTING_START_EPOCH)
+        cluster_obj=cluster_obj, epochs=5 + (0 if seated else leios.VOTING_START_EPOCH)
     )
     if not seated:
         cluster_obj.wait_for_epoch(epoch_no=leios.VOTING_START_EPOCH, padding_seconds=5)
@@ -754,19 +762,21 @@ class TestLeiosCommitteeRank:
 
         * Establish the small committee's stake ranking and real voting, including
           NotOnCommittee without votes from registered pools excluded by rank
-        * Delegate test-owned stake to an excluded pool during epoch N; require
-          changed mark ranking at N+1 and exactly the expected seat swap at N+2
-        * Require the newly seated pool to vote and the displaced pool not to vote,
-          while certification continues with the smaller committee
-        * Retire the newly seated pool at E; require pool-state removal and a changed
-          mark snapshot at E, but committee replacement only at E+1
-        * Require the retired pool to report NotOnCommittee without fresh votes,
-          and the replacement committee to vote and certify
+        * Submit delegation during the full baseline voting window in epoch N,
+          since it cannot affect the current committee; check changed mark at N+1
+        * In N+1 schedule the incoming pool's retirement for N+2
+        * At N+2 require pool-state removal but exactly the delegation-driven seat
+          swap: the retired incoming pool still votes from its snapshot-derived
+          seat, the displaced pool does not vote, and certification continues
+        * At N+3 require retirement-driven committee replacement, NotOnCommittee
+          without fresh votes from the retired pool, and votes/certificates from
+          its replacement committee
 
         Each observation also checks numeric own-vote weights against the set stake
         snapshot. All scenarios share one whole-cluster-locked disposable instance,
-        which is respun afterwards. Retirement runs last; a failed or skipped phase
-        stops dependent phases rather than producing cascading failures.
+        which is respun afterwards. Retirement's effect runs last, but scheduling
+        it earlier overlaps the epoch waits. A failed or skipped phase stops
+        dependent phases rather than producing cascading failures.
         """
         cluster = cluster_small_committee
         template = common.get_test_id(cluster)
@@ -796,6 +806,24 @@ class TestLeiosCommitteeRank:
             caching_key=helpers.get_current_line_str(),
         )
 
+        delegated: delegation.DelegationOut | None = None
+
+        def _delegate_during_baseline() -> None:
+            """Submit while the baseline cursors observe the unchanged current committee."""
+            nonlocal delegated
+            epoch = cluster.g_query.get_epoch()
+            result = delegation.delegate_stake_addr(
+                cluster_obj=cluster,
+                addrs_data=cluster_manager.cache.addrs_data,
+                temp_template=f"{template}_delegate",
+                pool_user=pool_user,
+                cold_vkey=cluster_manager.cache.addrs_data[incoming_name][
+                    "cold_key_pair"
+                ].vkey_file,
+            )
+            assert cluster.g_query.get_epoch() == epoch, "Delegation crossed an epoch boundary"
+            delegated = result
+
         before = None
         with subtests.test(scenario="static_ranking"):
             baseline = self._check_static_ranking(
@@ -803,11 +831,13 @@ class TestLeiosCommitteeRank:
                 pool_ids=pool_ids,
                 name_template=f"{template}_baseline",
                 subtests=subtests,
+                during_observation=_delegate_during_baseline,
             )
             assert incoming not in baseline.members
             before = baseline
         if before is None:
             return
+        assert delegated is not None, "Baseline completed without submitting delegation"
 
         # Capture failures as subtest results, but never reuse a failed transition.
         delegated_state = None
@@ -818,7 +848,8 @@ class TestLeiosCommitteeRank:
                 before=before,
                 pool_ids=pool_ids,
                 incoming_name=incoming_name,
-                pool_user=pool_user,
+                delegated=delegated,
+                payment=payment,
                 name_template=f"{template}_delegation",
                 subtests=subtests,
             )
@@ -828,11 +859,9 @@ class TestLeiosCommitteeRank:
         with subtests.test(scenario="retired_pool_loses_seat"):
             self._check_retired_pool_loses_seat(
                 cluster_obj=cluster,
-                cluster_manager=cluster_manager,
                 before=delegated_state,
                 pool_ids=pool_ids,
                 retired_name=incoming_name,
-                payment=payment,
                 name_template=f"{template}_retirement",
                 subtests=subtests,
             )
@@ -841,49 +870,24 @@ class TestLeiosCommitteeRank:
         self,
         *,
         cluster_obj: clusterlib.ClusterLib,
-        cluster_manager: cluster_management.ClusterManager,
         before: _CommitteeState,
         pool_ids: dict[str, str],
         retired_name: str,
-        payment: clusterlib.AddressRecord,
         name_template: str,
         subtests: pytest_subtests.SubTests,
     ) -> None:
-        """Retire a previously observed voter and verify its delayed committee replacement."""
+        """Check that the pool observed voting at retirement loses its seat one epoch later."""
         cluster = cluster_obj
         template = name_template
         retired_id = pool_ids[retired_name]
         assert retired_id in before.members
-        cold_keys = cluster_manager.cache.addrs_data[retired_name]["cold_key_pair"]
-
-        # Pool reap precedes SNAP: retirement at E first changes the committee at E+1.
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
-        )
-        retirement_epoch = cluster.g_query.get_epoch() + 1
-        cert = cluster.g_stake_pool.gen_pool_deregistration_cert(
-            pool_name=f"{template}_retire",
-            cold_vkey_file=cold_keys.vkey_file,
-            epoch=retirement_epoch,
-        )
-        tx_output = cluster.g_transaction.send_tx(
-            src_address=payment.address,
-            tx_name=f"{template}_retire",
-            tx_files=clusterlib.TxFiles(
-                certificate_files=[cert],
-                signing_key_files=[payment.skey_file, cold_keys.skey_file],
-            ),
-        )
-        assert cluster.g_query.get_epoch() == retirement_epoch - 1, "Late retirement submission"
-        assert cluster.g_query.get_pool_state(stake_pool_id=retired_id).retiring == retirement_epoch
-        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
-
-        cluster.wait_for_epoch(epoch_no=retirement_epoch, padding_seconds=leios.EPOCH_MARGIN_SEC)
+        retirement_epoch = before.epoch
+        assert cluster.g_query.get_epoch() == retirement_epoch
         assert not cluster.g_query.get_pool_state(stake_pool_id=retired_id).pool_params
-        at_retirement = _read_committee_state(cluster_obj=cluster, pool_ids=pool_ids)
-        assert retired_id in at_retirement.members, "Retired pool lost its seat one epoch early"
+
+        # Pool reap changed mark at E, but the pool just voted from E's older set snapshot.
         expected = _rank_snapshot(
-            snapshot=at_retirement.snapshot, stake_field="stakeMark", size=len(before.members)
+            snapshot=before.snapshot, stake_field="stakeMark", size=len(before.members)
         )
         assert retired_id not in expected, "Retired pool remains a mark-snapshot candidate"
 
@@ -911,36 +915,25 @@ class TestLeiosCommitteeRank:
         before: _CommitteeState,
         pool_ids: dict[str, str],
         incoming_name: str,
-        pool_user: clusterlib.PoolUser,
+        delegated: delegation.DelegationOut,
+        payment: clusterlib.AddressRecord,
         name_template: str,
         subtests: pytest_subtests.SubTests,
     ) -> _CommitteeState:
-        """Seat a previously observed non-voter by delegation and check the role swap."""
+        """Check delegated stake activation and schedule retirement to overlap its final epoch."""
         cluster = cluster_obj
         template = name_template
         incoming = pool_ids[incoming_name]
         assert incoming not in before.members
 
-        # Delegate in N; mark changes at N+1 and that snapshot becomes set at N+2.
-        clusterlib_utils.wait_for_epoch_interval(
-            cluster_obj=cluster, start=5, stop=common.get_epoch_stop_sec_buffer(cluster_obj=cluster)
-        )
-        delegation_epoch = cluster.g_query.get_epoch()
-        delegated = delegation.delegate_stake_addr(
-            cluster_obj=cluster,
-            addrs_data=cluster_manager.cache.addrs_data,
-            temp_template=f"{template}_delegate",
-            pool_user=pool_user,
-            cold_vkey=cluster_manager.cache.addrs_data[incoming_name]["cold_key_pair"].vkey_file,
-        )
-        assert cluster.g_query.get_epoch() == delegation_epoch, (
-            "Delegation crossed an epoch boundary"
-        )
+        # Delegation was submitted in N while observing that epoch's baseline committee.
+        delegation_epoch = before.epoch
+        assert cluster.g_query.get_epoch() == delegation_epoch
         tx_record = dbsync_utils.check_tx(
             cluster_obj=cluster, tx_raw_output=delegated.tx_raw_output
         )
         delegation.db_check_delegation(
-            pool_user=pool_user,
+            pool_user=delegated.pool_user,
             db_record=tx_record,
             deleg_epoch=delegation_epoch,
             pool_id=delegated.pool_id,
@@ -950,6 +943,7 @@ class TestLeiosCommitteeRank:
             epoch_no=delegation_epoch + 1, padding_seconds=leios.EPOCH_MARGIN_SEC
         )
         marked = _read_committee_state(cluster_obj=cluster, pool_ids=pool_ids)
+        assert marked.epoch == delegation_epoch + 1
         assert marked.members == before.members, "Delegation changed membership one epoch early"
         expected = _rank_snapshot(
             snapshot=marked.snapshot, stake_field="stakeMark", size=len(before.members)
@@ -957,12 +951,43 @@ class TestLeiosCommitteeRank:
         assert expected - before.members == {incoming}, (expected, before)
         assert len(before.members - expected) == 1
 
+        # The mark already seats the incoming pool for N+2. Retire it at N+2 so
+        # pool-state removal and the still-valid set-snapshot seat can be checked together.
+        retirement_epoch = delegation_epoch + 2
+        cold_keys = cluster_manager.cache.addrs_data[incoming_name]["cold_key_pair"]
+        cert = cluster.g_stake_pool.gen_pool_deregistration_cert(
+            pool_name=f"{template}_retire",
+            cold_vkey_file=cold_keys.vkey_file,
+            epoch=retirement_epoch,
+        )
+        tx_output = cluster.g_transaction.send_tx(
+            src_address=payment.address,
+            tx_name=f"{template}_retire",
+            tx_files=clusterlib.TxFiles(
+                certificate_files=[cert],
+                signing_key_files=[payment.skey_file, cold_keys.skey_file],
+            ),
+        )
+        assert cluster.g_query.get_epoch() == retirement_epoch - 1, "Late retirement submission"
+        assert cluster.g_query.get_pool_state(stake_pool_id=incoming).retiring == retirement_epoch
+        dbsync_utils.check_tx(cluster_obj=cluster, tx_raw_output=tx_output)
+        helpers.write_json(
+            out_file=pl.Path(f"{template}_schedule.json"),
+            content={
+                "delegation_epoch": delegation_epoch,
+                "retirement_epoch": retirement_epoch,
+                "incoming_pool": incoming,
+                "expected_members_at_activation": sorted(expected),
+            },
+        )
+
         cluster.wait_for_epoch(
             epoch_no=delegation_epoch + 2, padding_seconds=leios.EPOCH_MARGIN_SEC
         )
         after = _read_committee_state(cluster_obj=cluster, pool_ids=pool_ids)
         assert after.epoch == delegation_epoch + 2
         assert after.members == expected, (after, expected)
+        assert not cluster.g_query.get_pool_state(stake_pool_id=incoming).pool_params
         _observe_committee_votes(
             cluster_obj=cluster,
             state=after,
@@ -979,8 +1004,9 @@ class TestLeiosCommitteeRank:
         pool_ids: dict[str, str],
         name_template: str,
         subtests: pytest_subtests.SubTests,
+        during_observation: tp.Callable[[], None],
     ) -> _CommitteeState:
-        """Check stake ranking and baseline voting before any committee mutation."""
+        """Check baseline ranking/voting while submitting a future-epoch delegation."""
         clusterlib_utils.wait_for_epoch_interval(
             cluster_obj=cluster_obj, start=leios.EPOCH_MARGIN_SEC, stop=-EPOCH_TAIL_SEC
         )
@@ -1001,6 +1027,7 @@ class TestLeiosCommitteeRank:
             pool_ids=pool_ids,
             name_template=name_template,
             subtests=subtests,
+            during_observation=during_observation,
         )
         return state
 
