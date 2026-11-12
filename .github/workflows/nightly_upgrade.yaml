@@ -20,3 +20,5 @@ jobs:
       GMAIL_USERNAME: ${{ secrets.GMAIL_USERNAME }}
       GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+      TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+      TCACHE_URL: ${{ secrets.TCACHE_URL }}
