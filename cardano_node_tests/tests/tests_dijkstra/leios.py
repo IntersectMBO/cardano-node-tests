@@ -423,17 +423,20 @@ def is_committee_seated_in_genesis(*, cluster_obj: clusterlib.ClusterLib) -> boo
 
 
 def get_eb_tx_ref(*, tx_file: pl.Path) -> tuple[str, int]:
-    """Return the EB reference to a valid Dijkstra payment transaction.
+    """Return the EB reference to a known-valid top-level Dijkstra transaction.
 
     An EB doesn't list its txs by tx id (the hash of the tx body), but by the Blake2b-256
     hash and size of the block-format tx (`serializeTxForLeios` in ouroboros-consensus
     `LeiosDemoTypes.hs`). The signed file holds the three-element mempool format
     `[body, witnesses, auxiliary_data]`. Block inclusion adds a trailing `is_valid` flag,
-    which is `true` for the payment txs this helper supports. Only the outer array header
-    is replaced and the flag appended, preserving the original bytes of every component.
+    which is `true` for payments and successful Plutus spends. The same encoding applies
+    to script witnesses and reference-script spends (`toCBORForBlockInclusion` in the
+    Dijkstra ledger). Only the outer array header is replaced and the flag appended,
+    preserving the original bytes of every component. Do not use this helper for
+    phase-2-invalid transactions: the mempool bytes do not encode the producer's flag.
 
     Args:
-        tx_file: A path to a signed valid Dijkstra payment tx (a text envelope).
+        tx_file: A path to a signed, known-valid Dijkstra tx (a text envelope).
 
     Returns:
         The block-format tx hash as a hex string, and its size in bytes.
