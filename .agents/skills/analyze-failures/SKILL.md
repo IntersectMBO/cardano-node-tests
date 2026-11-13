@@ -1,6 +1,6 @@
 ---
 name: analyze-failures
-description: Triage a failed cardano-node-tests run, and answer questions about where a test run's logs and artifacts live. Use when the user asks to analyze, triage, or explain failures in a regression run, a node-upgrade run, a run_workdir, a saved run directory or artifacts downloaded from a CI run, and also when they ask where to find node logs, cluster logs, test artifacts, allure results or the cluster-management status database after running tests. Accepts an optional run directory (default `run_workdir`).
+description: Triage a failed cardano-node-tests run, downloading artifacts when given a GitHub Actions run URL, and answer questions about where a test run's logs and artifacts live. Use when the user asks to analyze, triage, or explain failures in a regression run, a node-upgrade run, a GitHub Actions run, a run_workdir, a saved run directory or downloaded CI artifacts, and also when they ask where to find node logs, cluster logs, test artifacts, allure results or the cluster-management status database after running tests. Accepts a GitHub Actions run URL or an optional local run directory (default `run_workdir`).
 ---
 
 # Analyze test run failures
@@ -8,12 +8,18 @@ description: Triage a failed cardano-node-tests run, and answer questions about 
 Triage a finished cardano-node-tests run and report grouped failures with a likely root cause
 for each group.
 
-## 1. Resolve the run directory
+## 1. Resolve the input
 
-The directory given in the invocation or the request, or `run_workdir` if none was given. The
-path may be relative to the current working directory or absolute; it can be a fresh run
-produced by `runner/regression.sh`, artifacts downloaded from a CI run, or any saved historical
-run directory.
+If given a GitHub Actions run URL, such as
+`https://github.com/IntersectMBO/cardano-node-tests/actions/runs/40786240035`, follow
+[Download GitHub Actions artifacts](references/github-actions.md) first. Download the
+artifacts and continue with the analysis automatically; do not ask the user to download
+them or supply a local path.
+
+Otherwise use the directory given in the invocation or the request, or `run_workdir` if none
+was given. The path may be relative to the current working directory or absolute; it can be a
+fresh run produced by `runner/regression.sh`, artifacts downloaded from a CI run, or any saved
+historical run directory.
 
 If the directory does not exist, stop and say so - do not guess another path.
 
@@ -51,7 +57,8 @@ workflows use - so do not restate or reinterpret their instructions here.
 
 ## 5. Report
 
-Report the findings in the conversation and stay available for follow-up questions.
+Report the findings in the conversation and stay available for follow-up questions. For a
+GitHub Actions run, include the source run URL and the local directory holding its artifacts.
 
 Do **not** write `failure_analysis.md`, cap the output length, or apply any other constraint
 from `agent_docs/ci_analysis_prompt.md`. Those are CI-only and the workflows append them
