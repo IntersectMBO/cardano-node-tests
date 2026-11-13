@@ -72,21 +72,22 @@ def _gen_signed_tx(
 
 
 def _repeat_submit(cluster_obj: clusterlib.ClusterLib, tx_file: pl.Path) -> str:
-    """Submit the Tx and then re-submit it.
+    """Submit and re-submit the Tx to confirm it reached the mempool.
 
-    Expect and error on re-submit. This way we make sure the Tx made it to mempool.
+    Expect a spent-input error on re-submission. Return a retry message if inputs are
+    already missing on the first submission or no re-submission confirms acceptance.
+    Raise unexpected CLI errors.
     """
     err_str = ""
     for r in range(5):
         try:
             cluster_obj.g_transaction.submit_tx_bare(tx_file=tx_file)
         except clusterlib.CLIError as exc:
-            inputs_spent = helpers.is_inputs_spent_err(str(exc))
-            if r == 0 and inputs_spent:
+            if not helpers.is_inputs_spent_err(str(exc)):
+                raise
+            if r == 0:
                 err_str = "Tx input is missing, maybe temporary fork happened?"
-            elif inputs_spent:
-                break
-            raise
+            break
         if r > 2:
             time.sleep(0.05)
     else:
