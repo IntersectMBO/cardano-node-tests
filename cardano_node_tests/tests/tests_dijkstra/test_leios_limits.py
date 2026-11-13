@@ -2,6 +2,7 @@
 
 import dataclasses
 import json
+import math
 import pathlib as pl
 import re
 import subprocess
@@ -43,6 +44,8 @@ MEMPOOL_BYTES = 8_000_000
 REFERENCE_CAP = 5 + 3 * 37
 CLOSURE_CAP = 44_000
 WIRE_LIMIT = 600_000
+MEMORY_BUDGET = 100_000
+STEPS_BUDGET = 10_000_000
 SCRIPT = plutus_common.ALWAYS_SUCCEEDS["v2"]
 REF_SCRIPT_SIZE = clusterlib_utils.get_reference_script_size(script_file=SCRIPT.script_file)
 
@@ -51,16 +54,17 @@ REF_SCRIPT_SIZE = clusterlib_utils.get_reference_script_size(script_file=SCRIPT.
 def cluster_leios_limits(
     cluster_manager: cluster_management.ClusterManager, request: pytest.FixtureRequest
 ) -> clusterlib.ClusterLib:
-    """Start a disposable singleton with one binding EB cap and no adaptive sizing.
+    """Start a disposable singleton with isolated EB caps and no adaptive sizing.
 
     The transactions, rather than an external load generator, create the backlog.
     Override the mempool bytes independently of the reduced EB closure capacity.
+    Suppress generators only in this instance's startup process, leaving the
+    worker's environment unchanged. Cleanup forces a respin before other tests.
     """
     if configuration.DEV_CLUSTER_RUNNING or configuration.FORBID_RESPIN:
         pytest.skip("EB limit tests need a framework-managed disposable cluster")
-    if configuration.HAS_TX_LOAD_GENERATOR:
-        pytest.skip("EB limit tests generate their own load; disable external generators")
     cap = request.param
+    assert cap in ("references", "closure", "execution"), cap
     shared_tmp = temptools.get_pytest_shared_tmp()
     scriptsdir = shared_tmp / f"startup_files_leios_limit_{cap}"
     with locking.FileLockIfXdist(f"{scriptsdir}.lock"):
@@ -76,18 +80,14 @@ def cluster_leios_limits(
                 dijkstra["maxEndorserBlockReferencesSize"] = REFERENCE_CAP
             elif cap == "closure":
                 dijkstra["maxEndorserBlockTxsSize"] = CLOSURE_CAP
-            elif cap in ("memory", "steps"):
-                unit = (
-                    SCRIPT.execution_cost.per_space
-                    if cap == "memory"
-                    else SCRIPT.execution_cost.per_time
-                )
-                dijkstra["maxEndorserBlockExecutionUnits"][cap] = 3 * unit
-            elif cap == "reference_scripts":
-                dijkstra["maxRefScriptSizePerEndorserBlock"] = 3 * REF_SCRIPT_SIZE
-            else:
-                assert cap == "wire", cap
+                # The wire guard shares this otherwise compatible packing config.
                 dijkstra["maxEndorserBlockReferencesSize"] = WIRE_LIMIT
+            else:
+                dijkstra["maxEndorserBlockExecutionUnits"] = {
+                    "memory": 3 * MEMORY_BUDGET,
+                    "steps": 3 * STEPS_BUDGET,
+                }
+                dijkstra["maxRefScriptSizePerEndorserBlock"] = 3 * REF_SCRIPT_SIZE
             helpers.write_json(out_file=dijkstra_file, content=dijkstra)
 
             config_file = scriptsdir / "template-config.json"
@@ -96,12 +96,26 @@ def cluster_leios_limits(
             config["LeiosAdaptiveEndorsements"] = {"Enabled": False}
             helpers.write_json(out_file=config_file, content=config)
 
-    return cluster_manager.get(
+            # The startup hook changes only this instance's child-shell environment.
+            with (scriptsdir / "shell_env").open("a", encoding="utf-8") as shell_env:
+                shell_env.write(
+                    "\nunset ENABLE_TX_GENERATOR ENABLE_TX_CENTRIFUGE ENABLE_TX_FIREHOSE\n"
+                )
+
+    cluster = cluster_manager.get(
         lock_resources=[cluster_management.Resources.CLUSTER],
         prio=True,
         cleanup=True,
         scriptsdir=scriptsdir,
     )
+    generator_services = {"tx_generator", "tx_centrifuge", "tx_firehose"}
+    unexpected = [
+        service
+        for service in cluster_nodes.services_status()
+        if service.name.rsplit(":", 1)[-1] in generator_services
+    ]
+    assert not unexpected, f"External generators configured on the isolated instance: {unexpected}"
+    return cluster
 
 
 @dataclasses.dataclass(frozen=True)
@@ -205,6 +219,10 @@ def _prepare_batch(
     """Fund independent candidates, then sign all of them before submitting any."""
     cluster = cluster_obj
     execution_case = cap in ("memory", "steps")
+    execution_units = (
+        STEPS_BUDGET if cap == "steps" else SCRIPT.execution_cost.per_time,
+        MEMORY_BUDGET if cap == "memory" else SCRIPT.execution_cost.per_space,
+    )
     txouts = [
         clusterlib.TxOut(
             address=input_address,
@@ -246,10 +264,7 @@ def _prepare_batch(
                     script_file=SCRIPT.script_file,
                     inline_datum_present=True,
                     redeemer_cbor_file=plutus_common.REDEEMER_42_CBOR,
-                    execution_units=(
-                        SCRIPT.execution_cost.per_time,
-                        SCRIPT.execution_cost.per_space,
-                    ),
+                    execution_units=execution_units,
                     collaterals=[collaterals[i]],
                 )
             ]
@@ -277,8 +292,8 @@ def _prepare_batch(
             tx_id=cluster.g_transaction.get_txid(tx_file=signed),
             wire_size=size,
             raw=raw,
-            memory=SCRIPT.execution_cost.per_space if execution_case else 0,
-            steps=SCRIPT.execution_cost.per_time if execution_case else 0,
+            memory=execution_units[1] if execution_case else 0,
+            steps=execution_units[0] if execution_case else 0,
             reference_scripts=REF_SCRIPT_SIZE if reference else 0,
         )
     return _Batch(
@@ -346,9 +361,7 @@ class TestLeiosLimits:
         [
             "references",
             "closure",
-            pytest.param("memory", marks=[pytest.mark.plutus, markers.SKIPIF_PLUTUSV2_UNUSABLE]),
-            pytest.param("steps", marks=[pytest.mark.plutus, markers.SKIPIF_PLUTUSV2_UNUSABLE]),
-            "reference_scripts",
+            pytest.param("execution", marks=[pytest.mark.plutus, markers.SKIPIF_PLUTUSV2_UNUSABLE]),
         ],
         indirect=True,
     )
@@ -357,13 +370,21 @@ class TestLeiosLimits:
         cluster_leios_limits: clusterlib.ClusterLib,
         cluster_manager: cluster_management.ClusterManager,
         request: pytest.FixtureRequest,
+        subtests: pytest_subtests.SubTests,
     ):
         """Require a full three-transaction EB while no observed EB exceeds a cap.
 
-        Each cap needs a different genesis, so these cases cannot share a live
-        cluster. Wait for active keyed committee weight to reach quorum, allowing
-        at most three epoch boundaries from startup, then burst-submit independent
-        large transactions into an enlarged mempool.
+        Share one genesis, addresses and metadata between memory, steps and
+        reference-script-byte subtests. Inflate only the tested execution
+        dimension's declared budget so the entire batch still fits the other
+        dimension. Reference-script payments execute no scripts, and execution
+        cases reference none, so those limits are independent too. The wire
+        startup guard shares the closure-cap cluster. Reference and closure-byte
+        caps need distinct genesis configurations to stay independently binding.
+
+        Wait for active keyed committee weight to reach quorum, allowing at most
+        three epoch boundaries from startup, then burst-submit independent large
+        transactions into an enlarged mempool.
         Verify that every other EB dimension could hold the entire batch, and that
         three candidates fit but any fourth would exceed only the selected cap.
         Match every forged EB entry to the signed file's wire hash and size.
@@ -377,22 +398,29 @@ class TestLeiosLimits:
         """
         cluster = cluster_leios_limits
         template = common.get_test_id(cluster)
-        cap = request.node.callspec.params["cluster_leios_limits"]
+        setup = request.node.callspec.params["cluster_leios_limits"]
+        caps = ("memory", "steps", "reference_scripts") if setup == "execution" else (setup,)
         leios.skip_if_no_ebs(cluster_obj=cluster)
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=3 + MAX_COMMITTEE_WAIT_EPOCHS)
+        seated = leios.is_committee_seated_in_genesis(cluster_obj=cluster)
+        # Funding waits two blocks initially and two per round. Workload polling
+        # has its own wall-clock bounds and does not wait for epoch transitions.
+        funding_blocks = 2 + 2 * MAX_ROUNDS * len(caps)
+        blocks_per_epoch = cluster.genesis["activeSlotsCoeff"] * cluster.genesis["epochLength"]
+        funding_epochs = math.ceil(funding_blocks / blocks_per_epoch)
+        common.skip_on_long_epochs(
+            cluster_obj=cluster,
+            epochs=funding_epochs + (0 if seated else MAX_COMMITTEE_WAIT_EPOCHS),
+        )
+        if setup == "closure":
+            with subtests.test(check="wire_limit_startup"):
+                if helpers.is_truthy_env_var("HF_TO_DIJKSTRA"):
+                    pytest.skip("Peerless startup guard needs Dijkstra from genesis")
+                self._check_wire_limit_startup(
+                    cluster_obj=cluster, name_template=f"{template}_wire", subtests=subtests
+                )
         _wait_for_committee(cluster_obj=cluster)
 
         pparams = cluster.g_query.get_protocol_params()
-        limits = _get_limits(pparams)
-        expected_limits = {
-            "references": REFERENCE_CAP - 5,
-            "closure": CLOSURE_CAP,
-            "memory": 3 * SCRIPT.execution_cost.per_space,
-            "steps": 3 * SCRIPT.execution_cost.per_time,
-            "reference_scripts": 3 * REF_SCRIPT_SIZE,
-        }
-        assert limits[cap] == expected_limits[cap], pparams
-        execution_case = cap in ("memory", "steps")
         payment = addrs_common.get_payment_addr(
             name_template=template,
             cluster_manager=cluster_manager,
@@ -405,14 +433,51 @@ class TestLeiosLimits:
             cluster.g_address.gen_payment_addr(
                 addr_name=f"{template}_script", payment_script_file=SCRIPT.script_file
             )
-            if execution_case
+            if setup == "execution"
             else payment.address
         )
-        state_dir = cluster_nodes.get_cluster_env().state_dir
-        pool_logs = sorted(state_dir.glob("pool*.stdout"))
-        assert pool_logs, state_dir
         mempool = cluster.g_query.get_mempool_info()
         assert mempool["capacityInBytes"] >= MEMPOOL_BYTES, mempool
+
+        for cap in caps:
+            with subtests.test(cap=cap):
+                self._check_packing_cap(
+                    cluster_obj=cluster,
+                    payment=payment,
+                    input_address=input_address if cap in ("memory", "steps") else payment.address,
+                    name_template=f"{template}_{cap}",
+                    metadata=metadata,
+                    fee=fee,
+                    pparams=pparams,
+                    cap=cap,
+                )
+
+    def _check_packing_cap(
+        self,
+        *,
+        cluster_obj: clusterlib.ClusterLib,
+        payment: clusterlib.AddressRecord,
+        input_address: str,
+        name_template: str,
+        metadata: pl.Path,
+        fee: int,
+        pparams: dict,
+        cap: str,
+    ) -> None:
+        """Require a full boundary EB, other dimensions non-binding, and all effects."""
+        cluster = cluster_obj
+        template = name_template
+        limits = _get_limits(pparams)
+        expected_limits = {
+            "references": REFERENCE_CAP - 5,
+            "closure": CLOSURE_CAP,
+            "memory": 3 * MEMORY_BUDGET,
+            "steps": 3 * STEPS_BUDGET,
+            "reference_scripts": 3 * REF_SCRIPT_SIZE,
+        }
+        assert limits[cap] == expected_limits[cap], pparams
+        pool_logs = sorted(cluster_nodes.get_cluster_env().state_dir.glob("pool*.stdout"))
+        assert pool_logs, cluster_nodes.get_cluster_env().state_dir
 
         for round_no in range(MAX_ROUNDS):
             name = f"{template}_r{round_no}"
@@ -489,19 +554,13 @@ class TestLeiosLimits:
 
         pytest.fail(f"No full three-transaction EB observed for {cap} in {MAX_ROUNDS} batches")
 
-    @allure.link(helpers.get_vcs_link())
-    @pytest.mark.leios
-    @pytest.mark.xdist_split(markers.XdSplits.heavy)
-    @pytest.mark.skipif(
-        helpers.is_truthy_env_var("HF_TO_DIJKSTRA"),
-        reason="Peerless startup guard needs Dijkstra from genesis, not an on-chain hard fork",
-    )
-    @pytest.mark.parametrize("cluster_leios_limits", ["wire"], indirect=True)
-    def test_wire_limit_startup(
+    def _check_wire_limit_startup(
         self,
-        cluster_leios_limits: clusterlib.ClusterLib,
+        *,
+        cluster_obj: clusterlib.ClusterLib,
+        name_template: str,
         subtests: pytest_subtests.SubTests,
-    ):
+    ) -> None:
         """Accept the wire boundary, then require a direct node failure one byte above.
 
         A running disposable cluster proves startup with a 600000-byte cap. Start
@@ -512,9 +571,8 @@ class TestLeiosLimits:
         Skip governance-driven hard forks: the peerless child's empty database
         cannot learn the on-chain action that activates Dijkstra.
         """
-        cluster = cluster_leios_limits
-        template = common.get_test_id(cluster)
-        leios.skip_if_no_ebs(cluster_obj=cluster)
+        cluster = cluster_obj
+        template = name_template
         with subtests.test(boundary="accepted"):
             assert (
                 cluster.g_query.get_protocol_params()["maxEndorserBlockReferencesSize"]
