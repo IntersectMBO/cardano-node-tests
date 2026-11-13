@@ -177,10 +177,13 @@ def _get_rational_str(value: float) -> str:
 def _check_w_denominator(
     update_proposal: clusterlib_utils.UpdateProposal, pparam: float | dict
 ) -> bool:
-    exp_val: float | dict | str = pparam
+    """Compare rational parameters returned as decimals or numerator/denominator objects."""
     if isinstance(pparam, dict):
-        exp_val = f"{pparam['numerator']}/{pparam['denominator']}"
-    return bool(update_proposal.value == exp_val)
+        pparam_value = fractions.Fraction(pparam["numerator"], pparam["denominator"])
+    else:
+        # Preserve the JSON decimal value rather than the float's binary approximation.
+        pparam_value = fractions.Fraction(str(pparam))
+    return fractions.Fraction(str(update_proposal.value)) == pparam_value
 
 
 def _check_max_tx_execution_units(
