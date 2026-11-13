@@ -6,6 +6,7 @@ that wrap external tools monkeypatch `run_command`.
 """
 
 import argparse
+import fractions
 import hashlib
 import inspect
 import json
@@ -18,6 +19,53 @@ import typing as tp
 import pytest
 
 from cardano_node_tests.utils import helpers
+
+
+class TestRationalPParam:
+    """Tests for rational protocol parameter normalization."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (0, fractions.Fraction(0)),
+            (1, fractions.Fraction(1)),
+            (0.1, fractions.Fraction(1, 10)),
+            (0.5210625, fractions.Fraction(8337, 16000)),
+            ("8337/16000", fractions.Fraction(8337, 16000)),
+            ("0.5210625", fractions.Fraction(8337, 16000)),
+            ({"numerator": 8337, "denominator": 16000}, fractions.Fraction(8337, 16000)),
+            ({"numerator": 2, "denominator": 3}, fractions.Fraction(2, 3)),
+            ({"numerator": 4, "denominator": 6}, fractions.Fraction(2, 3)),
+        ],
+    )
+    def test_normalize(
+        self, value: int | float | str | dict[str, int], expected: fractions.Fraction
+    ):
+        """Normalize supported representations without approximating the rational value."""
+        assert helpers.get_rational_pparam(value) == expected
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            {},
+            {"numerator": 1},
+            {"denominator": 3},
+        ],
+    )
+    def test_missing_components(self, value: dict[str, int]):
+        """Reject incomplete rational objects rather than inventing default components."""
+        with pytest.raises(KeyError):
+            helpers.get_rational_pparam(value)
+
+    def test_zero_denominator(self):
+        """Reject a rational with a zero denominator."""
+        with pytest.raises(ZeroDivisionError):
+            helpers.get_rational_pparam({"numerator": 1, "denominator": 0})
+
+    def test_invalid_string(self):
+        """Reject strings that do not represent a rational value."""
+        with pytest.raises(ValueError, match="Invalid literal"):
+            helpers.get_rational_pparam("not-a-rational")
 
 
 class TestChangeCwd:

@@ -178,12 +178,7 @@ def _check_w_denominator(
     update_proposal: clusterlib_utils.UpdateProposal, pparam: float | dict
 ) -> bool:
     """Compare rational parameters returned as decimals or numerator/denominator objects."""
-    if isinstance(pparam, dict):
-        pparam_value = fractions.Fraction(pparam["numerator"], pparam["denominator"])
-    else:
-        # Preserve the JSON decimal value rather than the float's binary approximation.
-        pparam_value = fractions.Fraction(str(pparam))
-    return fractions.Fraction(str(update_proposal.value)) == pparam_value
+    return helpers.get_rational_pparam(update_proposal.value) == helpers.get_rational_pparam(pparam)
 
 
 def _check_max_tx_execution_units(
@@ -369,13 +364,17 @@ class TestPParamUpdate:
         # missing votes would approve the action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
         cur_pparams = cluster.g_query.get_protocol_params()
-        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
-        spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
+        drep_constitution_threshold = helpers.get_rational_pparam(
+            cur_pparams["dRepVotingThresholds"]["ppGovGroup"]
+        )
+        spo_constitution_threshold = helpers.get_rational_pparam(
+            cur_pparams["poolVotingThresholds"]["ppSecurityGroup"]
+        )
         is_drep_total_below_threshold = (
-            delegated_stake.drep / delegated_stake.total_lovelace
+            fractions.Fraction(delegated_stake.drep, delegated_stake.total_lovelace)
         ) < drep_constitution_threshold
         is_spo_total_below_threshold = (
-            delegated_stake.spo / delegated_stake.total_lovelace
+            fractions.Fraction(delegated_stake.spo, delegated_stake.total_lovelace)
         ) < spo_constitution_threshold
 
         # PParam groups

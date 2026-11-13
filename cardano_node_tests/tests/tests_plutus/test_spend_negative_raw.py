@@ -811,7 +811,8 @@ class TestNegativeRedeemer:
     def cost_per_unit(
         self,
         cluster: clusterlib.ClusterLib,
-    ) -> plutus_common.ExecutionCost:
+    ) -> plutus_common.CostPerUnit:
+        """Return the current execution unit prices and fixed transaction fee."""
         return plutus_common.get_cost_per_unit(
             protocol_params=cluster.g_query.get_protocol_params()
         )
@@ -824,7 +825,7 @@ class TestNegativeRedeemer:
         collateral_utxos: list[clusterlib.UTXOData],
         redeemer_content: str,
         dst_addr: clusterlib.AddressRecord,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
     ) -> str:
         """Try to build a Tx and expect failure."""
@@ -875,7 +876,7 @@ class TestNegativeRedeemer:
         collateral_utxos: list[clusterlib.UTXOData],
         redeemer_value: int,
         dst_addr: clusterlib.AddressRecord,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
     ) -> str:
         """Try to spend a locked UTxO with redeemer int value that is not in allowed range."""
@@ -942,7 +943,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1053,7 +1054,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1108,7 +1109,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1162,7 +1163,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -1265,7 +1266,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -1354,7 +1355,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -1407,7 +1408,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: bytes,
     ):
@@ -1459,7 +1460,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1511,7 +1512,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: int,
     ):
@@ -1563,7 +1564,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_value: str,
     ):
@@ -1622,7 +1623,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_type: str,
     ):
@@ -1691,7 +1692,7 @@ class TestNegativeRedeemer:
         cluster: clusterlib.ClusterLib,
         fund_script_guessing_game_v1: FundTupleT,
         fund_script_guessing_game_v2: FundTupleT,
-        cost_per_unit: plutus_common.ExecutionCost,
+        cost_per_unit: plutus_common.CostPerUnit,
         plutus_version: str,
         redeemer_type: str,
     ):

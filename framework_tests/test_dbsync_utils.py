@@ -16,6 +16,65 @@ IMAGE_URL = "https://example.com/image.png"
 IMAGE_HASH = "ab" * 32
 
 
+class TestRationalParamsMapping:
+    """Check numeric conversion of rational parameters for db-sync comparisons."""
+
+    @pytest.mark.parametrize(
+        ("param_name", "db_name"),
+        [
+            ("monetaryExpansion", "monetary_expand_rate"),
+            ("treasuryCut", "treasury_growth_rate"),
+            ("poolPledgeInfluence", "influence"),
+            ("minFeeRefScriptCostPerByte", "min_fee_ref_script_cost_per_byte"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            (0, 0.0),
+            (15, 15.0),
+            (0.5210625, 0.5210625),
+            ("8337/16000", 0.5210625),
+            ({"numerator": 8337, "denominator": 16000}, 0.5210625),
+            ({"numerator": 1, "denominator": 3}, 1 / 3),
+            (None, None),
+        ],
+    )
+    def test_rational_parameter(
+        self, param_name: str, db_name: str, value: tp.Any, expected: float | None
+    ):
+        """Map equivalent rational representations to the db-sync numeric value."""
+        mapped = dbsync_utils.map_params_to_db_convention(pparams={param_name: value})
+        assert mapped[db_name] == expected
+        if expected is not None:
+            assert isinstance(mapped[db_name], float)
+
+    def test_missing_parameters(self):
+        """Keep absent optional parameters as None."""
+        mapped = dbsync_utils.map_params_to_db_convention(pparams={})
+        assert mapped["min_fee_ref_script_cost_per_byte"] is None
+        assert mapped["price_mem"] is None
+        assert mapped["price_step"] is None
+
+    def test_nested_rationals(self):
+        """Normalize execution prices and voting thresholds as well as top-level fields."""
+        rational = {"numerator": 2, "denominator": 3}
+        mapped = dbsync_utils.map_params_to_db_convention(
+            pparams={
+                "executionUnitPrices": {"priceMemory": rational, "priceSteps": rational},
+                "dRepVotingThresholds": {"motionNoConfidence": rational},
+                "poolVotingThresholds": {"motionNoConfidence": rational},
+            }
+        )
+        for name in (
+            "price_mem",
+            "price_step",
+            "dvt_motion_no_confidence",
+            "pvt_motion_no_confidence",
+        ):
+            assert mapped[name] == 2 / 3
+
+
 @pytest.fixture
 def check_image(monkeypatch: pytest.MonkeyPatch) -> tp.Callable[..., None]:
     """Check image metadata using stubbed db-sync rows and version information."""
