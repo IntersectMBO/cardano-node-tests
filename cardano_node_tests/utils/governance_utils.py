@@ -506,7 +506,7 @@ def _get_gov_action_committee(
             _prev_action_ref(action_data),
             removed_members or [],
             added_members,
-            float(action_data.threshold),
+            helpers.get_rational_pparam(action_data.threshold),
         ],
         "tag": ActionTags.UPDATE_COMMITTEE.value,
     }
@@ -553,7 +553,7 @@ def check_action_view(
     return_addr_vkey_hash: str = "",
     recv_addr_vkey_hash: str = "",
 ) -> None:
-    """Check `governance action view` output."""
+    """Check `governance action view` output, comparing committee thresholds numerically."""
     if not return_addr_vkey_hash:
         if action_data.deposit_return_stake_vkey_file:
             return_addr_vkey_hash = cluster_obj.g_stake_address.get_stake_vkey_hash(
@@ -587,6 +587,10 @@ def check_action_view(
     }
 
     action_view_out = cluster_obj.g_governance.action.view(action_file=action_data.action_file)
+
+    if isinstance(action_data, clusterlib.ActionUpdateCommittee):
+        contents = action_view_out["governance action"]["contents"]
+        contents[3] = helpers.get_rational_pparam(contents[3])
 
     assert action_view_out == expected_action_out, f"{action_view_out} != {expected_action_out}"
 

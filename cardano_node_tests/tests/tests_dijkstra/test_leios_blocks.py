@@ -1563,9 +1563,9 @@ class TestLeiosQuorum:
         # The quorum is read from the current protocol parameters, and the seat weights
         # from the committee of the current epoch. Neither changes at an epoch boundary
         # unless the pools or their stake change, which the cluster lock rules out.
-        quorum = fractions.Fraction(
+        quorum = helpers.get_rational_pparam(
             cluster.g_query.get_protocol_params()["leiosQuorumStakeThreshold"]
-        ).limit_denominator()
+        )
         stopped_pool_id = helpers.get_pool_id_hex(
             delegation.get_pool_id(
                 cluster_obj=cluster,

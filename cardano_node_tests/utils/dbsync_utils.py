@@ -936,13 +936,10 @@ def check_plutus_costs(
 
 
 def _get_float_pparam(pparam: tp.Any) -> float | None:
+    """Convert a rational parameter to a db-sync float, preserving missing values."""
     if pparam is None:
         return None
-    if isinstance(pparam, dict):
-        numerator = pparam.get("numerator", 0)
-        denominator = pparam.get("denominator", 1)
-        return float(numerator / denominator)
-    return float(pparam)
+    return float(helpers.get_rational_pparam(pparam))
 
 
 def map_params_to_db_convention(*, pparams: dict) -> dict[str, tp.Any]:
@@ -974,7 +971,9 @@ def map_params_to_db_convention(*, pparams: dict) -> dict[str, tp.Any]:
         "treasury_growth_rate": _get_float_pparam(pparams.get("treasuryCut")),
         "min_pool_cost": pparams.get("minPoolCost"),
         "coins_per_utxo_size": pparams.get("utxoCostPerByte"),
-        "min_fee_ref_script_cost_per_byte": pparams.get("minFeeRefScriptCostPerByte"),
+        "min_fee_ref_script_cost_per_byte": _get_float_pparam(
+            pparams.get("minFeeRefScriptCostPerByte")
+        ),
         "price_mem": price_mem,
         "price_step": price_steps,
         # Technical proposals group

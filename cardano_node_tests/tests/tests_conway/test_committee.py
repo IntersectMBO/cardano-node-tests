@@ -1,5 +1,6 @@
 """Tests for Conway governance Constitutional Committee functionality."""
 
+import fractions
 import logging
 import pathlib as pl
 import random
@@ -480,6 +481,7 @@ class TestCommittee:
         * Add CC Members
         * Update committee threshold
         * Check that the proposed changes are correct in `query gov-state`
+        * Check `governance action view` for fraction and decimal thresholds
         """
         temp_template = common.get_test_id(cluster)
         cc_size = 3
@@ -606,6 +608,9 @@ class TestCommittee:
         dbsync_utils.check_committee_info(gov_state=gov_state, txid=txid)
         [r.success() for r in (reqc.db010, reqc.db011)]
 
+        # Check both fraction and decimal thresholds in the action view.
+        governance_utils.check_action_view(cluster_obj=cluster, action_data=update_action)
+
     @allure.link(helpers.get_vcs_link())
     @pytest.mark.xdist_split(markers.XdSplits.governance, markers.XdSplits.heavy)
     @pytest.mark.long
@@ -673,13 +678,17 @@ class TestCommittee:
         # would not be possible to approve any action.
         delegated_stake = governance_utils.get_delegated_stake(cluster_obj=cluster)
         cur_pparams = cluster.g_query.get_protocol_params()
-        drep_constitution_threshold = cur_pparams["dRepVotingThresholds"]["committeeNormal"]
-        spo_constitution_threshold = cur_pparams["poolVotingThresholds"]["committeeNormal"]
+        drep_constitution_threshold = helpers.get_rational_pparam(
+            cur_pparams["dRepVotingThresholds"]["committeeNormal"]
+        )
+        spo_constitution_threshold = helpers.get_rational_pparam(
+            cur_pparams["poolVotingThresholds"]["committeeNormal"]
+        )
         is_drep_total_below_threshold = (
-            delegated_stake.drep / delegated_stake.total_lovelace
+            fractions.Fraction(delegated_stake.drep, delegated_stake.total_lovelace)
         ) < drep_constitution_threshold
         is_spo_total_below_threshold = (
-            delegated_stake.spo / delegated_stake.total_lovelace
+            fractions.Fraction(delegated_stake.spo, delegated_stake.total_lovelace)
         ) < spo_constitution_threshold
 
         # Auth keys for CC members

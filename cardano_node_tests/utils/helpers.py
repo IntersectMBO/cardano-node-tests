@@ -1,6 +1,7 @@
 import argparse
 import contextlib
 import datetime
+import fractions
 import functools
 import hashlib
 import inspect
@@ -446,6 +447,17 @@ def validate_dict_values(
             errors.append(msg)
 
     return errors
+
+
+def get_rational_pparam(pparam: int | float | str | dict[str, int]) -> fractions.Fraction:
+    """Return a rational parameter as an exact fraction.
+
+    Accept numbers, fraction strings, and numerator/denominator dictionaries.
+    Convert floats through their decimal strings to avoid binary rounding artifacts.
+    """
+    if isinstance(pparam, dict):
+        return fractions.Fraction(pparam["numerator"], pparam["denominator"])
+    return fractions.Fraction(str(pparam))
 
 
 def get_pool_param(key: str, *, pool_params: dict) -> tp.Any:

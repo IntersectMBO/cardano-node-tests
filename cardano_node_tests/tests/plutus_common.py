@@ -95,6 +95,14 @@ SIGNING_KEY_GOLDEN_EXTENDED = DATA_DIR / "golden_extended.skey"
 
 @dataclasses.dataclass(frozen=True, order=True)
 class ExecutionCost:
+    """A script's integer execution budget and expected execution fee, not unit prices.
+
+    Attributes:
+        per_time: Number of execution steps consumed by the script.
+        per_space: Number of memory units consumed by the script.
+        fixed_cost: Expected script execution fee in Lovelace.
+    """
+
     per_time: int
     per_space: int
     fixed_cost: int
@@ -945,11 +953,30 @@ def check_plutus_costs(
         raise AssertionError("\n".join(errors))
 
 
-def get_cost_per_unit(protocol_params: dict) -> ExecutionCost:
-    """Get execution cost per unit in Lovelace."""
-    return ExecutionCost(
-        per_time=protocol_params["executionUnitPrices"]["priceSteps"] or 0,
-        per_space=protocol_params["executionUnitPrices"]["priceMemory"] or 0,
+@dataclasses.dataclass(frozen=True, order=True)
+class CostPerUnit:
+    """Protocol prices used to convert an execution budget into a Lovelace fee.
+
+    Attributes:
+        per_time: Lovelace price per execution step, which can be fractional.
+        per_space: Lovelace price per memory unit, which can be fractional.
+        fixed_cost: Protocol's fixed transaction fee (txFeeFixed), not a script fee.
+    """
+
+    per_time: float
+    per_space: float
+    fixed_cost: int
+
+
+def get_cost_per_unit(protocol_params: dict) -> CostPerUnit:
+    """Get execution prices in Lovelace from numeric or rational-object parameters."""
+    return CostPerUnit(
+        per_time=float(
+            helpers.get_rational_pparam(protocol_params["executionUnitPrices"]["priceSteps"] or 0)
+        ),
+        per_space=float(
+            helpers.get_rational_pparam(protocol_params["executionUnitPrices"]["priceMemory"] or 0)
+        ),
         fixed_cost=protocol_params["txFeeFixed"] or 0,
     )
 

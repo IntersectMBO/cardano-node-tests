@@ -229,7 +229,7 @@ class TestLeiosPParamsGov:
         quorum = fractions.Fraction(
             min(pool_shares.values()) * fractions.Fraction(QUORUM_STAKE_SHARE_RATIO)
         ).limit_denominator(1000)
-        init_quorum = conway_common.get_rational_pparam(
+        init_quorum = helpers.get_rational_pparam(
             cluster.g_query.get_protocol_params()["leiosQuorumStakeThreshold"]
         )
         assert 0 < quorum < init_quorum, (
