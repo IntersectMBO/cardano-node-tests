@@ -89,6 +89,11 @@ export SCHEDULING_LOG="${WORKDIR}/scheduling.log"
 
 export DEV_CLUSTER_RUNNING=true FORBID_RESPIN=true CLUSTERS_COUNT=1 TEST_THREADS=10 NUM_POOLS="${NUM_POOLS:-4}"
 
+# A local run has no CI run id. Give all its steps one id, so the tcache
+# stores them as one testrun.
+TCACHE_RUN_ID="local-$(TZ=UTC printf '%(%Y%m%dT%H%M%SZ)T' -1)-$(printf '%08x' "$SRANDOM")"
+export TCACHE_RUN_ID
+
 echo "::endgroup::"  # end group for "Script setup"
 
 echo "::group::Nix env setup step1"

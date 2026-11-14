@@ -3,3 +3,4 @@ DBSYNC_REV=13.8.0.0
 DBSYNC_TAR_URL=https://github.com/IntersectMBO/cardano-db-sync/releases/download/13.8.0.0/cardano-db-sync-13.8.0.0-linux-amd64.tar.gz
 SMASH=true
 DBSYNC_SKIP_INDEXES=true
+TCACHE_TESTRUN_NAME=nightly-dbsync

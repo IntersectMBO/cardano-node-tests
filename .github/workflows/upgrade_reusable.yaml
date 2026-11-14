@@ -39,6 +39,10 @@ on:
         required: false
       COPILOT_GITHUB_TOKEN:
         required: false
+      TCACHE_BASIC_AUTH:
+        required: false
+      TCACHE_URL:
+        required: false
 
 env:
   PY_COLORS: "1"
@@ -83,6 +87,9 @@ jobs:
         id: testing-step
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+          TCACHE_URL: ${{ secrets.TCACHE_URL }}
+          ENABLE_TCACHE_STATS: ${{ vars.ENABLE_TCACHE_STATS }}
         run: |
           # env
           echo "::group::Script setup"
