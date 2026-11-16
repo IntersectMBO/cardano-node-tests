@@ -26,9 +26,9 @@ classifiers = [
 dependencies = [
     "allure-pytest (>=2.16.0,<3.0.0)",
     "cardano-clusterlib (>=0.10.9rc2,<0.11.0)",
-    "cardonnay (>=0.4.12rc1,<0.5.0)",
+    "cardonnay (>=0.4.12rc2,<0.5.0)",
     "cbor2 (>=6.1.4,<7.0.0)",
-    "filelock (>=3.32.5,<4.0.0)",
+    "filelock (>=4.2.1,<5.0.0)",
     "hypothesis (>=6.167.1,<7.0.0)",
     "psycopg2-binary (>=2.9.12,<3.0.0)",
     "pydantic (>=2.13.5,<3.0.0)",
@@ -77,7 +77,7 @@ docs = [
 ]
 
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=84.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
