@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cardano Sync Results</title>
+  <!-- The run list published by the testing-results-cache service. Its graphs and zips are served from the same origin under /sync-analyzer/. -->
+  <meta name="sync-analyzer-data" content="https://dashboard.example.org/sync_analyzer.json">
+  <link rel="stylesheet" href="sync-analyzer.css">
+</head>
+<body>
+<main>
+  <div class="head">
+    <div>
+      <h1>Node sync, release by release</h1>
+      <p>A full sync of a Cardano network from genesis, one run per node version. Pick up to four runs to see them on the same graphs.</p>
+    </div>
+    <p class="links"><a href="../dashboard/">Testing dashboard</a> · <a href="../test_results/sync_tests.html">Sync test reports</a></p>
+  </div>
+
+  <section class="panel controls" aria-label="Pick runs">
+    <div class="ctl">
+      <span class="ctl-label">Network</span>
+      <div class="seg" role="group" aria-label="Network" id="networks"></div>
+    </div>
+    <div class="versions" id="versions"></div>
+    <div class="actions">
+      <button id="add" type="button" class="secondary">+ Add version</button>
+      <button id="gen" type="button">Generate graphs</button>
+      <span class="hint" id="hint"></span>
+    </div>
+  </section>
+
+  <section aria-label="Selected runs">
+    <h2>Selected runs</h2>
+    <div class="runs" id="runs"></div>
+  </section>
+
+  <section class="panel" aria-label="Graphs">
+    <div class="panel-head">
+      <h2 id="graphs-title">Graphs</h2>
+      <span class="foot">Drawn on the server by the sync tests' own graph script. The line graphs use one colour per run, oldest first.</span>
+    </div>
+    <div id="graphs"><div class="empty">Pick one to four versions, then Generate graphs.</div></div>
+  </section>
+
+  <section aria-label="Numbers">
+    <h2>Numbers</h2>
+    <div class="numbers" id="numbers"><div class="empty">The tables fill in with the graphs.</div></div>
+  </section>
+
+  <section class="panel reports" aria-label="Published reports">
+    <div class="panel-head">
+      <h2>Published sync reports</h2>
+      <span class="foot">Written by the test engineers after a release sync, on this site. This page lists them; it holds no report text.</span>
+    </div>
+    <div class="count" id="reports-count">–</div>
+    <ul id="reports"><li class="meta">Loading…</li></ul>
+    <a class="all" href="../test_results/sync_tests.html">All sync test results</a>
+  </section>
+
+  <p class="foot"><span id="updated">Loading…</span> · <a href="https://github.com/IntersectMBO/cardano-sync-tests">IntersectMBO/cardano-sync-tests</a> · <a href="https://github.com/mkoura/testing-results-cache">mkoura/testing-results-cache</a></p>
+</main>
+<script src="sync-analyzer.js"></script>
+</body>
+</html>
