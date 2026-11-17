@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cardano Sync Results</title>
+  <!-- The run list published by the testing-results-cache service. Its graphs and zips are served from the same origin under /sync-analyzer/. -->
+  <meta name="sync-analyzer-data" content="https://dashboard.example.org/sync_analyzer.json">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="sync-analyzer.css">
+</head>
+<body>
+<main>
+  <div class="bar">
+    <h1>Sync results</h1>
+    <span class="lock">node sync · graphs, numbers, downloads and a list of published reports · no commentary</span>
+  </div>
+
+  <section class="controls" aria-label="Pick runs">
+    <div class="ctl">
+      <span class="ctl-label">Environment</span>
+      <div class="seg" role="group" aria-label="Environment" id="networks"></div>
+    </div>
+    <div class="versions" id="versions"></div>
+    <div class="actions">
+      <button id="add" type="button" class="secondary">+ Add version</button>
+      <button id="gen" type="button">Generate graphs</button>
+      <span class="hint" id="hint"></span>
+    </div>
+  </section>
+
+  <section aria-label="Selected runs">
+    <h2>Selected runs</h2>
+    <div class="runs" id="runs"></div>
+  </section>
+
+  <section aria-label="Graphs">
+    <h2 id="graphs-title">Graphs</h2>
+    <div id="graphs"><div class="empty">Pick one to four versions, then Generate graphs.</div></div>
+  </section>
+
+  <section aria-label="Numbers">
+    <h2>Numbers</h2>
+    <div class="numbers" id="numbers"><div class="empty">The tables fill in with the graphs.</div></div>
+  </section>
+
+  <section class="reports" aria-label="Published reports">
+    <h2>Published sync reports</h2>
+    <div class="count" id="reports-count">–</div>
+    <p class="hint">Vetted reports on the official testing results site. Newest first. This page lists them, it does not write them.</p>
+    <ul id="reports"><li class="meta">Loading…</li></ul>
+    <a class="all" href="../test_results/sync_tests.html">All sync test results</a>
+  </section>
+
+  <p class="foot"><span id="updated">Loading…</span> · <a href="../dashboard/">Testing dashboard</a> · <a href="https://github.com/IntersectMBO/cardano-sync-tests">cardano-sync-tests</a> · <a href="https://github.com/mkoura/testing-results-cache">testing-results-cache</a></p>
+</main>
+<script src="sync-analyzer.js"></script>
+</body>
+</html>
