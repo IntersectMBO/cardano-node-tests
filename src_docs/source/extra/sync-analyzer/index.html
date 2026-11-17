@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cardano Sync Results</title>
+  <!-- The run list published by the testing-results-cache service. Its graphs and zips are served from the same origin under /sync-analyzer/. -->
+  <meta name="sync-analyzer-data" content="https://dashboard.example.org/sync_analyzer.json">
+  <link rel="stylesheet" href="sync-analyzer.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="left" aria-label="Pick runs">
+    <div class="brand"><b>Sync results</b><span>Node sync runs compared</span></div>
+
+    <div class="ctl">
+      <span class="ctl-label">Network</span>
+      <div class="seg" role="group" aria-label="Network" id="networks"></div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Versions</span>
+      <div class="versions" id="versions"></div>
+      <div class="actions">
+        <button id="add" type="button" class="secondary">+ Add version</button>
+        <button id="gen" type="button">Generate graphs</button>
+      </div>
+      <p class="hint" id="hint"></p>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Theme</span>
+      <div class="seg" role="group" aria-label="Theme">
+        <button type="button" data-theme-choice="system" aria-pressed="true">System</button>
+        <button type="button" data-theme-choice="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+
+    <p class="foot"><a href="../dashboard/">Testing dashboard</a> · <a href="../test_results/sync_tests.html">Sync test reports</a></p>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <h1>Node sync, release by release</h1>
+      <p>A full sync of a Cardano network from genesis, one run per node version. Pick up to four runs to see them on the same graphs.</p>
+    </div>
+
+    <section aria-label="Selected runs">
+      <h2>Selected runs</h2>
+      <div class="runs" id="runs"></div>
+    </section>
+
+    <section class="panel" aria-label="Graphs">
+      <div class="panel-head">
+        <h2 id="graphs-title">Graphs</h2>
+        <span class="foot">Drawn on the server by the sync tests' own graph script. The line graphs use one colour per run, oldest first.</span>
+      </div>
+      <div id="graphs"><div class="empty">Pick one to four versions, then Generate graphs.</div></div>
+    </section>
+
+    <section aria-label="Numbers">
+      <h2>Numbers</h2>
+      <div class="numbers" id="numbers"><div class="empty">The tables fill in with the graphs.</div></div>
+    </section>
+  </main>
+
+  <aside class="right" aria-label="Reports and notes">
+    <section class="card reports">
+      <h3>Published sync reports</h3>
+      <div class="count" id="reports-count">–</div>
+      <p class="foot">Written by the test engineers after a release sync, on this site. This page lists them; it holds no report text.</p>
+      <ul id="reports"><li class="meta">Loading…</li></ul>
+      <p class="foot"><a href="../test_results/sync_tests.html">All sync test results</a></p>
+    </section>
+
+    <section class="card about">
+      <h3>About these numbers</h3>
+      <dl>
+        <div><dt>Few runs per version</dt><dd>Most versions were synced once, so run-to-run noise is not measured. Treat small deltas as unconfirmed until a version has been synced twice.</dd></div>
+        <div><dt>The chain grows</dt><dd>Runs are weeks apart on a longer chain. Chain size is in the run facts; seconds per GB of chain compares runs of different lengths.</dd></div>
+        <div><dt>Slots per second</dt><dd>An era's slot count divided by its sync time. It does not depend on the era's length, so it compares across eras and runs.</dd></div>
+        <div><dt>Memory</dt><dd>The RAM graph shows the heap. RSS peak and end are in the run facts.</dd></div>
+        <div><dt>Slow epochs</dt><dd>Epochs that took far longer than the epochs around them. An epoch slow in every run is a property of the chain, not of a version.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card about">
+      <h3>Open source</h3>
+      <dl>
+        <div><dt>Sync tests</dt><dd><a href="https://github.com/IntersectMBO/cardano-sync-tests">IntersectMBO/cardano-sync-tests</a></dd></div>
+        <div><dt>Results service</dt><dd><a href="https://github.com/mkoura/testing-results-cache">mkoura/testing-results-cache</a></dd></div>
+      </dl>
+      <p class="foot" id="updated">Loading…</p>
+    </section>
+  </aside>
+</div>
+<script src="sync-analyzer.js"></script>
+</body>
+</html>
