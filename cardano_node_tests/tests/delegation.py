@@ -18,6 +18,9 @@ from cardano_node_tests.utils import node_consistency
 
 LOGGER = logging.getLogger(__name__)
 
+FIRST_REWARD_OFFSET = 4
+FIRST_REWARD_RETRY_EPOCHS = 1
+
 PREVIEW_POOL_IDS = (
     "pool1ynfnjspgckgxjf2zeye8s33jz3e3ndk9pcwp0qzaupzvvd8ukwt",  # GRADA
     "pool18pn6p9ef58u4ga3wagp44qhzm8f6zncl57g6qgh0pk3yytwz54h",  # ADACT
@@ -173,6 +176,24 @@ def db_check_delegation(
 
     if check_registration:
         assert pool_user.stake.address in db_record.stake_registration
+
+
+def wait_for_first_rewards(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    stake_addresses: tp.Sequence[str],
+    deleg_epoch: int,
+    padding_seconds: int = 10,
+) -> tuple[int, dict[str, int]]:
+    """Wait for a positive balance, allowing a zero payout in the first eligible epoch."""
+    start_epoch = deleg_epoch + FIRST_REWARD_OFFSET
+    return clusterlib_utils.wait_for_reward_balances(
+        cluster_obj=cluster_obj,
+        stake_addresses=stake_addresses,
+        start_epoch=start_epoch,
+        stop_epoch=start_epoch + FIRST_REWARD_RETRY_EPOCHS,
+        padding_seconds=padding_seconds,
+    )
 
 
 def delegate_stake_addr(

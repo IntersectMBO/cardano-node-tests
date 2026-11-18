@@ -77,7 +77,7 @@ class TestNoRewards:
         Pools without BLS keys are updated using Conway-era certificates, also in Dijkstra+.
 
         * Delegate stake address
-        * Wait for first reward
+        * Wait for first positive reward
         * Increase the needed pledge amount - update the pool parameters by resubmitting the pool
           registration certificate - the funds are now lower than what is needed by the stake pool
         * Check that NO new rewards were received by those delegating to the pool
@@ -87,7 +87,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=16)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=17)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -137,11 +137,13 @@ class TestNoRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        assert cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
+        stake_address = delegation_out.pool_user.stake.address
+        reward_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[stake_address], deleg_epoch=init_epoch
+        )
+        assert reward_balances[stake_address], (
+            f"User of pool '{pool_name}' hasn't received any rewards by epoch {reward_epoch}"
+        )
 
         # Make sure we have enough time to finish the pool update in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -262,7 +264,7 @@ class TestNoRewards:
         delegate to that pool receive rewards.
 
         * Delegate stake address
-        * Wait for first reward
+        * Wait for first positive reward
         * Withdraw part of the pledge - the funds are lower than what is needed by the stake pool
         * Check that NO new rewards were received by those delegating to the pool
         * Check that pool owner is also NOT receiving rewards
@@ -271,7 +273,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=16)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=17)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -298,11 +300,13 @@ class TestNoRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        withdrawal_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        assert cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
+        stake_address = delegation_out.pool_user.stake.address
+        withdrawal_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[stake_address], deleg_epoch=init_epoch
+        )
+        assert reward_balances[stake_address], (
+            f"User of pool '{pool_name}' hasn't received any rewards by epoch {withdrawal_epoch}"
+        )
 
         # Load pool data
         loaded_data = clusterlib_utils.load_registered_pool_data(
@@ -430,7 +434,7 @@ class TestNoRewards:
         neither pool owners nor those who delegate to that pool receive rewards.
 
         * Delegate stake address
-        * Wait for first reward
+        * Wait for first positive reward
         * Deregister stake address - owner's stake is lower than pledge
         * Check that the key deposit was returned
         * Check that NO new rewards were received by those delegating to the pool
@@ -441,7 +445,7 @@ class TestNoRewards:
         * Check that pool owner is also receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=15)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=16)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_owner = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["stake"])
@@ -468,11 +472,13 @@ class TestNoRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        dereg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        assert cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
+        stake_address = delegation_out.pool_user.stake.address
+        dereg_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[stake_address], deleg_epoch=init_epoch
+        )
+        assert reward_balances[stake_address], (
+            f"User of pool '{pool_name}' hasn't received any rewards by epoch {dereg_epoch}"
+        )
 
         # Withdraw rewards from owner's stake address if there are any
         if cluster.g_query.get_stake_addr_info(pool_owner.stake.address).reward_account_balance:
@@ -635,7 +641,7 @@ class TestNoRewards:
         rewards.
 
         * Delegate stake address
-        * Wait for first reward
+        * Wait for first positive reward
         * Withdraw pool rewards to payment address
         * Deregister the pool reward address
         * Check that the key deposit was returned
@@ -645,7 +651,7 @@ class TestNoRewards:
         * Check that pool owner is receiving rewards
         """
         cluster, pool_name = cluster_lock_pool_use_rewards
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=11)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=12)
 
         pool_rec = cluster_manager.cache.addrs_data[pool_name]
         pool_reward = clusterlib.PoolUser(payment=pool_rec["payment"], stake=pool_rec["reward"])
@@ -672,11 +678,13 @@ class TestNoRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        dereg_epoch = cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        assert cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance, f"User of pool '{pool_name}' hasn't received any rewards"
+        stake_address = delegation_out.pool_user.stake.address
+        dereg_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[stake_address], deleg_epoch=init_epoch
+        )
+        assert reward_balances[stake_address], (
+            f"User of pool '{pool_name}' hasn't received any rewards by epoch {dereg_epoch}"
+        )
 
         # Withdraw pool rewards to payment address
         # use `transaction build` if possible

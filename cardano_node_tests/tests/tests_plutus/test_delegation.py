@@ -719,7 +719,7 @@ class TestDelegateAddr:
         if plutus_version == "v1" and use_reference_script:
             pytest.skip("PlutusV1 doesn't support reference scripts")
         # Max over params; scenarios that skip the rewards check wait ~0 epochs
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
 
         collateral_fund_deleg = 1_500_000_000
         collateral_fund_withdraw = 1_500_000_000
@@ -859,12 +859,15 @@ class TestDelegateAddr:
         ) or (not use_reference_script and build_method == clusterlib_utils.BuildMethods.BUILD)
 
         if not skip_rewards_check:
-            LOGGER.info("Waiting 4 epochs for first reward.")
-            cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-            if not cluster.g_query.get_stake_addr_info(
-                pool_user.stake.address
-            ).reward_account_balance:
-                reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
+            reward_epoch, reward_balances = delegation.wait_for_first_rewards(
+                cluster_obj=cluster,
+                stake_addresses=[pool_user.stake.address],
+                deleg_epoch=init_epoch,
+            )
+            if not reward_balances[pool_user.stake.address]:
+                reward_error = (
+                    f"User of pool '{pool_id}' hasn't received any rewards by epoch {reward_epoch}"
+                )
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
@@ -945,7 +948,7 @@ class TestDelegateAddr:
         #  - cardano-cli 299: Cannot de-register Plutus script stake address
 
         cluster, pool_id = cluster_lock_42stake
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5)
         temp_template = common.get_test_id(cluster)
 
         collateral_fund_reg = 1_500_000_000
@@ -1098,10 +1101,13 @@ class TestDelegateAddr:
 
         reward_error = ""
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        if not cluster.g_query.get_stake_addr_info(pool_user.stake.address).reward_account_balance:
-            reward_error = f"User of pool '{pool_id}' hasn't received any rewards."
+        reward_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[pool_user.stake.address], deleg_epoch=init_epoch
+        )
+        if not reward_balances[pool_user.stake.address]:
+            reward_error = (
+                f"User of pool '{pool_id}' hasn't received any rewards by epoch {reward_epoch}"
+            )
 
         # Make sure we have enough time to finish deregistration in one epoch
         clusterlib_utils.wait_for_epoch_interval(
