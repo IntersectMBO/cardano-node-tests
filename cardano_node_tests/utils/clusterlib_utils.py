@@ -528,13 +528,52 @@ def get_epochs_to_rewards(*, cluster_obj: clusterlib.ClusterLib) -> int:
 
 
 def wait_for_rewards(*, cluster_obj: clusterlib.ClusterLib) -> None:
-    """Wait until `FIRST_REWARDS_EPOCH`, if necessary, for first reward distribution."""
+    """Wait until the cluster's first reward distribution epoch, if necessary.
+
+    This does not check individual balances. Use `wait_for_reward_balances` for that.
+    """
     new_epochs = get_epochs_to_rewards(cluster_obj=cluster_obj)
     if not new_epochs:
         return
 
     LOGGER.info(f"Waiting {new_epochs} epoch(s) to get first rewards.")
     cluster_obj.wait_for_epoch(epoch_no=FIRST_REWARDS_EPOCH, padding_seconds=10)
+
+
+def wait_for_reward_balances(
+    *,
+    cluster_obj: clusterlib.ClusterLib,
+    stake_addresses: abc.Sequence[str],
+    start_epoch: int,
+    stop_epoch: int,
+    padding_seconds: int = 10,
+) -> tuple[int, dict[str, int]]:
+    """Check stake reward balances over an inclusive epoch window.
+
+    Returns:
+        The first epoch in which all addresses have a nonzero balance, or the
+        final epoch if the window ends first, and the balances in that epoch.
+
+    Raises:
+        ValueError: The epoch window is empty or no addresses were supplied.
+    """
+    if start_epoch > stop_epoch or not stake_addresses:
+        msg = "Reward wait requires a nonempty epoch window and at least one stake address"
+        raise ValueError(msg)
+
+    balances: dict[str, int] = {}
+    for epoch in range(start_epoch, stop_epoch + 1):
+        cluster_obj.wait_for_epoch(
+            epoch_no=epoch, padding_seconds=padding_seconds, future_is_ok=False
+        )
+        balances = {
+            addr: cluster_obj.g_query.get_stake_addr_info(addr).reward_account_balance
+            for addr in stake_addresses
+        }
+        LOGGER.info("Stake reward balances in epoch %s: %s", epoch, balances)
+        if all(balances.values()):
+            break
+    return epoch, balances
 
 
 def get_chain_account_state(*, ledger_state: dict) -> ChainAccount:

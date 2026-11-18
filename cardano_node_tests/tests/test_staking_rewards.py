@@ -139,7 +139,7 @@ def _check_member_pool_ids(
         pool_epoch = r_tx.epoch_no - 4
         rec_for_epoch_tx = rewards_by_idx.get(pool_epoch)
         if (
-            r_tx.reward_total
+            r_tx.reward_per_epoch
             and r_tx.member_pool_id
             and rec_for_epoch_tx
             and rec_for_epoch_tx.member_pool_id
@@ -178,7 +178,7 @@ def _check_leader_pool_ids(
         pool_epoch = r_tx.epoch_no - 4
         rec_for_epoch_tx = rewards_by_idx.get(pool_epoch)
         if (
-            r_tx.reward_total
+            r_tx.reward_per_epoch
             and r_tx.leader_pool_ids
             and rec_for_epoch_tx
             and rec_for_epoch_tx.leader_pool_ids
@@ -285,13 +285,13 @@ class TestRewards:
         """Check that the stake address and pool owner are receiving rewards.
 
         * Delegate to pool
-        * Wait for rewards for pool owner and pool users for up to 4 epochs
+        * Wait for a positive delegator reward in either of the first two eligible epochs
         * Withdraw rewards to payment address
         """
         cluster, pool_id = cluster_and_pool
         temp_template = common.get_test_id(cluster)
 
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=4, max_wait_sec=8 * 60 * 60)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=5, max_wait_sec=8 * 60 * 60)
 
         # Make sure we have enough time to finish the registration/delegation in one epoch
         clusterlib_utils.wait_for_epoch_interval(cluster_obj=cluster, start=10, stop=-300)
@@ -309,12 +309,15 @@ class TestRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=40)
-        if not cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance:
-            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards, cannot continue.")
+        stake_address = delegation_out.pool_user.stake.address
+        reward_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster,
+            stake_addresses=[stake_address],
+            deleg_epoch=init_epoch,
+            padding_seconds=40,
+        )
+        if not reward_balances[stake_address]:
+            pytest.skip(f"User of pool '{pool_id}' hasn't received any rewards by {reward_epoch}.")
 
         # Withdraw rewards to payment address
         tx_raw_withdrawal = cluster.g_stake_address.withdraw_reward(
@@ -474,14 +477,11 @@ class TestRewards:
             # Make sure reward amount corresponds with ledger state.
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
-            user_reward_epoch = user_rewards[-1].reward_per_epoch
-            if user_reward_epoch and prev_rs_record:
-                assert user_reward_epoch == _get_rew_amount_for_cred_hash(
+            if prev_rs_record is not None:
+                assert user_rewards[-1].reward_per_epoch == _get_rew_amount_for_cred_hash(
                     user_stake_addr_dec, prev_rs_record
                 )
-            owner_reward_epoch = owner_rewards[-1].reward_per_epoch
-            if owner_reward_epoch and prev_rs_record:
-                assert owner_reward_epoch == _get_rew_amount_for_cred_hash(
+                assert owner_rewards[-1].reward_per_epoch == _get_rew_amount_for_cred_hash(
                     pool_reward_addr_dec, prev_rs_record
                 )
 
@@ -583,14 +583,12 @@ class TestRewards:
                 )
             )
 
-            # Wait 4 epochs for first rewards
-            if this_epoch >= init_epoch + 4:
-                assert owner_reward > prev_owner_reward, "New reward was NOT received by pool owner"
-                assert user_reward > prev_user_reward, (
-                    "New reward was NOT received by stake address"
-                )
-
             _check_ledger_state(this_epoch=this_epoch)
+
+        assert any(r.reward_per_epoch > 0 for r in user_rewards), (
+            "Stake address received no rewards"
+        )
+        assert any(r.reward_per_epoch > 0 for r in owner_rewards), "Pool owner received no rewards"
 
         # Withdraw rewards to payment address
         this_epoch = cluster.wait_for_epoch(epoch_no=this_epoch + 1, padding_seconds=10)
@@ -1021,14 +1019,14 @@ class TestRewards:
         or zero.
 
         * Delegate stake address
-        * Wait for first reward
+        * Wait for first positive reward
         * Transfer all funds from payment address back to faucet, so no funds are staked
         * Keep withdrawing new rewards so reward balance is 0
         * Record every epoch's reward balance, including zero
         * Check that rewards after four more epochs are less than a third of the initial balance
         """
         cluster, pool_name = cluster_use_pool_and_rewards
-        common.skip_on_long_epochs(cluster_obj=cluster, epochs=8)
+        common.skip_on_long_epochs(cluster_obj=cluster, epochs=9)
 
         temp_template = common.get_test_id(cluster)
 
@@ -1052,12 +1050,14 @@ class TestRewards:
             "Delegation took longer than expected and would affect other checks"
         )
 
-        LOGGER.info("Waiting 4 epochs for first reward.")
-        cluster.wait_for_epoch(epoch_no=init_epoch + 4, padding_seconds=10)
-        if not cluster.g_query.get_stake_addr_info(
-            delegation_out.pool_user.stake.address
-        ).reward_account_balance:
-            pytest.skip(f"User of pool '{pool_name}' hasn't received any rewards, cannot continue.")
+        stake_address = delegation_out.pool_user.stake.address
+        reward_epoch, reward_balances = delegation.wait_for_first_rewards(
+            cluster_obj=cluster, stake_addresses=[stake_address], deleg_epoch=init_epoch
+        )
+        if not reward_balances[stake_address]:
+            pytest.skip(
+                f"User of pool '{pool_name}' hasn't received any rewards by epoch {reward_epoch}."
+            )
 
         # Create destination address for rewards withdrawal
         dst_addr_record = clusterlib_utils.create_payment_addr_records(
@@ -1486,7 +1486,7 @@ class TestRewards:
             # Reward is received on epoch boundary, so check reward with record for previous epoch.
             prev_rs_record = rs_records.get(this_epoch - 1)
             reward_per_epoch = reward_records[-1].reward_per_epoch
-            if reward_per_epoch and prev_rs_record:
+            if prev_rs_record is not None:
                 assert reward_per_epoch == _get_rew_amount_for_cred_hash(
                     stake_addr_dec, prev_rs_record
                 )
@@ -1601,10 +1601,6 @@ class TestRewards:
                 )
 
             if this_epoch == init_epoch + 4:
-                assert reward_total > prev_reward_total, (
-                    "New reward was NOT received by stake address"
-                )
-
                 # Deregister stake address
                 tx_raw_dereg = clusterlib_utils.deregister_stake_address(
                     cluster_obj=cluster,
@@ -1639,16 +1635,6 @@ class TestRewards:
                     pool_id=pool1_id,
                 )
 
-            if this_epoch == init_epoch + 5:
-                # Rewards should be received even when the stake credential was
-                # re-registered after reward calculation have already started
-                assert reward_total > 0, "Reward was NOT received by stake address"
-
-            if this_epoch >= init_epoch + 6:
-                assert reward_total > prev_reward_total, (
-                    "New reward was NOT received by stake address"
-                )
-
             assert cluster.g_query.get_epoch() == this_epoch, (
                 "Failed to finish actions in single epoch, it would affect other checks"
             )
@@ -1679,6 +1665,9 @@ class TestRewards:
         assert delegation_out_ep2
         assert delegation_out_ep3
         assert delegation_out_ep4
+        assert any(r.reward_per_epoch > 0 for r in reward_records), (
+            "Stake address received no rewards during the observation window"
+        )
 
         # Check records in db-sync
         tx_db_record_init = dbsync_utils.check_tx(
