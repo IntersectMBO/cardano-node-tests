@@ -296,6 +296,7 @@ def search_voting_activity(
     logfile: pl.Path,
     within_epoch: bool = True,
     full_window: bool = False,
+    include_not_on_committee: bool = False,
 ) -> tuple[set[str], list[str]]:
     """Search a pool log for a cast vote, an EB announcement and a declined vote.
 
@@ -312,6 +313,8 @@ def search_voting_activity(
         full_window: Keep searching for the whole window even after a vote was found.
             Needed when the absence of votes is what is being checked, as the evidence
             that there was something to vote on can show up after the first message.
+        include_not_on_committee: Also look for the trace emitted when the node
+            has no key matching a seat, on versions that report `NotOnCommittee`.
 
     Returns:
         The messages that were found, and the problems that got in the way of the search.
@@ -334,6 +337,7 @@ def search_voting_activity(
             leios.MSG_VOTED,
             leios.MSG_ANNOUNCEMENT_ACCEPTED,
             *leios.NOT_VOTED_KEY_MSGS,
+            *([leios.NOT_ON_COMMITTEE_MSG] if include_not_on_committee else []),
         ],
         deadline=time.monotonic() + window_sec,
         stop_on=() if full_window else (leios.MSG_VOTED,),
@@ -1389,7 +1393,11 @@ class TestBlsKeyRotationVoting:
             cluster_obj=cluster, key_file=orig_skey_file, key_pair=node_bls_key_pair
         )
         stale_found, stale_problems = search_voting_activity(
-            cluster_obj=cluster, logfile=pool_log, within_epoch=False, full_window=True
+            cluster_obj=cluster,
+            logfile=pool_log,
+            within_epoch=False,
+            full_window=True,
+            include_not_on_committee=True,
         )
 
         # The cut over an operator does once the rotation is seated: drop the old key
@@ -1419,7 +1427,9 @@ class TestBlsKeyRotationVoting:
                 f"The pool '{pool_name}' voted while its node held only the old BLS key, "
                 "which no longer matches its committee seat."
             )
-        elif not stale_found & frozenset(leios.NOT_VOTED_KEY_MSGS):
+        # The ledger seat was checked above. Some node revisions report
+        # NotOnCommittee when none of the node's keys matches that seat.
+        elif not stale_found & frozenset(leios.NOT_VOTED_MSGS):
             # Without the pool declining to vote there may have been nothing to vote on,
             # and then the absence of votes says nothing
             stale_skip_reasons.append(

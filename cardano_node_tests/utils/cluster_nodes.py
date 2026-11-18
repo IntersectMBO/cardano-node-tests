@@ -411,8 +411,17 @@ def start_cluster(cmd: str, args: list[str]) -> clusterlib.ClusterLib:
 def restart_all_nodes(
     *, instance_num: int | None = None, delay: int = configuration.TX_SUBMISSION_DELAY
 ) -> None:
-    """Restart all Cardano nodes of the running cluster."""
+    """Restart all Cardano nodes and resume firehose if it was active."""
     LOGGER.info("Restarting all cluster nodes.")
+
+    # The firehose wrapper can exhaust its retry budget across planned restarts.
+    # Stop it first so the socket disconnect cannot trigger another retry.
+    firehose_active = configuration.ENABLE_TX_FIREHOSE and any(
+        s.name == "tx_firehose" and s.status in ("RUNNING", "STARTING")
+        for s in services_status(instance_num=instance_num)
+    )
+    if firehose_active:
+        services_action(["tx_firehose"], action="stop", instance_num=instance_num)
 
     try:
         run_supervisorctl(args=["restart", "nodes:"], instance_num=instance_num)
@@ -423,6 +432,9 @@ def restart_all_nodes(
     # Wait for nodes to start
     if delay > 0:
         time.sleep(delay)
+
+    if firehose_active:
+        services_action(["tx_firehose"], action="start", instance_num=instance_num)
 
 
 def services_action(
