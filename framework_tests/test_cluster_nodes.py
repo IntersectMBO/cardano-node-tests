@@ -267,3 +267,50 @@ class TestGetStalledNodes:
         assert not cluster_nodes.get_stalled_nodes(
             [_status("nodes:pool1")], state_dir=state_dir, now=1e9
         )
+
+
+@pytest.mark.parametrize(
+    ("enabled", "status", "resume"),
+    [
+        (True, "RUNNING", True),
+        (True, "STARTING", True),
+        (True, "STOPPED", False),
+        (True, "EXITED", False),
+        (True, None, False),
+        (False, None, False),
+    ],
+)
+def test_restart_all_nodes_firehose(
+    monkeypatch: pytest.MonkeyPatch, enabled: bool, status: str | None, resume: bool
+):
+    """Stop only active firehose services and resume them after the node startup delay."""
+    calls: list[tuple[str, ...]] = []
+
+    def _supervisorctl(
+        args: list[str], *, instance_num: int | None = None, ignore_fail: bool = False
+    ) -> bytes:
+        assert instance_num == 2
+        calls.append(tuple(args))
+        if args == ["status", "all"]:
+            assert ignore_fail
+            lines = ["nodes:pool1 RUNNING pid 1, uptime 0:01:00"]
+            if status:
+                lines.append(f"tx_firehose {status}")
+            return "\n".join(lines).encode()
+        return b""
+
+    monkeypatch.setattr(cluster_nodes.configuration, "ENABLE_TX_FIREHOSE", enabled)
+    monkeypatch.setattr(cluster_nodes, "run_supervisorctl", _supervisorctl)
+    monkeypatch.setattr(
+        cluster_nodes.time, "sleep", lambda delay: calls.append(("sleep", str(delay)))
+    )
+
+    cluster_nodes.restart_all_nodes(instance_num=2, delay=5)
+
+    expected = [("status", "all")] if enabled else []
+    if resume:
+        expected.append(("stop", "tx_firehose"))
+    expected.extend([("restart", "nodes:"), ("sleep", "5")])
+    if resume:
+        expected.append(("start", "tx_firehose"))
+    assert calls == expected
