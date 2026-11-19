@@ -1,1 +1,2 @@
 DBSYNC_SKIP_INDEXES=true
+TCACHE_TESTRUN_NAME=regression-dbsync

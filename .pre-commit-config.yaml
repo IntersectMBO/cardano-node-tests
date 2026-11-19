@@ -74,4 +74,4 @@ repos:
     # the full dependency graph.
     pass_filenames: false
     require_serial: true
-    args: [cardano_node_tests, framework_tests, scripts/count_test_results.py, src_docs/source/conf.py]
+    args: [cardano_node_tests, framework_tests, scripts/count_test_results.py, scripts/stats_json.py, src_docs/source/conf.py]
