@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cardano Test Runs</title>
+  <!-- The dashboard data published by the testing-results-cache service. -->
+  <meta name="dashboard-data" content="https://dashboard.example.org/dashboard.json">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="left" aria-label="Filters">
+    <div class="brand"><b>Cardano test runs</b><span>System-level testing</span></div>
+
+    <div class="ctl">
+      <span class="ctl-label">Time window</span>
+      <div class="seg" role="group" aria-label="Time window">
+        <button type="button" id="w7" data-days="7" aria-pressed="false">7 d</button>
+        <button type="button" id="w30" data-days="30" aria-pressed="true">30 d</button>
+        <button type="button" id="w90" data-days="90" aria-pressed="false">90 d</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Test type</span>
+      <div class="seg wrap" role="group" aria-label="Test type">
+        <button type="button" id="k-all" data-kind="all" aria-pressed="true">All</button>
+        <button type="button" id="k-reg" data-kind="regression" aria-pressed="false">Regression</button>
+        <button type="button" id="k-upg" data-kind="upgrade" aria-pressed="false">Upgrade</button>
+        <button type="button" id="k-nodesync" data-kind="node-sync" aria-pressed="false">Node sync</button>
+        <button type="button" id="k-dbsync" data-kind="db-sync" aria-pressed="false">db-sync</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Source</span>
+      <div class="seg" role="group" aria-label="Source">
+        <button type="button" id="s-all" data-source="all" aria-pressed="true">All</button>
+        <button type="button" id="s-ci" data-source="ci" aria-pressed="false">CI</button>
+        <button type="button" id="s-local" data-source="local" aria-pressed="false">Local</button>
+      </div>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Test runs</span>
+      <ul class="runlist" id="runlist"></ul>
+    </div>
+
+    <div class="ctl">
+      <span class="ctl-label">Theme</span>
+      <div class="seg" role="group" aria-label="Theme">
+        <button type="button" id="th-system" data-theme-choice="system" aria-pressed="true">System</button>
+        <button type="button" id="th-light" data-theme-choice="light" aria-pressed="false">Light</button>
+        <button type="button" id="th-dark" data-theme-choice="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="head">
+      <h1 id="heading">Cardano testing at a glance</h1>
+      <p id="subheading">System-level tests run against Cardano node builds and releases.</p>
+    </div>
+
+    <section class="tiles" aria-label="Totals">
+      <div class="tile"><span class="label">Test runs</span><span class="value" id="t-runs">–</span><span class="hint" id="t-runs-hint"></span><span class="hint all" id="t-runs-all"></span></div>
+      <div class="tile"><span class="label">Tests executed</span><span class="value" id="t-cases">–</span><span class="hint">skipped tests not counted</span><span class="hint all" id="t-cases-all"></span></div>
+      <div class="tile"><span class="label">Test time</span><span class="value" id="t-time">–</span><span class="hint">wall clock, summed</span><span class="hint all" id="t-time-all"></span></div>
+      <div class="tile"><span class="label">CLI invocations</span><span class="value" id="t-cli">–</span><span class="hint" id="t-cli-hint"></span><span class="hint all" id="t-cli-all"></span></div>
+    </section>
+
+    <section class="about-tests" aria-label="What we test">
+      <div class="card" data-about="regression">
+        <h3>Regression testing</h3>
+        <p>End-to-end tests of cardano-node and cardano-cli on a local Cardano testnet. They run every night against the latest node from the master branch, in several setups, and on demand for each node release.</p>
+      </div>
+      <div class="card" data-about="upgrade">
+        <h3>Upgrade testing</h3>
+        <p>One run in three steps. Step 1 starts a cluster on the released node and runs the tests. Step 2 upgrades all nodes but one pool, so old and new versions run side by side, and runs the tests again. Step 3 completes the upgrade, with a hard fork when one is due, and runs them a third time.</p>
+      </div>
+      <div class="card" data-about="node-sync db-sync">
+        <h3>Sync testing</h3>
+        <p>A full sync of a Cardano network from genesis on one machine, with the time per era, memory and CPU recorded. Node sync runs the node alone. db-sync also runs cardano-db-sync against that node, starting once the node has reached the Shelley era, and syncs the database as well.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="sync" aria-label="Sync tests" hidden>
+      <div class="impact-head">
+        <h2>Sync tests</h2>
+        <span class="foot">Sync time by network, and how long a mainnet sync takes per node release</span>
+      </div>
+      <section class="tiles sync-tiles" aria-label="Sync totals">
+        <div class="tile"><span class="label">Sync runs</span><span class="value" id="y-runs">–</span><span class="hint" id="y-runs-hint"></span><span class="hint all" id="y-runs-all"></span></div>
+        <div class="tile"><span class="label">Sync time</span><span class="value" id="y-time">–</span><span class="hint" id="y-time-hint"></span><span class="hint all" id="y-time-all"></span></div>
+        <div class="tile"><span class="label">Mainnet syncs</span><span class="value" id="y-mainnet">–</span><span class="hint" id="y-mainnet-hint"></span><span class="hint all" id="y-mainnet-all"></span></div>
+        <div class="tile"><span class="label">Latest mainnet sync</span><span class="value" id="y-latest">–</span><span class="hint" id="y-latest-hint"></span><span class="hint all" id="y-latest-all"></span></div>
+      </section>
+      <div class="ctl sync-ctl">
+        <span class="ctl-label">Network</span>
+        <div class="seg" role="group" aria-label="Network">
+          <button type="button" id="n-all" data-network="all" aria-pressed="true">All</button>
+          <button type="button" id="n-mainnet" data-network="mainnet" aria-pressed="false">Mainnet</button>
+          <button type="button" id="n-preview" data-network="preview" aria-pressed="false">Preview</button>
+          <button type="button" id="n-preprod" data-network="preprod" aria-pressed="false">Preprod</button>
+        </div>
+      </div>
+      <div class="row2 sync-charts">
+        <div>
+          <h2>Sync hours per day</h2>
+          <ul class="legend" aria-hidden="true">
+            <li><span class="sw mainnet"></span>Mainnet</li>
+            <li><span class="sw preview"></span>Preview</li>
+            <li><span class="sw preprod"></span>Preprod</li>
+          </ul>
+          <div id="chart-sync-hours" role="img" aria-label="Sync hours per day, by network"></div>
+        </div>
+        <div>
+          <h2>Mainnet sync time per run</h2>
+          <p class="foot">Hours to sync mainnet from genesis, one point per node sync run, newest last.</p>
+          <div id="chart-sync-trend" role="img" aria-label="Mainnet sync hours per run"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel impact-panel" id="impact" aria-label="Issues found by our testing" hidden>
+      <div class="impact-head">
+        <h2>Issues found by our testing</h2>
+        <span class="foot">Issues our test engineers opened in the upstream Cardano repositories</span>
+      </div>
+      <div class="impact">
+        <div><b id="i-found">–</b><span>issues found</span></div>
+        <div><b id="i-bugs">–</b><span>of them bugs</span></div>
+        <div><b id="i-open">–</b><span>still open</span></div>
+        <div><b id="i-comp">–</b><span>components</span></div>
+      </div>
+      <div class="row2">
+        <div>
+          <h2>Issues found, running total</h2>
+          <div id="chart-issues" role="img" aria-label="Running total of issues found by our testing"></div>
+        </div>
+        <div>
+          <h2>By component</h2>
+          <ul class="comps" id="comps"></ul>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Opened</th>
+              <th scope="col">Issue</th>
+              <th scope="col">Component</th>
+              <th scope="col">Type</th>
+              <th scope="col">State</th>
+            </tr>
+          </thead>
+          <tbody id="issues"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="row2">
+      <section class="panel">
+        <h2>Test runs per day</h2>
+        <ul class="legend" aria-hidden="true">
+          <li><span class="sw regression"></span>Regression</li>
+          <li><span class="sw upgrade"></span>Upgrade</li>
+          <li><span class="sw node-sync"></span>Node sync</li>
+          <li><span class="sw db-sync"></span>db-sync</li>
+        </ul>
+        <div id="chart-runs" role="img" aria-label="Test runs per day, by test type"></div>
+      </section>
+      <section class="panel">
+        <h2>Tests executed per day</h2>
+        <ul class="legend" aria-hidden="true">
+          <li><span class="sw tests"></span>Tests executed</li>
+        </ul>
+        <div id="chart-tests" role="img" aria-label="Tests executed per day"></div>
+      </section>
+    </div>
+
+    <div class="row2">
+      <section class="panel">
+        <h2>Tests executed, running total</h2>
+        <div id="chart-cumul" role="img" aria-label="Running total of tests executed"></div>
+      </section>
+      <section class="panel">
+        <h2>Size of the regression suite</h2>
+        <p class="foot">Tests per regression run, the largest run of each day. Growth means new coverage.</p>
+        <div id="chart-suite" role="img" aria-label="Tests per regression run"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>Testing by test run</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Test run</th>
+              <th scope="col">Type</th>
+              <th scope="col" class="num">Runs</th>
+              <th scope="col" class="num">Tests executed</th>
+              <th scope="col" class="num">Test time</th>
+              <th scope="col" class="num">Tests per run</th>
+              <th scope="col">Last run (UTC)</th>
+            </tr>
+          </thead>
+          <tbody id="by-name"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Latest runs</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Started (UTC)</th>
+              <th scope="col">Test run</th>
+              <th scope="col">Type</th>
+              <th scope="col">Versions</th>
+              <th scope="col" class="num">Tests executed</th>
+              <th scope="col" class="num">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="latest"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <aside class="right" aria-label="Releases and notes">
+    <section class="card">
+      <h3>Releases tested</h3>
+      <ul class="releases" id="releases"></ul>
+    </section>
+
+    <section class="card about">
+      <h3>About these numbers</h3>
+      <dl>
+        <div><dt>Regression</dt><dd>The system-level test suite against a local Cardano testnet, run nightly and for node releases.</dd></div>
+        <div><dt>Upgrade</dt><dd>One run in three steps across a node upgrade. It counts as one run; its tests are the sum of the three steps.</dd></div>
+        <div><dt>Tests executed</dt><dd>Every test that ran, in every run and step. Skipped tests are not counted.</dd></div>
+        <div><dt>CLI invocations</dt><dd>How many times the tests ran a cardano-cli command, and how many transactions they submitted.</dd></div>
+        <div><dt>Sync tests</dt><dd>One run is one full sync of a network, by the node alone or with db-sync. Its test time is the sync time. It counts in the numbers above like any other run.</dd></div>
+      </dl>
+      <p class="foot">CI runs come from GitHub Actions. Local runs are uploaded by developers from their own machines. The page checks for new data every 60 seconds.</p>
+    </section>
+
+    <section class="card about">
+      <h3>Open source</h3>
+      <dl>
+        <div><dt>Test results</dt><dd><a href="https://tests.cardano.intersectmbo.org/test_results.html">tests.cardano.intersectmbo.org</a></dd></div>
+        <div><dt>Test suite</dt><dd><a href="https://github.com/IntersectMBO/cardano-node-tests">IntersectMBO/cardano-node-tests</a></dd></div>
+        <div><dt>Sync tests</dt><dd><a href="https://github.com/IntersectMBO/cardano-sync-tests">IntersectMBO/cardano-sync-tests</a></dd></div>
+        <div><dt>Local testnets</dt><dd><a href="https://github.com/IntersectMBO/cardonnay">IntersectMBO/cardonnay</a></dd></div>
+        <div><dt>CLI library</dt><dd><a href="https://github.com/input-output-hk/cardano-clusterlib-py">input-output-hk/cardano-clusterlib-py</a></dd></div>
+      </dl>
+      <p class="foot" id="updated">Loading…</p>
+    </section>
+  </aside>
+</div>
+<script src="dashboard.js"></script>
+</body>
+</html>
