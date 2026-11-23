@@ -156,6 +156,7 @@ dbsync_2105 = blockers.GH(
 dbsync_2182 = blockers.GH(
     issue=2182,
     repo="IntersectMBO/cardano-db-sync",
+    fixed_in="13.8.0.1",  # Fixed in release following 13.8.0.0
     message="Pool relay IPv4 and IPv6 addresses are stored with literal double quotes.",
 )
 
