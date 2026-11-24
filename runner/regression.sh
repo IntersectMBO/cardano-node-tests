@@ -483,6 +483,9 @@ fi
 # Save testing artifacts
 ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
 
+# Report testrun stats to the tcache
+./runner/report_stats.sh "${WORKDIR}/allure-results" "$retval" "${WORKDIR}/cli_coverage.json" || :
+
 kill_monitor
 
 if [ "$retval" -eq 0 ]; then
