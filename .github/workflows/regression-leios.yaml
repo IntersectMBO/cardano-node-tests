@@ -37,4 +37,6 @@ jobs:
       ci_args: -k "smoke or leios or tests_dijkstra"
       env-path: runner/env_leios
     secrets:
+      TCACHE_BASIC_AUTH: ${{ secrets.TCACHE_BASIC_AUTH }}
+      TCACHE_URL: ${{ secrets.TCACHE_URL }}
       COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
