@@ -44,7 +44,10 @@ from cardano_node_tests.utils.versions import EraName
 
 DATA_DIR = pl.Path(__file__).parent / "data"
 LOGGER = logging.getLogger(__name__)
-DEREG_BUFFER_SEC = 40
+
+# Cleanup does not need next-epoch retirement. Leave an extra epoch so the
+# certificate remains valid if submission or confirmation crosses a boundary.
+CLEANUP_RETIREMENT_EPOCH_OFFSET = 2
 
 # The first protocol version that rejects a duplicated VRF key. Below it the ledger
 # doesn't even keep the occurrence map the rule is enforced against - see
@@ -444,13 +447,12 @@ def _create_register_pool(
         raise ValueError(msg)
 
     # Deregister stake pool
-    def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+    def _deregister() -> None:
         with helpers.change_cwd(temp_dir):
             cluster_obj.g_stake_pool.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=pool_creation_out.cold_key_pair,
-                epoch=cluster_obj.g_query.get_epoch() + depoch,
+                epoch=cluster_obj.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                 pool_name=pool_data.pool_name,
                 tx_name=f"{temp_template}_cleanup",
             )
@@ -575,13 +577,12 @@ def _create_register_pool_delegate_stake_tx(
     )
 
     # Deregister stake pool
-    def _deregister():
-        depoch = 1 if cluster_obj.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+    def _deregister() -> None:
         with helpers.change_cwd(temp_dir):
             cluster_obj.g_stake_pool.deregister_stake_pool(
                 pool_owners=pool_owners,
                 cold_key_pair=node_cold,
-                epoch=cluster_obj.g_query.get_epoch() + depoch,
+                epoch=cluster_obj.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                 pool_name=pool_data.pool_name,
                 tx_name=f"{temp_template}_cleanup",
             )
@@ -1299,13 +1300,12 @@ class TestStakePool:
         )
 
         # Deregister stake pool
-        def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        def _deregister() -> None:
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
@@ -1444,13 +1444,12 @@ class TestStakePool:
         node_consistency.check_tx_on_all_nodes(cluster_obj=cluster, tx_raw_output=tx_raw_output)
 
         # Deregister stake pool
-        def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        def _deregister() -> None:
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=pool_creation_out.cold_key_pair,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
@@ -1881,13 +1880,12 @@ class TestStakePool:
         cluster.g_transaction.submit_tx(tx_file=tx_witnessed_file, txins=tx_raw_output.txins)
 
         # Deregister stake pool
-        def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        def _deregister() -> None:
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_owners,
                     cold_key_pair=node_cold,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
@@ -2439,12 +2437,11 @@ class TestNegative:
         # a shared instance, and this one has no stake and so never forges, so the
         # retirement is cleanup enough and no respin is needed.
         def _deregister() -> None:
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=[pool_users_pool1[0]],
                     cold_key_pair=node_cold,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
@@ -2956,13 +2953,12 @@ class TestNegative:
             err_str = str(exc)
 
         # Deregister stake pool in case it was unexpectedly registered
-        def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        def _deregister() -> None:
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=pool_users,
                     cold_key_pair=node_cold,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
@@ -3327,13 +3323,12 @@ class TestCompatibility:
             tx_files=tx_files,
         )
 
-        def _deregister():
-            depoch = 1 if cluster.time_to_epoch_end() >= DEREG_BUFFER_SEC else 2
+        def _deregister() -> None:
             with helpers.change_cwd(testfile_temp_dir):
                 cluster.g_stake_pool.deregister_stake_pool(
                     pool_owners=[pool_user],
                     cold_key_pair=node_cold,
-                    epoch=cluster.g_query.get_epoch() + depoch,
+                    epoch=cluster.g_query.get_epoch() + CLEANUP_RETIREMENT_EPOCH_OFFSET,
                     pool_name=pool_data.pool_name,
                     tx_name=f"{temp_template}_cleanup",
                 )
