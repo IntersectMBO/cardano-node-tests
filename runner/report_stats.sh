@@ -35,13 +35,6 @@ if [ ! -d "$results_dir" ]; then
   exit 1
 fi
 
-# regression.sh adds PATH_PREPEND to PATH only inside its nix shell, so add it
-# again here for the `--version` calls.
-if [ -n "${PATH_PREPEND:-}" ]; then
-  PATH="${PATH_PREPEND}:${PATH}"
-  export PATH
-fi
-
 # `TCACHE_URL` ends in `/results`.
 root="${TCACHE_URL%/}"
 stats_url="${root%/results}/stats"

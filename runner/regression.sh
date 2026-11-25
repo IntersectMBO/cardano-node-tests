@@ -453,6 +453,7 @@ nix develop --accept-flake-config .#testenv --command bash -c '
   rm -f "$pytest_stamp"
   ./runner/cli_coverage.sh "$COVERAGE_DIR" "${WORKDIR}/cli_coverage.json" || :
   ./runner/reqs_coverage.sh "$ARTIFACTS_DIR" "${WORKDIR}/requirements_coverage.json" || :
+  ./runner/report_stats.sh "$REPORTS_DIR" "$retval" "${WORKDIR}/cli_coverage.json" || :
   exit "$retval"
 ' || retval="$?"
 
@@ -482,9 +483,6 @@ fi
 
 # Save testing artifacts
 ./runner/save_artifacts.sh "$ARTIFACTS_DIR" "$WORKDIR" || :
-
-# Report testrun stats to the tcache
-./runner/report_stats.sh "${WORKDIR}/allure-results" "$retval" "${WORKDIR}/cli_coverage.json" || :
 
 kill_monitor
 
