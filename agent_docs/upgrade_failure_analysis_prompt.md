@@ -23,7 +23,7 @@ Inputs available under `{RUN_DIR}/` (use only what exists):
 Steps:
 
 1. Get per-step counts and failed/broken test lists (with `statusDetails.message` heads):
-   `scripts/count_test_results.py {RUN_DIR}/allure-results-step1 {RUN_DIR}/allure-results-step2 {RUN_DIR}/allure-results-step3`
+   `cardano_node_tests/count_test_results.py {RUN_DIR}/allure-results-step1 {RUN_DIR}/allure-results-step2 {RUN_DIR}/allure-results-step3`
    Run it exactly as shown, as a single plain command - do not wrap it in pipes, command substitution or other compound shell constructs, those are rejected by the CI command allowlist.
    (`broken` = pytest error in setup/teardown; `failed` = assertion failure.)
 2. Group failures by likely root cause (same exception class + message head, same node crash, same infra symptom). **Note which step(s) each group hits** — a failure that appears only in step2 or step3 is much more interesting than one that already fails in step1. Treat one node crash that flunks many tests as a single group.

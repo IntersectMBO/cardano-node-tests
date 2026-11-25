@@ -133,7 +133,7 @@ jobs:
           # The testing step can die before it creates run_workdir.
           mkdir -p run_workdir
           copilot -p "$ANALYSIS_PROMPT" --no-ask-user --disable-builtin-mcps \
-            --allow-tool='read,write,shell(scripts/count_test_results.py:*),shell(ls:*),shell(wc:*),shell(head:*),shell(tail:*),shell(grep:*),shell(find:*),shell(cut:*),shell(sort:*),shell(uniq:*),shell(awk:*),shell(jq:*),shell(sqlite3:*)' \
+            --allow-tool='read,write,shell(cardano_node_tests/count_test_results.py:*),shell(ls:*),shell(wc:*),shell(head:*),shell(tail:*),shell(grep:*),shell(cut:*),shell(sort:*),shell(uniq:*),shell(awk:*),shell(jq:*),shell(sqlite3:*)' \
             --log-dir=run_workdir/copilot-logs \
             2>&1 | tee run_workdir/copilot-execution-output.log
       - name: Read failure analysis into env

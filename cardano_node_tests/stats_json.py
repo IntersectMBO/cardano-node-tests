@@ -2,14 +2,13 @@
 """Emit a testrun statistics document for upload to the tcache.
 
 Usage:
-    scripts/stats_json.py <allure-results-dir> [options]
+    stats-json <allure-results-dir> [options]
 
-The counts come from the grouping logic in `count_test_results.py`. This
-script adds the run identity, timing, software versions and CLI coverage.
+This script adds the run identity, software versions and CLI coverage to
+the Allure results summary.
 """
 
 import argparse
-import contextlib
 import datetime
 import json
 import os
@@ -20,10 +19,11 @@ import sys
 import typing as tp
 import uuid
 
-# `scripts` is not a package, so the sibling module is imported by path.
-sys.path.insert(0, str(pl.Path(__file__).resolve().parent))
+if not __package__:
+    # Prefer this checkout over any installed copy when run as a script.
+    sys.path.insert(0, str(pl.Path(__file__).resolve().parents[1]))
 
-import count_test_results as counter
+from cardano_node_tests.utils import allure_results
 
 SCHEMA = 1
 DEFAULT_STEP = "main"
@@ -192,78 +192,19 @@ def _commands(coverage_file: pl.Path | None) -> dict[str, int | float | None]:
     return {"count": count, "submits": _submits(covered), "coverage_pct": coverage}
 
 
-def _timing(results_dir: pl.Path) -> tuple[str | None, float]:
+def _timing(summary: allure_results.ResultSummary) -> tuple[str | None, float]:
     """Derive when the testrun started and its wall clock duration.
 
     Args:
-        results_dir: The Allure results directory.
+        summary: The Allure results summary with timing bounds.
 
     Returns:
         Tuple of (ISO-8601 start time or None, duration in seconds).
     """
-    starts: list[float] = []
-    stops: list[float] = []
-    for fpath in results_dir.iterdir():
-        if not fpath.name.endswith("-result.json"):
-            continue
-        with contextlib.suppress(OSError, ValueError, TypeError, AttributeError):
-            record = json.loads(fpath.read_text(encoding="utf-8"))
-            message = (record.get("statusDetails") or {}).get("message") or ""
-            if message == counter.SKIPALL_MSG:
-                continue
-            start, stop = record.get("start"), record.get("stop")
-            if isinstance(start, (int, float)) and isinstance(stop, (int, float)):
-                starts.append(start)
-                stops.append(stop)
-
-    if not starts:
+    if summary.start_ms is None or summary.stop_ms is None:
         return None, 0.0
-    began = datetime.datetime.fromtimestamp(min(starts) / MS_PER_SECOND, tz=datetime.UTC)
-    return began.isoformat(), (max(stops) - min(starts)) / MS_PER_SECOND
-
-
-def _counts(best: dict[str, counter._TestResult]) -> dict[str, int]:
-    """Count the grouped results by Allure status.
-
-    Args:
-        best: The authoritative result per test, from `count_test_results`.
-
-    Returns:
-        The total and the four status buckets.
-    """
-    tally: dict[str, int] = {}
-    for result in best.values():
-        tally[result.status] = tally.get(result.status, 0) + 1
-    return {
-        "total": len(best),
-        "passed": tally.get("passed", 0),
-        "failed": tally.get("failed", 0),
-        "broken": tally.get("broken", 0),
-        "skipped": tally.get("skipped", 0),
-    }
-
-
-def _quality(
-    best: dict[str, counter._TestResult], no_history_id: int, read_errors: int
-) -> dict[str, int]:
-    """Report how far the counts can be trusted.
-
-    `never_run` counts registered tests that never got a real result, which
-    means the testrun was interrupted.
-
-    Args:
-        best: The authoritative result per test.
-        no_history_id: Result files that carried no `historyId`.
-        read_errors: Result files that could not be read.
-
-    Returns:
-        The three counters that qualify the counts.
-    """
-    return {
-        "never_run": sum(1 for result in best.values() if not result.is_real),
-        "no_history_id": no_history_id,
-        "read_errors": read_errors,
-    }
+    began = datetime.datetime.fromtimestamp(summary.start_ms / MS_PER_SECOND, tz=datetime.UTC)
+    return began.isoformat(), (summary.stop_ms - summary.start_ms) / MS_PER_SECOND
 
 
 def build_document(
@@ -274,6 +215,9 @@ def build_document(
     filtered: bool = False,
 ) -> dict[str, tp.Any]:
     """Build the statistics document for one testrun.
+
+    Report unreadable result files on stderr without mixing diagnostics into
+    the JSON output.
 
     Args:
         results_dir: The Allure results directory.
@@ -292,10 +236,10 @@ def build_document(
         err = f"Not a directory: {results_dir}"
         raise NotADirectoryError(err)
 
-    result_files = sorted(f for f in results_dir.iterdir() if f.name.endswith("-result.json"))
-    # Reuse the private grouping helper so the two scripts cannot drift.
-    best, no_history_id, read_errors = counter._group_records(result_files)
-    began, duration = _timing(results_dir)
+    summary = allure_results.summarize(results_dir)
+    for fpath, error in summary.read_errors.items():
+        print(f"Error: cannot read '{fpath}': {error}", file=sys.stderr)
+    began, duration = _timing(summary)
 
     document = {
         "schema": SCHEMA,
@@ -305,8 +249,12 @@ def build_document(
         "exit_code": exit_code,
         "filtered": filtered,
         "release": bool(_typed_testrun_name()),
-        "counts": _counts(best),
-        "quality": _quality(best, no_history_id, read_errors),
+        "counts": summary.counts,
+        "quality": {
+            "never_run": summary.never_run,
+            "no_history_id": summary.no_history_id,
+            "read_errors": len(summary.read_errors),
+        },
         "versions": _versions(),
         "commands": _commands(coverage_file),
     }
