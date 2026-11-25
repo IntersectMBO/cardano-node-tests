@@ -84,6 +84,9 @@ ERRORS_IGNORED = [
     "db-sync-node.*could not serialize access",
     # Can happen on p2p when node is shutting down
     "AsyncCancelled",
+    # The ledger metrics thread can query ChainDB after it closes during shutdown.
+    # TODO: remove once https://github.com/IntersectMBO/cardano-node/issues/6781 is fixed.
+    r'cardano-node: ExceptionInLinkedThread "ThreadId [0-9]+" \(ClosedDBError\b',
     # DB-Sync table name
     "OffChainPoolFetchError",
     # DB-Sync table name
