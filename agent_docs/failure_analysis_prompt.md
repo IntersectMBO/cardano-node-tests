@@ -22,7 +22,7 @@ Counting tests (IMPORTANT):
 Run following command to get the correct counts and the list of failed/broken tests:
 
 ```sh
-scripts/count_test_results.py {RUN_DIR}/allure-results
+cardano_node_tests/count_test_results.py {RUN_DIR}/allure-results
 ```
 
 Run it exactly as shown, as a single plain command - do not wrap it in pipes, command substitution or other compound shell constructs, those are rejected by the CI command allowlist.

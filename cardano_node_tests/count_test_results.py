@@ -2,7 +2,7 @@
 """Summarize allure test results for preliminary failure analysis.
 
 Usage:
-    scripts/count_test_results.py <allure-results-dir> [<allure-results-dir>...]
+    count-test-results <allure-results-dir> [<allure-results-dir>...]
 
 For each directory, prints per-test counts by status and one line per
 failed/broken test (capped, with a '+N more' tail). Missing and empty
@@ -25,17 +25,19 @@ simple command prefixes, so compound shell snippets (pipes, command
 substitution) are rejected there.
 """
 
-import json
 import pathlib
 import sys
-import typing as tp
+
+if not __package__:
+    # Prefer this checkout over any installed copy when run as a script.
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+
+from cardano_node_tests.utils import allure_results
 
 # Cap the failed/broken enumeration so a mass-failure run cannot flood the
 # consumer - AI agent tool output gets truncated around 30kB.
 ENUM_LIMIT = 40
 LINE_WIDTH = 200
-
-SKIPALL_MSG = "Skipped: collected, not run"
 
 
 def _plural(count: int, word: str) -> str:
@@ -51,104 +53,18 @@ def _plural(count: int, word: str) -> str:
     return f"{count} {word}{'' if count == 1 else 's'}"
 
 
-class _TestResult(tp.NamedTuple):
-    """Authoritative result of a single test."""
-
-    is_real: bool
-    start: float
-    status: str
-    name: str
-    msg_head: str
-
-
-def _parse_result_file(fpath: pathlib.Path) -> tuple[str, bool, _TestResult]:
-    """Parse one allure result file.
-
-    Args:
-        fpath: Path to a `*-result.json` file.
-
-    Returns:
-        Tuple of (grouping key, whether the file had a historyId, test result).
-
-    Raises:
-        OSError: When the file cannot be read.
-        ValueError: When the file content is not valid JSON.
-        TypeError: When the file content is not a JSON object.
-        AttributeError: When a nested field has an unexpected type.
-    """
-    rec = json.loads(fpath.read_text(encoding="utf-8"))
-    if not isinstance(rec, dict):
-        err = "not a JSON object"
-        raise TypeError(err)
-
-    key = rec.get("historyId")
-    has_history_id = bool(key) and isinstance(key, str)
-    if not has_history_id:
-        params = sorted(
-            (str(p.get("name") or ""), str(p.get("value") or ""))
-            for p in rec.get("parameters") or []
-        )
-        key = f"{rec.get('fullName') or rec.get('name') or fpath.name}|{params}"
-
-    message = (rec.get("statusDetails") or {}).get("message") or ""
-    start = rec.get("start")
-    result = _TestResult(
-        is_real=message != SKIPALL_MSG,
-        start=start if isinstance(start, (int, float)) else 0,
-        status=str(rec.get("status") or "unknown"),
-        name=str(rec.get("name") or rec.get("fullName") or "?"),
-        msg_head=message.splitlines()[0] if message else "",
-    )
-    return str(key), has_history_id, result
-
-
-def _group_records(
-    result_files: list[pathlib.Path],
-) -> tuple[dict[str, _TestResult], int, int]:
-    """Group result files per test, the newest real result of a test winning.
-
-    Args:
-        result_files: Allure `*-result.json` files.
-
-    Returns:
-        Tuple of (test key to authoritative result mapping, number of files
-        without a historyId, number of unreadable files).
-    """
-    best: dict[str, _TestResult] = {}
-    no_history_id = 0
-    read_errors = 0
-    for fpath in result_files:
-        try:
-            key, has_history_id, result = _parse_result_file(fpath)
-        except (OSError, ValueError, TypeError, AttributeError) as exc:
-            # Printed to stdout so the error stays next to its directory's
-            # summary when the two streams are merged (as in CI).
-            print(f"Error: cannot read '{fpath}': {exc}")
-            read_errors += 1
-            continue
-        if not has_history_id:
-            no_history_id += 1
-        prev = best.get(key)
-        if prev is None or (result.is_real, result.start) > (prev.is_real, prev.start):
-            best[key] = result
-    return best, no_history_id, read_errors
-
-
-def _print_counts(best: dict[str, _TestResult]) -> None:
+def _print_counts(summary: allure_results.ResultSummary) -> None:
     """Print per-test counts by status.
 
     Args:
-        best: Test key to authoritative result mapping.
+        summary: The grouped test results and counts.
     """
-    counts: dict[str, int] = {}
-    for result in best.values():
-        counts[result.status] = counts.get(result.status, 0) + 1
-
-    total = len(best)
-    passed = counts.get("passed", 0)
-    failed = counts.get("failed", 0)
-    broken = counts.get("broken", 0)
-    skipped = counts.get("skipped", 0)
+    counts = summary.counts
+    total = counts["total"]
+    passed = counts["passed"]
+    failed = counts["failed"]
+    broken = counts["broken"]
+    skipped = counts["skipped"]
     print(
         f"Total: {total}, Passed: {passed}, Failed: {failed}, Broken: {broken}, Skipped: {skipped}"
     )
@@ -156,7 +72,7 @@ def _print_counts(best: dict[str, _TestResult]) -> None:
     if other:
         print(f"Other statuses: {other}")
 
-    never_run = sum(1 for r in best.values() if not r.is_real)
+    never_run = summary.never_run
     if never_run:
         print(
             f"Note: {_plural(never_run, 'test')} registered by the initial skip pass "
@@ -165,7 +81,7 @@ def _print_counts(best: dict[str, _TestResult]) -> None:
         )
 
 
-def _print_failures(best: dict[str, _TestResult]) -> None:
+def _print_failures(best: dict[str, allure_results.TestResult]) -> None:
     """Print one line per failed/broken test, sorted by test name and capped.
 
     Args:
@@ -205,32 +121,31 @@ def summarize_dir(results_dir: pathlib.Path) -> int:
         print(f"Directory not found: {results_dir}")
         return 0
 
-    # `iterdir` instead of `glob`, as `glob` swallows permission errors and an
-    # unlistable directory would be misreported as having no results.
     try:
-        result_files = sorted(f for f in results_dir.iterdir() if f.name.endswith("-result.json"))
+        summary = allure_results.summarize(results_dir)
     except OSError as exc:
         print(f"Error: cannot list '{results_dir}': {exc}")
         return 1
-    if not result_files:
+    if not (summary.results or summary.read_errors):
         print(
             f"No *-result.json files found in {results_dir} - "
             "the testrun likely did not produce results"
         )
         return 0
 
-    best, no_history_id, read_errors = _group_records(result_files)
-    _print_counts(best)
-    _print_failures(best)
+    for fpath, error in summary.read_errors.items():
+        print(f"Error: cannot read '{fpath}': {error}")
+    _print_counts(summary)
+    _print_failures(summary.results)
 
-    if no_history_id:
+    if summary.no_history_id:
         print(
-            f"Note: {_plural(no_history_id, 'result file')} without historyId - "
+            f"Note: {_plural(summary.no_history_id, 'result file')} without historyId - "
             "test grouping is approximate"
         )
-    if read_errors:
+    if summary.read_errors:
         print(
-            f"Warning: {_plural(read_errors, 'result file')} could not be read - "
+            f"Warning: {_plural(len(summary.read_errors), 'result file')} could not be read - "
             "counts may be incomplete"
         )
         return 1

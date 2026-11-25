@@ -58,7 +58,7 @@ if [ -n "${MARKEXPR:-}" ] || [ -n "${DESELECT_FROM_FILE:-}" ]; then
   extra_args+=(--filtered)
 fi
 
-if ! "${tests_repo}/scripts/stats_json.py" "$results_dir" \
+if ! "${tests_repo}/cardano_node_tests/stats_json.py" "$results_dir" \
        --exit-code "$exit_code" --step "$step" "${extra_args[@]}" \
        --output "$stats_json"; then
   echo "Could not build the stats document, not reporting stats." >&2
