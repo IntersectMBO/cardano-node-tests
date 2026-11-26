@@ -35,9 +35,8 @@ if [ ! -d "$results_dir" ]; then
   exit 1
 fi
 
-# `TCACHE_URL` ends in `/results`.
-root="${TCACHE_URL%/}"
-stats_url="${root%/results}/stats"
+# `TCACHE_URL` is the service base URL.
+stats_url="${TCACHE_URL%/}/stats"
 
 stats_json="$(mktemp)"
 # shellcheck disable=SC2064
