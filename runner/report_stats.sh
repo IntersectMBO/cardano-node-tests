@@ -61,4 +61,6 @@ echo "Reporting testrun stats to $stats_url"
 # Time out so a tcache that never answers cannot hold up the testrun.
 curl -sS -X PUT --fail-with-body --connect-timeout 10 --max-time 60 \
   -u "$TCACHE_BASIC_AUTH" "$stats_url" \
-  -H "Content-Type: application/json" --data-binary "@$stats_json"
+  -H "Content-Type: application/json" --data-binary "@$stats_json" || {
+  echo "Warning: Failed to upload testrun stats to tcache (curl exit code $?)." >&2
+}
