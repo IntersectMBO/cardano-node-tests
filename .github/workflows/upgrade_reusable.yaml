@@ -42,6 +42,7 @@ on:
       TCACHE_BASIC_AUTH:
         required: false
       TCACHE_URL:
+        description: "Tcache service base URL, without an endpoint suffix"
         required: false
 
 env:
