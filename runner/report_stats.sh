@@ -20,7 +20,7 @@ tests_repo="$(cd "$(dirname "$0")/.." && pwd)" || { echo "Cannot determine test 
 # shellcheck disable=SC1091
 . "${tests_repo}/scripts/common.sh"
 
-if ! is_truthy "${ENABLE_TCACHE_STATS:-}"; then
+if ! is_truthy "${ENABLE_TCACHE_STATS:-true}"; then
   echo "ENABLE_TCACHE_STATS is not enabled, not reporting stats."
   exit 0
 fi
