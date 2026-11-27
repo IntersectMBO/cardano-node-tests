@@ -139,18 +139,18 @@ class TestTxChaining:
         tx_raw_outputs: list[clusterlib.TxRawOutput] = []
         submit_err = ""
 
-        # It can happen that a Tx is removed from mempool without making it to the blockchain.
-        # The whole chain of transactions is than distrupted. We'll just repeat the whole
-        # process when this happens.
+        # If a Tx is removed from the mempool before reaching the blockchain, retry the
+        # whole chain with fresh funding and separate artifacts.
         for rep in range(3):
             if rep > 0:
                 LOGGER.warning(f"Repeating Tx chaining for the {rep} time.")
 
             next_try = False
             tx_raw_outputs.clear()
+            attempt_template = f"{temp_template}_r{rep}"
 
             payment_addr = addrs_common.get_payment_addr(
-                name_template=temp_template,
+                name_template=attempt_template,
                 cluster_manager=cluster_manager,
                 cluster_obj=cluster,
                 amount=205_000_000,
@@ -174,7 +174,7 @@ class TestTxChaining:
                     payment_addr=payment_addr,
                     txin=txin,
                     out_addr=payment_addr,
-                    tx_name=f"{temp_template}_r{rep}_{idx:04d}",
+                    tx_name=f"{attempt_template}_{idx:04d}",
                     fee=fee,
                     invalid_hereafter=invalid_hereafter,
                 )
